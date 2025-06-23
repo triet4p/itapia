@@ -48,14 +48,18 @@ POSTGRES_PORT=5432
 ```
 
 ### Chạy pipeline dữ liệu
-#### 1. Khởi động CSDL
+#### 1. Tạo các image cần thiết
+```bash
+docker build -t itapia-data-processor data_processing
+```
+#### 2. Khởi động CSDL
 - Khởi động Postgre SQL ở chế độ nền
 ```bash
 docker-compose up -d stocks_postgre_db
 ```
-#### 2. Tạo bảng cần thiết.
+#### 3. Tạo bảng cần thiết.
 - Sử dụng DBeaver hoặc dòng lệnh để kết nối CSDL và chạy lệnh trong `db/create_table.sql` để tạo các bảng cần thiết trong Postgre SQL.
-#### 3. Chạy script thu thập dữ liệu.
+#### 4. Chạy script thu thập dữ liệu.
 Để thu thập dữ liệu cho một khu vực cụ thể (ví dụ: americas), chạy lệnh sau:
 ```bash
 docker-compose run --rm data_processor python scripts/fetch_eod_data.py americas
