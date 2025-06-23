@@ -1,4 +1,4 @@
-
+from datetime import datetime
 class FetchException(Exception):
     def __init__(self, msg: str):
         super().__init__()
@@ -108,29 +108,24 @@ TO_FETCH_TICKERS = [
     'EQIX'
 ]
 
-import json
-import os
+TO_FETCH_TICKERS_BY_REGION = {
+    "americas": [
+        'AAPL', 'MSFT', 'NVDA', 'JPM', 'BAC', 'GS', 'WFC', 'V', 'MA', 'BRK-B',
+        'JNJ', 'PFE', 'MRK', 'UNH', 'LLY', 'ABBV', 'MDT', 'AMZN', 'TSLA', 'HD',
+        'MCD', 'SBUX', 'NKE', 'PG', 'KO', 'WMT', 'COST', 'BUD', 'PEP', 'MDLZ',
+        'TGT', 'XOM', 'CVX', 'BA', 'CAT', 'GE', 'HON', 'LMT', 'UPS', 'NEE',
+        'DUK', 'SO', 'GOOGL', 'VZ', 'T', 'META', 'NFLX', 'DIS', 'TMUS', 'PLD',
+        'AMT', 'SPG', 'EQIX', 'LIN', 'DOW', 'SLB', 'ENB', 'BCE', 'ORCL', 'ADBE', 
+        'CRM', 'AMD', 'INTC'
+    ],
+    "europe": [
+        'SAP', 'DB', 'BMW.DE', 'SIE.DE', 'HSBC', 'BCS', 'AZN', 'UL', 'BP', 'RIO',
+        'BHP', 'SHEL', 'NVS', 'NESN.SW', 'SNY', 'MC.PA', 'AIR.PA', 'ENGI.PA',
+        'TTE', 'TEF', 'ASML'
+    ],
+    "asia_pacific": [
+        'TSM', 'MUFG', 'HMC', 'TM', 'INFY'
+    ]
+}
 
-CONTEXT_FILE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'config'))
-CONTEXT_FILE_PATH = CONTEXT_FILE_DIR + '/context.json'
-
-def read_context():
-    try:
-        with open(CONTEXT_FILE_PATH, 'r') as f:
-            return json.load(f)
-    except Exception:
-        raise FetchException('Missing context file')
-
-def write_context(new_context: dict):
-    try:
-        with open(CONTEXT_FILE_PATH, '+w') as f:
-            if 'START' not in new_context.keys():
-                raise FetchException('False type of context')
-            
-            context = {
-                'START': new_context['START']
-            }
-            
-            json.dump(context, f)
-    except Exception:
-        raise FetchException('Missing context')
+DEFAULT_START_DATE = datetime(2018, 1, 1)
