@@ -2,13 +2,11 @@ import yfinance as yf
 from typing import List, Literal
 from datetime import datetime, timedelta
 import pandas as pd
-from dotenv import load_dotenv
-from pathlib import Path
-from sqlalchemy import create_engine, Engine, text
-import os
 import sys
 
-from utils import FetchException, TO_FETCH_TICKERS_BY_REGION, DEFAULT_START_DATE
+from utils import FetchException, TO_FETCH_TICKERS_BY_REGION
+from db_manager import get_last_history_date, get_postgre_engine, bulk_upsert_df
+
 
 def _extract_raw_data(tickers: List[str],
                      start_collect_date: datetime,
@@ -50,66 +48,25 @@ def _handle_missing_data(df: pd.DataFrame,
                          features: List[str]):
     df[features] = df.groupby('ticker')[features].ffill().bfill()
     return df[(df['collect_date'] >= start_date) & (df['collect_date'] <= end_date)].copy()
+    
+def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
+                  table_name: str):
+    """
+    Pipeline lấy dữ liệu giá lịch sử (OHLCV) của các cổ phiếu thuộc 1 region được chỉ định
+    rồi xử lý giá trị thiếu và lưu vào Postgre SQL
 
-def _create_postgre_engine():
-    env_path = Path(__file__).parent.parent.parent / '.env'
-    load_dotenv(env_path)
-    
-    db_host = os.getenv('DB_HOST')
-    db_port = os.getenv('DB_PORT')
-    db_user = os.getenv('DB_USER')
-    db_password = os.getenv('DB_PASSWORD')
-    db_name = os.getenv('DB_NAME')
-    
-    db_url = f'postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}'
-    
-    try:
-        engine = create_engine(db_url)
-        print('Successfully connect')
-        return engine
-    except Exception as e:
-        err_msg = f'Failed connection to {db_url}'
-        print(err_msg)
-        raise FetchException(err_msg)
-    
-def _load_to_db(engine: Engine, df: pd.DataFrame, selected_cols: List[str]):
-    with engine.begin() as conn:
-        df[selected_cols].to_sql(
-            'history_prices',
-            conn,
-            if_exists='append',
-            index=False,
-            chunksize=1000
-        )
-    
-def _get_last_date_from_db(engine: Engine, region: str):
-    tickers = tuple(TO_FETCH_TICKERS_BY_REGION[region])
-    query = f"SELECT MAX(collect_date) FROM history_prices WHERE ticker IN {tickers};"
-    stmt = text(query)
-    
-    try:
-        with engine.connect() as connection:
-            result = connection.execute(stmt).scalar()
-            if result:
-                # Chuyển đổi từ date của DB sang datetime của Python
-                return datetime.combine(result, datetime.min.time())
-            return None # Trả về None nếu bảng trống
-    except Exception as e:
-        print(f"Lỗi khi truy vấn ngày cuối cùng từ CSDL: {e}")
-        # Nếu có lỗi (ví dụ bảng chưa tồn tại), coi như chưa có dữ liệu
-        return None
-    
-def full_pipeline(region: str):
+    Args:
+        region (Literal[&#39;americas&#39;, &#39;europe&#39;, &#39;asia_pacific&#39;]): Khu vực được hỗ trợ.
+            Dữ liệu thường phải lấy theo khu vực vì timezone khác nhau.
+        table_name (str): Tên bảng được lưu trong CSDL
+    """
     try:
         print(f'Lưu cho khu vực {region}')
-        engine = _create_postgre_engine()
-        last_date = _get_last_date_from_db(engine, region)
-        if last_date:
-            start_date = last_date + timedelta(days=1)
-        else:
-            start_date = DEFAULT_START_DATE
+        engine = get_postgre_engine()
+        last_date = get_last_history_date(engine, region)
+        start_date = last_date + timedelta(days=1)
             
-        now_date = datetime.now()           
+        now_date = datetime.now()      
         delta_day = 0
         if now_date.isoweekday() == 1:
             delta_day = 2
@@ -118,10 +75,14 @@ def full_pipeline(region: str):
 
         end_date = datetime(now_date.year, now_date.month, now_date.day) - timedelta(days=delta_day)
         
+        print(f'Bắt đầu lấy từ {start_date} tới {end_date}')
+        
+        if start_date >= end_date:
+            print('Invalid date')
+            return
+        
         start_collect_date = start_date - timedelta(days=30)
         end_collect_date = end_date + timedelta(days=delta_day)
-        
-        print(f'Bắt đầu lấy từ {start_date} tới {end_date}')
         
         raw_df = _extract_raw_data(TO_FETCH_TICKERS_BY_REGION[region], start_collect_date, end_collect_date)
         
@@ -136,7 +97,10 @@ def full_pipeline(region: str):
         # 3. Load
         
         selected_cols = ['collect_date', 'ticker', 'open', 'high', 'low', 'close', 'volume']
-        _load_to_db(engine, cleaned_df, selected_cols)
+        selected_df = cleaned_df[selected_cols].copy()
+        bulk_upsert_df(engine, table_name, selected_df, 
+                       unique_cols=['collect_date', 'ticker'],
+                       chunk_size=1000)
         print(f"Đã lưu thành công {len(cleaned_df)} dòng dữ liệu.")
     
         print(f"Cập nhật thành công!")
@@ -152,6 +116,8 @@ if __name__ == '__main__':
     
     target_region = sys.argv[1].lower()
     
-    full_pipeline(region=target_region)
+    TABLE_NAME = 'history_prices'
+    
+    full_pipeline(region=target_region, table_name=TABLE_NAME)
     
     
