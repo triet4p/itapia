@@ -1,8 +1,8 @@
 version: '3.8'
 services:
-  stocks_db:
+  stocks_postgre_db:
     image: postgres:15-alpine
-    container_name: itapia-stocks_db
+    container_name: itapia-stocks_postgre_db
     restart: always
     env_file:
       - .env
@@ -22,7 +22,7 @@ services:
     volumes:
       - ./data_processing:/app
     depends_on:
-      - stocks_db
+      - stocks_postgre_db
     networks:
       - itapia-network
   
