@@ -1,6 +1,6 @@
 import yfinance as yf
 from typing import List, Literal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import sys
 
@@ -46,8 +46,21 @@ def _reconstruct_table(raw_df: pd.DataFrame, numeric_type: Literal['float32', 'f
 def _handle_missing_data(df: pd.DataFrame, 
                          start_date: datetime, end_date: datetime, 
                          features: List[str]):
+    # BƯỚC CHUẨN BỊ: Chuyển đổi datetime của Python sang Timestamp của Pandas
+    # pd.Timestamp hoàn toàn tương thích với cột datetime64[ns]
+    pd_start_date = pd.Timestamp(start_date)
+    pd_end_date = pd.Timestamp(end_date)
+    
+    # Xử lý missing data như cũ
+    # (Tùy chọn) Có thể xử lý cả cột 'collect_date' trước khi fill
+    df['collect_date'] = pd.to_datetime(df['collect_date'], utc=True)
     df[features] = df.groupby('ticker')[features].ffill().bfill()
-    return df[(df['collect_date'] >= start_date) & (df['collect_date'] <= end_date)].copy()
+    
+    # SỬA LẠI DÒNG NÀY:
+    # Bây giờ, phép so sánh diễn ra giữa các kiểu dữ liệu tương thích
+    filtered_df = df[(df['collect_date'] >= pd_start_date) & (df['collect_date'] <= pd_end_date)]
+    
+    return filtered_df.copy()
     
 def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
                   table_name: str):
@@ -66,14 +79,14 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         last_date = get_last_history_date(engine, region)
         start_date = last_date + timedelta(days=1)
             
-        now_date = datetime.now()      
+        now_date = datetime.now(timezone.utc)      
         delta_day = 0
         if now_date.isoweekday() == 1:
             delta_day = 2
         elif now_date.isoweekday() == 7:
             delta_day = 1
 
-        end_date = datetime(now_date.year, now_date.month, now_date.day) - timedelta(days=delta_day)
+        end_date = datetime(now_date.year, now_date.month, now_date.day, tzinfo=timezone.utc) - timedelta(days=delta_day)
         
         print(f'Bắt đầu lấy từ {start_date} tới {end_date}')
         

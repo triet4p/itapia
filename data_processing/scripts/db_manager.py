@@ -41,6 +41,48 @@ def get_postgre_engine() -> Engine:
         print(err_msg)
         raise FetchException(err_msg)
     
+def bulk_insert_on_conflict_do_nothing(engine: Engine, table_name: str,
+                                       data: list[dict],
+                                       unique_cols: list[str],
+                                       chunk_size: int = 1000):
+    """
+    Hỗ trợ thao tác INSERT ON CONFLICT DO NOTHING hàng loạt.
+    Nếu một bản ghi đã tồn tại (dựa trên unique_cols), nó sẽ bị bỏ qua.
+    Toàn bộ quá trình chạy trong một transaction.
+
+    Args:
+        engine (Engine): Một Engine hỗ trợ kết nối CSDL.
+        table_name (str): Tên bảng cần insert.
+        data (list[dict]): Dữ liệu, là một list các dict.
+        unique_cols (list[str]): Các cột tạo nên ràng buộc UNIQUE để kiểm tra xung đột.
+        chunk_size (int): Số hàng trong 1 batch.
+    """
+    if not data:
+        print("Không có dữ liệu để insert.")
+        return 
+    
+    metadata = MetaData()
+    table = Table(table_name, metadata, autoload_with=engine)
+    total_processed = 0
+    
+    with engine.begin() as connection:
+        for i in range(0, len(data), chunk_size):
+            chunk = data[i:i + chunk_size]
+            
+            stmt = pg_insert(table).values(chunk)
+            
+            # ĐÂY LÀ ĐIỂM THAY ĐỔI CHÍNH
+            # Thay vì .on_conflict_do_update, chúng ta dùng .on_conflict_do_nothing
+            final_stmt = stmt.on_conflict_do_nothing(
+                index_elements=unique_cols
+            )
+            
+            connection.execute(final_stmt)
+            total_processed += len(chunk)
+            print(f"Đã xử lý {total_processed}/{len(data)} dòng...")
+
+    print(f"Hoàn tất. Đã xử lý {total_processed} dòng cho bảng '{table_name}'.")
+    
 def bulk_upsert_json(engine: Engine, table_name: str,
                      data: list[dict],
                      unique_cols: list[str],
