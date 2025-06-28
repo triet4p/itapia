@@ -1,44 +1,61 @@
-# itapia
- ITAPIA (Intelligent and Transparent AI-Powered Personal Investment Assistant) là một dự án đồ án tốt nghiệp nhằm xây dựng một nền tảng hỗ trợ đầu tư chứng khoán thông minh. Dự án được thiết kế đặc biệt cho các nhà đầu tư cá nhân vốn ít, ưu tiên quản lý rủi ro và mong muốn hiểu rõ các quyết định do AI gợi ý.
+# ITAPIA - Intelligent and Transparent AI-Powered Personal Investment Assistant
 
-Khác với các công cụ "hộp đen", ITAPIA tập trung vào tính giải thích được (Explainability), chi phí thấp, và khả năng học hỏi, phát triển cùng người dùng.
+ITAPIA (Intelligent and Transparent AI-Powered Personal Investment Assistant) is a graduation thesis project aimed at building an intelligent stock investment support platform. The project is specifically designed for individual investors with limited capital who prioritize risk management and seek to understand AI-driven investment recommendations.
 
------
+Unlike traditional "black box" tools, ITAPIA focuses on explainability, low cost, and the ability to learn and evolve alongside its users.
 
-## Kiến trúc tổng quan
-Hệ thống được thiết kế theo kiến trúc microservices đơn giản hóa, bao gồm các thành phần chính:
-- Frontend: Giao diện người dùng bằng React, nơi chứa các logic cá nhân hóa tại client-side.
-- API Service (CPU-based): Đóng vai trò API Gateway, xử lý logic nghiệp vụ thông thường.
-- AI Service (GPU-based): Chịu trách nhiệm chạy các mô hình AI/LLM nặng.
-- Data Processing: Các script độc lập để chạy các pipeline ETL theo lịch trình.
-- Databases: PostgreSQL cho dữ liệu bền bỉ và Redis cho cache & dữ liệu real-time.
+---
 
-### Kiến trúc triển khai
-Hệ thống được triển khai theo biểu đồ
-![](doc/ITAPIA_deployment.png)
+## 🏗️ System Architecture
 
-Trong khuôn khổ dự án, các thành phần được deploy trên `Docker` để phát triển và thử nghiệm.
-### Tài liệu dự án
-Tài liệu dự án bạn có thể xem trong thư mục `doc`.
-## Getting Started
-### Yêu cầu hệ thống
-#### Môi trường phát triển
-- Docker: 4.41.2+
-- Python: 3.11+
-#### Phiên bản các thành phần
-- Postgre DB: 15 (image từ alphine)
-#### Các công cụ hỗ trợ
-- DBeaver 25 để hỗ trợ thao tác CSDL qua GUI.
-### Cài đặt
-#### 1. Clone repository:
+The system is built using a simplified microservices architecture, comprising the following core components:
+
+- **Frontend**: React-based user interface containing client-side personalization logic
+- **API Service** (CPU-based): Acts as API Gateway, handling standard business logic
+- **AI Service** (GPU-based): Responsible for running heavy AI/LLM models
+- **Data Processing**: Independent scripts for running scheduled ETL pipelines
+- **Databases**: PostgreSQL for persistent data and Redis for caching & real-time data
+
+### Deployment Architecture
+
+The system follows the deployment diagram shown below:
+
+![Deployment Architecture](doc/ITAPIA_deployment.png)
+
+Within the project scope, all components are deployed using Docker for development and testing purposes.
+
+### Project Documentation
+
+Additional project documentation can be found in the `doc` directory.
+
+---
+
+## 🚀 Getting Started
+
+### System Requirements
+
+#### Development Environment
+- **Docker**: 4.41.2+
+- **Python**: 3.11+
+
+#### Component Versions
+- **PostgreSQL**: 15 (Alpine image)
+
+#### Supporting Tools
+- **DBeaver 25**: For GUI-based database operations
+
+### Installation
+
+#### 1. Clone the Repository
 ```bash
 git clone https://github.com/trietp1253201581/itapia.git
 cd itapia
 ```
-#### 2. Tạo file chứa các biến môi trường
-Trong dự án này đang dùng 1 file `.env` chung ở thư mục gốc chứa toàn bộ biến môi trường cần thiết.
 
-Bạn cần tạo file `.env` ở thư mục gốc dự án với nội dung sau
+#### 2. Configure Environment Variables
+This project uses a single `.env` file in the root directory containing all necessary environment variables.
+
+Create a `.env` file in the project root with the following content:
 ```ini
 POSTGRES_USER=itapia_user
 POSTGRES_PASSWORD=123456
@@ -47,39 +64,98 @@ POSTGRES_HOST=stocks_postgre_db
 POSTGRES_PORT=5432
 ```
 
-### Chạy pipeline dữ liệu
-#### 1. Tạo các image cần thiết
+---
+
+## 📊 Data Pipeline Setup
+
+### 1. Build Required Images
 ```bash
 docker build -t itapia-data-processor data_processing
 ```
-#### 2. Khởi động CSDL
-- Khởi động Postgre SQL ở chế độ nền
+
+### 2. Start Database Services
+- Start PostgreSQL in detached mode:
 ```bash
 docker-compose up -d stocks_postgre_db
 ```
-- Khởi động container chứa Redis (In-memory) 
+
+- Start Redis (In-memory) container:
 ```bash
 docker-compose up -d realtime_db
 ```
-#### 3. Tạo bảng cần thiết.
-- Sử dụng DBeaver hoặc dòng lệnh để kết nối CSDL và chạy lệnh trong `db/create_table.sql` để tạo các bảng cần thiết trong Postgre SQL.
-#### 4. Chạy script thu thập dữ liệu batch.
-Để thu thập dữ liệu cho một khu vực cụ thể (ví dụ: americas), chạy lệnh sau:
+
+### 3. Initialize Database Tables
+Use DBeaver or command line to connect to the database and execute the SQL commands in `db/create_table.sql` to create the necessary tables in PostgreSQL.
+
+### 4. Run Batch Data Collection Scripts
+To collect data for a specific region (e.g., americas), run the following commands:
+
 ```bash
-# history price
+# Historical price data
 docker-compose run --rm batch-data-processor python scripts/fetch_history.py americas
 
-# news
+# News data
 docker-compose run --rm batch-data-processor python scripts/fetch_news.py americas
 ```
-Bạn cần chỉ định rõ 1 trong 3 region sau:
-- americas
-- europe
-- asia_pacific
 
-Sau đó scripts sẽ tự lấy dữ liệu OHLCV từ lần gần nhất (mặc định là `2018-01-01` cho lần đầu) của các cổ phiếu (89 cổ phiếu - xem trong [tickers](data_processing/scripts/utils.py)) rồi tái cấu trúc response, điền giá trị thiếu và load vào bảng dữ liệu.
-#### 5. Chạy script lấy dữ liệu realtime.
-Để thu thập dữ liệu realtime (giá cổ phiếu hiện tại) cho toàn bộ khu vực, chạy
+**Supported Regions:**
+- `americas`
+- `europe` 
+- `asia_pacific`
+
+The scripts will automatically fetch OHLCV data from the most recent date (defaults to `2018-01-01` for initial run) for the configured stocks (89 stocks - see [tickers](data_processing/scripts/utils.py)), restructure the response, fill missing values, and load into the database.
+
+### 5. Run Real-time Data Collection
+To collect real-time data (current stock prices) for all regions, run:
 ```bash
 docker-compose run --rm realtime-data-processor
 ```
+
+---
+
+## 🔧 Project Structure
+
+```
+itapia/
+├── data_processing/          # Data processing scripts and utilities
+│   ├── scripts/             # ETL pipeline scripts
+│   └── ...
+├── db/                      # Database schema and migrations
+├── doc/                     # Project documentation
+├── docker-compose.yml       # Docker services configuration
+├── .env                     # Environment variables (create this)
+└── README.md               # Project documentation
+```
+
+---
+
+## 🛠️ Development Workflow
+
+1. **Database Setup**: Initialize PostgreSQL and Redis containers
+2. **Schema Creation**: Run database schema creation scripts
+3. **Data Collection**: Execute batch data collection for historical data
+4. **Real-time Processing**: Start real-time data collection services
+5. **Development**: Begin application development with populated data
+
+---
+
+## 📈 Key Features
+
+- **Explainable AI**: Transparent investment recommendations with clear reasoning
+- **Risk Management**: Built-in risk assessment and management tools
+- **Cost-Effective**: Designed for investors with limited capital
+- **Multi-Region Support**: Covers Americas, Europe, and Asia-Pacific markets
+- **Real-time Data**: Live stock price updates and market monitoring
+- **News Integration**: Relevant financial news collection and analysis
+
+---
+
+## 🤝 Contributing
+
+This is a graduation thesis project. For questions or suggestions, please refer to the project documentation in the `doc` directory.
+
+---
+
+## 📄 License
+
+This project is developed as part of an academic graduation thesis. Please refer to the specific license terms in the repository.
