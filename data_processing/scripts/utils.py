@@ -136,5 +136,5 @@ REGION_TIME_ZONE = {
     'asia_pacific': 'Asia/Tokyo'
 }
 
-MARKET_OPEN_TIME = dt_time(8, 0, 0)
-MARKET_CLOSE_TIME = dt_time(18, 0, 0)
+MARKET_OPEN_TIME = dt_time(8, 30, 0)
+MARKET_CLOSE_TIME = dt_time(17, 30, 0)

@@ -1,7 +1,12 @@
 from datetime import datetime, timedelta
+import redis.exceptions
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.schema import Table, MetaData
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+import redis
+from redis.client import Redis
+
 from pathlib import Path
 from dotenv import load_dotenv
 import os
@@ -184,5 +189,48 @@ class PostgreDBManager:
             # Nếu có lỗi (ví dụ bảng chưa tồn tại), coi như chưa có dữ liệu
             return default_return_date
     
-
+class RedisManager:
+    def __init__(self):
+        self._connection: Redis = None
+        
+    def get_connection(self) -> Redis:
+        if self._connection is not None:
+            return self._connection
+        
+        env_path = Path(__file__).parent.parent.parent / '.env'
+        load_dotenv(env_path)
+        
+        redis_host = os.getenv('REDIS_HOST', 'localhost')
+        redis_port = int(os.getenv('REDIS_PORT', 6379))
+        
+        print(f"Đang tạo kết nối mới đến Redis tại {redis_host}:{redis_port}...")
+        
+        try:
+            # decode_responses=True để kết quả trả về là string thay vì bytes
+            self._connection = redis.Redis(
+                host=redis_host, 
+                port=redis_port, 
+                db=0,
+                decode_responses=True
+            )
+            self._connection.ping()
+            print("Kết nối đến Redis thành công!")
+        except redis.exceptions.ConnectionError as e:
+            print(f"Lỗi kết nối đến Redis: {e}")
+            raise
+        
+        return self._connection
     
+    def save_candle(self, candle: dict, identify: str, ttl_seconds: int = 86400):
+        try:
+            if self._connection is None:
+                self._connection = self.get_connection()
+            conn = self._connection
+            
+            conn.hset(identify, mapping=candle)
+            
+            conn.expire(identify, ttl_seconds)
+        except Exception as e:
+            print(e)
+            raise FetchException(f'An exception appear when save candle with name {identify}')
+            

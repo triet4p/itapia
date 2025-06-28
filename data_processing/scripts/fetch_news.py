@@ -103,8 +103,6 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         data = _extract_news_data(tickers, sleep_time, max_news)
         transformed_data = _transform(data)
         
-        engine = db_mng.get_engine()
-        
         db_mng.bulk_insert(
             table_name, 
             transformed_data, 
