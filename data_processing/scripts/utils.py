@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, time as dt_time
 class FetchException(Exception):
     def __init__(self, msg: str):
         super().__init__()
@@ -129,3 +129,12 @@ TO_FETCH_TICKERS_BY_REGION = {
 }
 
 DEFAULT_START_DATE = datetime(2018, 1, 1, tzinfo=timezone.utc)
+
+REGION_TIME_ZONE = {
+    'americas': "America/New_York",
+    'europe': 'Europe/Berlin',
+    'asia_pacific': 'Asia/Tokyo'
+}
+
+MARKET_OPEN_TIME = dt_time(8, 0, 0)
+MARKET_CLOSE_TIME = dt_time(18, 0, 0)

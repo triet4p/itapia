@@ -5,7 +5,7 @@ import pandas as pd
 import sys
 
 from utils import FetchException, TO_FETCH_TICKERS_BY_REGION
-from db_manager import get_last_history_date, get_postgre_engine, bulk_upsert_df
+from db_manager import PostgreDBManager
 
 
 def _extract_raw_data(tickers: List[str],
@@ -63,7 +63,8 @@ def _handle_missing_data(df: pd.DataFrame,
     return filtered_df.copy()
     
 def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
-                  table_name: str):
+                  table_name: str,
+                  db_mng: PostgreDBManager):
     """
     Pipeline lấy dữ liệu giá lịch sử (OHLCV) của các cổ phiếu thuộc 1 region được chỉ định
     rồi xử lý giá trị thiếu và lưu vào Postgre SQL
@@ -72,11 +73,12 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         region (Literal[&#39;americas&#39;, &#39;europe&#39;, &#39;asia_pacific&#39;]): Khu vực được hỗ trợ.
             Dữ liệu thường phải lấy theo khu vực vì timezone khác nhau.
         table_name (str): Tên bảng được lưu trong CSDL
+        db_manager (PostgreDBManager): Quản lý truy cập CSDL
     """
     try:
         print(f'Lưu cho khu vực {region}')
-        engine = get_postgre_engine()
-        last_date = get_last_history_date(engine, region)
+        engine = db_mng.get_engine()
+        last_date = db_mng.get_last_history_date(region)
         start_date = last_date + timedelta(days=1)
             
         now_date = datetime.now(timezone.utc)      
@@ -111,9 +113,10 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         
         selected_cols = ['collect_date', 'ticker', 'open', 'high', 'low', 'close', 'volume']
         selected_df = cleaned_df[selected_cols].copy()
-        bulk_upsert_df(engine, table_name, selected_df, 
-                       unique_cols=['collect_date', 'ticker'],
-                       chunk_size=1000)
+        db_mng.bulk_insert(table_name, selected_df, 
+                           unique_cols=['collect_date', 'ticker'],
+                           chunk_size=1000,
+                           on_conflict='update')
         print(f"Đã lưu thành công {len(cleaned_df)} dòng dữ liệu.")
     
         print(f"Cập nhật thành công!")
@@ -131,6 +134,8 @@ if __name__ == '__main__':
     
     TABLE_NAME = 'history_prices'
     
-    full_pipeline(region=target_region, table_name=TABLE_NAME)
+    db_mng = PostgreDBManager()
+    
+    full_pipeline(region=target_region, table_name=TABLE_NAME, db_mng=db_mng)
     
     

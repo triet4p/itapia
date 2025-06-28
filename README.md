@@ -62,7 +62,11 @@ docker-compose up -d stocks_postgre_db
 #### 4. Chạy script thu thập dữ liệu.
 Để thu thập dữ liệu cho một khu vực cụ thể (ví dụ: americas), chạy lệnh sau:
 ```bash
-docker-compose run --rm data_processor python scripts/fetch_eod_data.py americas
+# history price
+docker-compose run --rm data-processor python scripts/fetch_history.py americas
+
+# news
+docker-compose run --rm data-processor python scripts/fetch_news.py americas
 ```
 Bạn cần chỉ định rõ 1 trong 3 region sau:
 - americas

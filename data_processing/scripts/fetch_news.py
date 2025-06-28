@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import uuid
 
 from utils import TO_FETCH_TICKERS_BY_REGION, FetchException
-from db_manager import bulk_insert_on_conflict_do_nothing, get_postgre_engine
+from db_manager import PostgreDBManager
 
 def _extract_news_data(tickers: list[str],
                        sleep_time: int = 5,
@@ -82,6 +82,7 @@ def _transform(data: list[dict]):
 
 def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
                   table_name: str,
+                  db_mng: PostgreDBManager,
                   max_news: int = 10,
                   sleep_time: int = 5):
     """
@@ -92,6 +93,7 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         region (Literal[&#39;americas&#39;, &#39;europe&#39;, &#39;asia_pacific&#39;]): Khu vực được hỗ trợ.
             Dữ liệu thường phải lấy theo khu vực vì timezone khác nhau.
         table_name (str): Tên bảng được lưu trong CSDL
+        db_manager (PostgreDBManager): Quản lý truy cập CSDL
         max_news (int): Số lượng tin tức nhiều nhất lấy từ mỗi cổ phiếu. Defaults to 10.
         sleep_time (int): Thời gian chờ giữa mỗi request để tránh time limit. Defaults to 5.
     """
@@ -101,12 +103,15 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         data = _extract_news_data(tickers, sleep_time, max_news)
         transformed_data = _transform(data)
         
-        engine = get_postgre_engine()
+        engine = db_mng.get_engine()
         
-        bulk_insert_on_conflict_do_nothing(
-            engine, table_name, 
-            transformed_data, unique_cols=['news_uuid'],
-            chunk_size=300)
+        db_mng.bulk_insert(
+            table_name, 
+            transformed_data, 
+            unique_cols=['news_uuid'],
+            chunk_size=300,
+            on_conflict='nothing'
+        )
         
         print(f"Cập nhật thành công!")
     except FetchException as e:
@@ -123,5 +128,7 @@ if __name__ == '__main__':
     
     TABLE_NAME = 'relevant_news'
     
-    full_pipeline(region=target_region, table_name=TABLE_NAME,
+    db_mng = PostgreDBManager()
+    
+    full_pipeline(region=target_region, table_name=TABLE_NAME, db_mng=db_mng,
                   max_news=15, sleep_time=5)
