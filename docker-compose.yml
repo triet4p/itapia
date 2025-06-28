@@ -3,7 +3,7 @@ services:
   stocks_postgre_db:
     image: postgres:15-alpine
     container_name: itapia-stocks_postgre_db
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env
     ports:
@@ -13,10 +13,20 @@ services:
     networks:
       - itapia-network
 
-  data-processor:
-    build:
-      context: ./data_processing
-    container_name: itapia-data-processor
+  realtime_db:
+    image: redis:7-alpine
+    container_name: itapia-redis_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "6379:6379"
+    networks:
+      - itapia-network
+
+  batch-data-processor:
+    image: itapia-data-processor:latest
+    container_name: itapia-batch-data-processor
     env_file:
       - .env
     volumes:
@@ -25,6 +35,19 @@ services:
       - stocks_postgre_db
     networks:
       - itapia-network
+
+  realtime-data-processor:
+    image: itapia-data-processor:latest
+    restart: always 
+    container_name: itapia-realtime-data-processor
+    env_file:
+      - .env
+    depends_on:
+      - realtime_db
+    networks:
+      - itapia-network
+    # Chạy script điều phối real-time
+    command: python -u scripts/fetch_realtime_price.py
   
 volumes:
   postgres_data:

@@ -57,16 +57,20 @@ docker build -t itapia-data-processor data_processing
 ```bash
 docker-compose up -d stocks_postgre_db
 ```
+- Khởi động container chứa Redis (In-memory) 
+```bash
+docker-compose up -d realtime_db
+```
 #### 3. Tạo bảng cần thiết.
 - Sử dụng DBeaver hoặc dòng lệnh để kết nối CSDL và chạy lệnh trong `db/create_table.sql` để tạo các bảng cần thiết trong Postgre SQL.
-#### 4. Chạy script thu thập dữ liệu.
+#### 4. Chạy script thu thập dữ liệu batch.
 Để thu thập dữ liệu cho một khu vực cụ thể (ví dụ: americas), chạy lệnh sau:
 ```bash
 # history price
-docker-compose run --rm data-processor python scripts/fetch_history.py americas
+docker-compose run --rm batch-data-processor python scripts/fetch_history.py americas
 
 # news
-docker-compose run --rm data-processor python scripts/fetch_news.py americas
+docker-compose run --rm batch-data-processor python scripts/fetch_news.py americas
 ```
 Bạn cần chỉ định rõ 1 trong 3 region sau:
 - americas
@@ -74,3 +78,8 @@ Bạn cần chỉ định rõ 1 trong 3 region sau:
 - asia_pacific
 
 Sau đó scripts sẽ tự lấy dữ liệu OHLCV từ lần gần nhất (mặc định là `2018-01-01` cho lần đầu) của các cổ phiếu (89 cổ phiếu - xem trong [tickers](data_processing/scripts/utils.py)) rồi tái cấu trúc response, điền giá trị thiếu và load vào bảng dữ liệu.
+#### 5. Chạy script lấy dữ liệu realtime.
+Để thu thập dữ liệu realtime (giá cổ phiếu hiện tại) cho toàn bộ khu vực, chạy
+```bash
+docker-compose run --rm realtime-data-processor
+```
