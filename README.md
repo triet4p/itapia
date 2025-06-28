@@ -62,6 +62,9 @@ POSTGRES_PASSWORD=123456
 POSTGRES_DB=stocks_db
 POSTGRES_HOST=stocks_postgre_db
 POSTGRES_PORT=5432
+
+REDIS_HOST=realtime_db
+REDIS_PORT=6379
 ```
 
 ---
@@ -108,7 +111,7 @@ The scripts will automatically fetch OHLCV data from the most recent date (defau
 ### 5. Run Real-time Data Collection
 To collect real-time data (current stock prices) for all regions, run:
 ```bash
-docker-compose run --rm realtime-data-processor
+docker-compose up -d realtime-data-processor
 ```
 
 ---
@@ -158,4 +161,13 @@ This is a graduation thesis project. For questions or suggestions, please refer 
 
 ## 📄 License
 
-This project is developed as part of an academic graduation thesis. Please refer to the specific license terms in the repository.
+This project is developed as part of a graduation thesis project. The code is available for academic and educational use. For detailed license terms, see the [LICENSE](LICENSE) file.
+
+### Citation
+If you use this work in your research, please cite:
+```txt
+[Triet Le]. (2025). ITAPIA: Intelligent and Transparent AI-Powered Personal Investment Assistant. 
+Graduation Thesis, HUST, VietNam.
+```
+For commercial use or collaboration inquiries, please contact `trietlm0306@gmail.com`.
+
