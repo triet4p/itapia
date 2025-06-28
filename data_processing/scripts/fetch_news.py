@@ -35,12 +35,12 @@ def _transform_element(element: dict):
     
     content = element.get('content')
     if not content: # Kiểm tra cả None và dictionary rỗng
-        raise FetchException(f"Bỏ qua tin tức với id {transformed['news_uuid']}: không có trường 'content'")
+        raise FetchException(f"News with id {transformed['news_uuid']} do not have 'content'")
     
     # Lấy các giá trị đơn giản
     transformed['title'] = content.get('title')
     if not transformed['title']: # Tiêu đề là bắt buộc
-        raise FetchException(f"Bỏ qua tin tức với id {transformed['news_uuid']}: không có 'title'")
+        raise FetchException(f"News with id {transformed['news_uuid']} do not have 'title'")
 
     transformed['summary'] = content.get('summary', '') # Mặc định là chuỗi rỗng nếu thiếu
     
@@ -51,12 +51,11 @@ def _transform_element(element: dict):
         transformed['publish_time'] = datetime.fromisoformat(pub_date_str)
     else:
         # Nếu không có ngày xuất bản, chúng ta không thể sử dụng tin này
-        raise FetchException(f"Bỏ qua tin tức '{transformed['title']}': không có 'pubDate'")
+        raise FetchException(f"News with id {transformed['news_uuid']} do not have 'pubDate'")
 
     transformed['collect_time'] = datetime.now(timezone.utc)
     transformed['content_type'] = content.get('contentType', '')
-    
-    # --- PHẦN SỬA LỖI CHÍNH ---
+
     # Lấy 'provider' một cách an toàn
     provider_info = content.get('provider') # Có thể là dict hoặc None
     transformed['provider'] = provider_info.get('displayName', '') if provider_info else ''
@@ -111,11 +110,11 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
             on_conflict='nothing'
         )
         
-        print(f"Cập nhật thành công!")
+        print(f"Successfully!")
     except FetchException as e:
-        print(f"Một lỗi đã xảy ra trong pipeline: {e}")
+        print(f"A fetch exception occured: {e}")
     except Exception as e:
-        print(f"Một lỗi không mong muốn đã xảy ra: {e}")
+        print(f"An unknown exception occured: {e}")
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

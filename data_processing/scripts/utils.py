@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, time as dt_time
+
 class FetchException(Exception):
     def __init__(self, msg: str):
         super().__init__()

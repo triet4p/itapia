@@ -67,18 +67,15 @@ class PostgreDBManager:
                 chunk = data[i:i + chunk_size]
                 
                 stmt = pg_insert(table).values(chunk)
-                
-                # ĐÂY LÀ ĐIỂM THAY ĐỔI CHÍNH
-                # Thay vì .on_conflict_do_update, chúng ta dùng .on_conflict_do_nothing
                 final_stmt = stmt.on_conflict_do_nothing(
                     index_elements=unique_cols
                 )
                 
                 connection.execute(final_stmt)
                 total_processed += len(chunk)
-                print(f"Đã xử lý {total_processed}/{len(data)} dòng...")
+                print(f"Processed {total_processed}/{len(data)} line...")
 
-        print(f"Hoàn tất. Đã xử lý {total_processed} dòng cho bảng '{table_name}'.")
+        print(f"Succesfully insert {total_processed} lines into '{table_name}'.")
 
     def _bulk_insert_on_conflict_do_update(self, table_name: str,
                                            data: list[dict],
@@ -107,9 +104,9 @@ class PostgreDBManager:
                 
                 connection.execute(final_stmt)
                 total_inserted += len(chunk)
-                print(f"Đã xử lý {total_inserted}/{len(data)} dòng...")
+                print(f"Processed {total_inserted}/{len(data)} line...")
 
-        print(f"Hoàn tất. Upsert thành công {total_inserted} dòng vào bảng '{table_name}'.")
+        print(f"Succesfully insert {total_inserted} lines into '{table_name}'.")
         
     def bulk_insert(self, table_name: str, 
                     data: list[dict]|pd.DataFrame,
@@ -203,7 +200,7 @@ class RedisManager:
         redis_host = os.getenv('REDIS_HOST', 'localhost')
         redis_port = int(os.getenv('REDIS_PORT', 6379))
         
-        print(f"Đang tạo kết nối mới đến Redis tại {redis_host}:{redis_port}...")
+        print(f"Get connection to redis {redis_host}:{redis_port}...")
         
         try:
             # decode_responses=True để kết quả trả về là string thay vì bytes
@@ -214,9 +211,9 @@ class RedisManager:
                 decode_responses=True
             )
             self._connection.ping()
-            print("Kết nối đến Redis thành công!")
+            print("Successfully connect to redis!")
         except redis.exceptions.ConnectionError as e:
-            print(f"Lỗi kết nối đến Redis: {e}")
+            print(f"Error when connect to Redis: {e}")
             raise
         
         return self._connection

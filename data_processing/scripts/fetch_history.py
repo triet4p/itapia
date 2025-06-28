@@ -46,18 +46,14 @@ def _reconstruct_table(raw_df: pd.DataFrame, numeric_type: Literal['float32', 'f
 def _handle_missing_data(df: pd.DataFrame, 
                          start_date: datetime, end_date: datetime, 
                          features: List[str]):
-    # BƯỚC CHUẨN BỊ: Chuyển đổi datetime của Python sang Timestamp của Pandas
-    # pd.Timestamp hoàn toàn tương thích với cột datetime64[ns]
+    # Chuyển đổi datetime của Python sang Timestamp của Pandas
     pd_start_date = pd.Timestamp(start_date)
     pd_end_date = pd.Timestamp(end_date)
     
-    # Xử lý missing data như cũ
-    # (Tùy chọn) Có thể xử lý cả cột 'collect_date' trước khi fill
+    # Xử lý missing data 
     df['collect_date'] = pd.to_datetime(df['collect_date'], utc=True)
     df[features] = df.groupby('ticker')[features].ffill().bfill()
     
-    # SỬA LẠI DÒNG NÀY:
-    # Bây giờ, phép so sánh diễn ra giữa các kiểu dữ liệu tương thích
     filtered_df = df[(df['collect_date'] >= pd_start_date) & (df['collect_date'] <= pd_end_date)]
     
     return filtered_df.copy()
@@ -76,8 +72,7 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         db_manager (PostgreDBManager): Quản lý truy cập CSDL
     """
     try:
-        print(f'Lưu cho khu vực {region}')
-        engine = db_mng.get_engine()
+        print(f'Fetch history data for region {region}.')
         last_date = db_mng.get_last_history_date(region)
         start_date = last_date + timedelta(days=1)
             
@@ -90,7 +85,7 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
 
         end_date = datetime(now_date.year, now_date.month, now_date.day, tzinfo=timezone.utc) - timedelta(days=delta_day)
         
-        print(f'Bắt đầu lấy từ {start_date} tới {end_date}')
+        print(f'Start collect from {start_date} to {end_date}')
         
         if start_date >= end_date:
             print('Invalid date')
@@ -106,7 +101,7 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         cleaned_df = _handle_missing_data(reconstructed_df, start_date, end_date, features=['open', 'high', 'low', 'close', 'volume'])
         
         if cleaned_df.empty:
-            print("Không có dữ liệu hợp lệ sau khi làm sạch.")
+            print("Empty data after cleaning phase.")
             return
 
         # 3. Load
@@ -117,13 +112,11 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
                            unique_cols=['collect_date', 'ticker'],
                            chunk_size=1000,
                            on_conflict='update')
-        print(f"Đã lưu thành công {len(cleaned_df)} dòng dữ liệu.")
-    
-        print(f"Cập nhật thành công!")
+        print(f"Successfully save {len(cleaned_df)} records.")
     except FetchException as e:
-        print(f"Một lỗi đã xảy ra trong pipeline: {e}")
+        print(f"A fetch exception occured: {e}")
     except Exception as e:
-        print(f"Một lỗi không mong muốn đã xảy ra: {e}")
+        print(f"An unknown exception occured: {e}")
     
 if __name__ == '__main__':
     if len(sys.argv) < 2:

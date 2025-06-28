@@ -1,4 +1,3 @@
-import sys
 import time
 from datetime import datetime, timezone
 from typing import Literal
@@ -28,7 +27,7 @@ def process_single_ticker(ticker_sym: str, redis_mng: RedisManager):
     
     required_keys = ['last_price', 'day_high', 'day_low', 'open', 'volume']
     if not all(info.get(k) is not None for k in required_keys):
-        print(f"  - Dữ liệu cho {ticker_sym} không đầy đủ. Bỏ qua.")
+        print(f"  - Data not enough: {ticker_sym}. Continue!")
         return
     
     provisional_candle = {
@@ -43,7 +42,7 @@ def process_single_ticker(ticker_sym: str, redis_mng: RedisManager):
     name = f'intraday:{ticker_sym}'
     redis_mng.save_candle(provisional_candle, name, 86400)
     
-    print(f"  - Cập nhật thành công cho {ticker_sym} với giá {info.last_price}")
+    print(f"  - Successfully update {ticker_sym} with last price is {info.last_price}")
     
 def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
                   redis_mng: RedisManager,
@@ -59,9 +58,9 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
             try:
                 process_single_ticker(ticker, redis_mng)
             except FetchException as e:
-                print(f'Lỗi ở ticker {ticker}: {e}')
+                print(f'Error in ticker {ticker}: {e}')
             except Exception as e:
-                print(f'Lỗi ko mong muốn ở ticker {ticker}: {e}')
+                print(f'Unknown Error in {ticker}: {e}')
             time.sleep(relax_time)
             
         print('Complete cycle')
@@ -69,15 +68,18 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         print(f"[{datetime.now(pytz.timezone(region_tz)).strftime('%Y-%m-%d %H:%M:%S')}] Market not open in {region}")
         
 def main_orchestrator():
-    print("--- REAL-TIME ORCHESTRATOR (SCHEDULE-BASED) ĐÃ KHỞI ĐỘNG ---")
+    print("--- REAL-TIME ORCHESTRATOR (SCHEDULE-BASED) HAS BEEN STARTED ---")
     
     redis_mng = RedisManager() # Tạo đối tượng manager một lần
     
     # --- Lập lịch cho các công việc ---
     for region in REGION_TIME_ZONE.keys():
-        print(f"Đang lập lịch cho khu vực {region.upper()} chạy mỗi 5 phút...")
+        print(f"Scheduling for region {region.upper()}, run each 15 minute...")
         partial_job = partial(full_pipeline, region=region, redis_mng=redis_mng, relax_time=4)
-        schedule.every(10).minutes.do(partial_job)
+        schedule.every().hour.at(":00").do(partial_job)
+        schedule.every().hour.at(":15").do(partial_job)
+        schedule.every().hour.at(":30").do(partial_job)
+        schedule.every().hour.at(":45").do(partial_job)
         
     # Vòng lặp thực thi
     while True:
