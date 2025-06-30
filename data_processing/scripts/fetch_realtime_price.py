@@ -36,7 +36,7 @@ def process_single_ticker(ticker_sym: str, redis_mng: RedisManager):
         'low': info.day_low,
         'last_price': info.last_price,
         'last_volume': info.last_volume,
-        'last_update': datetime.now(timezone.utc).isoformat()
+        'last_update_utc': datetime.now(timezone.utc).isoformat()
     }
     
     name = f'intraday:{ticker_sym}'
