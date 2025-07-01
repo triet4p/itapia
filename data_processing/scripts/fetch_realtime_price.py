@@ -25,7 +25,7 @@ def process_single_ticker(ticker_sym: str, redis_mng: RedisManager):
 
     info = yf.Ticker(ticker_sym).fast_info
     
-    required_keys = ['last_price', 'day_high', 'day_low', 'open', 'volume']
+    required_keys = ['lastPrice', 'dayHigh', 'dayLow', 'open', 'lastVolume']
     if not all(info.get(k) is not None for k in required_keys):
         print(f"  - Data not enough: {ticker_sym}. Continue!")
         return
