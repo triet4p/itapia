@@ -40,6 +40,7 @@ Additional project documentation can be found in the `doc` directory.
 
 #### Component Versions
 - **PostgreSQL**: 15 (Alpine image)
+- **Redis**: 7 (Alpine image)
 
 #### Supporting Tools
 - **DBeaver 25**: For GUI-based database operations
@@ -73,7 +74,7 @@ REDIS_PORT=6379
 
 ### 1. Build Required Images
 ```bash
-docker build -t itapia-data-processor data_processing
+docker build -t itapia-data-processor:latest data_processing
 ```
 
 ### 2. Start Database Services
@@ -116,10 +117,51 @@ docker-compose up -d realtime-data-processor
 
 ---
 
+## 🌐 API Service Setup
+
+### 1. Build API Service Image
+```bash
+docker build -t itapia-api-service:latest api_service
+```
+
+### 2. Start API Service
+Make sure the database services are running first, then start the API service:
+```bash
+docker-compose up -d api-service
+```
+
+### 3. Access API Documentation
+Once the service is running, you can access:
+- **API Documentation**: http://localhost:8000/docs (Swagger UI)
+- **Alternative Documentation**: http://localhost:8000/redoc (ReDoc)
+- **API Base URL**: http://localhost:8000/api/v1
+
+### 4. Available Endpoints
+- **GET /api/v1/prices/history/{ticker}**: Get historical price data for a stock
+- **GET /api/v1/prices/intraday/{ticker}**: Get real-time price data for a stock  
+- **GET /api/v1/news/{ticker}**: Get recent news for a stock
+
+### 5. API Service Features
+- **FastAPI Framework**: High-performance async API with automatic documentation
+- **Database Integration**: Direct connection to PostgreSQL and Redis
+- **Data Validation**: Pydantic schemas for request/response validation
+- **Error Handling**: Comprehensive error responses with appropriate HTTP status codes
+
+---
+
 ## 🔧 Project Structure
 
 ```
 itapia/
+├── api_service/             # FastAPI-based API service
+│   ├── app/                # Application modules
+│   │   ├── api/            # API endpoints and routing
+│   │   ├── core/           # Core configuration
+│   │   ├── crud/           # Database operations
+│   │   ├── db/             # Database sessions and connections
+│   │   └── schemas/        # Pydantic data models
+│   ├── Dockerfile          # API service container configuration
+│   └── requirements.txt    # Python dependencies
 ├── data_processing/          # Data processing scripts and utilities
 │   ├── scripts/             # ETL pipeline scripts
 │   └── ...
@@ -138,7 +180,8 @@ itapia/
 2. **Schema Creation**: Run database schema creation scripts
 3. **Data Collection**: Execute batch data collection for historical data
 4. **Real-time Processing**: Start real-time data collection services
-5. **Development**: Begin application development with populated data
+5. **API Service**: Start the API service for data access and business logic
+6. **Development**: Begin application development with populated data and API access
 
 ---
 
