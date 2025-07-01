@@ -2,6 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from redis.client import Redis
 
+import os
+init_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', '..'))
+print(init_dir)
+import sys
+sys.path.append(init_dir)
+
 from app import crud, schemas
 from app.db.session import get_db, get_redis
 
@@ -12,7 +18,7 @@ def read_history_prices(ticker: str, skip: int = 0, limit: int = 500, db: Sessio
     prices = crud.get_history_prices(db, ticker.upper(), skip, limit)
     return prices
 
-@router.get("/prices/intraday/{ticker}", response_model=list[schemas.IntradayPrice])
+@router.get("/prices/intraday/{ticker}", response_model=schemas.IntradayPrice | None)
 def read_intraday_prices(ticker: str, conn: Redis = Depends(get_redis)):
     price = crud.get_intraday_prices(conn, ticker=ticker.upper())
     if not price:

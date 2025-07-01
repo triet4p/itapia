@@ -3,7 +3,7 @@ from sqlalchemy import text
 
 def get_news(db: Session, ticker: str, skip: int = 0, limit: int = 10):
     query = text("""
-        SELECT news_uuid, ticker, title, summary, publisher, link, publish_time, collect_time
+        SELECT news_uuid, ticker, title, summary, provider, link, publish_time, collect_time
         FROM relevant_news 
         WHERE ticker = :ticker 
         ORDER BY publish_time, collect_time DESC 

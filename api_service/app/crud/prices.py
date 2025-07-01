@@ -5,7 +5,7 @@ from datetime import datetime
 
 def get_history_prices(db: Session, ticker: str, skip: int = 0, limit: int = 500):
     query = text("""
-        SELECT * FROM daily_prices 
+        SELECT * FROM history_prices 
         WHERE ticker = :ticker 
         ORDER BY collect_date DESC 
         OFFSET :skip LIMIT :limit
