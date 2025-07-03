@@ -55,7 +55,7 @@ class TrendAnalyzer:
     def _get_long_term_view(self) -> Dict[str, str]:
         """Phân tích xu hướng dài hạn (vài tháng đến một năm)."""
         # Cặp MA kinh điển 50/200
-        trend_direction = self._analyze_ma_trend(short_ma='SMA_50', long_ma='SMA_200')
+        trend_direction = self._analyze_ma_trend(short_ma_col='SMA_50', long_ma_col='SMA_200')
         
         # Kiểm tra vị trí giá so với MA dài hạn
         status = "Undefined"
