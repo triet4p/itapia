@@ -1,7 +1,8 @@
+import inspect
 import pandas as pd
 import pandas_ta as ta
 import numpy as np
-from typing import Optional, List, Dict
+from typing import Any, Optional, List, Dict
 
 class FeatureEngine:
     DEFAULT_CONFIG: Dict[str, List[Dict[str, any]]] = {
@@ -49,10 +50,11 @@ class FeatureEngine:
             
         return df
     
-    # --- CORE HELPER FUNCTION ---
-    def _add_generic_indicator(self, indicator_name: str, configs: Optional[List[Dict[str, any]]] = None):
+    # --- CORE HELPER FUNCTION (PHIÊN BẢN NÂNG CẤP CUỐI CÙNG) ---
+    def _add_generic_indicator(self, indicator_name: str, configs: Optional[List[Dict[str, Any]]] = None):
         """
-        Hàm chung để thêm bất kỳ chỉ báo nào từ pandas-ta với khả năng xử lý lỗi.
+        Hàm chung để thêm bất kỳ chỉ báo nào từ pandas-ta.
+        Chủ động kiểm tra tham số hợp lệ bằng inspect.signature.
         """
         if configs is None:
             configs = self.DEFAULT_CONFIG.get(indicator_name)
@@ -65,13 +67,24 @@ class FeatureEngine:
             print(f"Warning: Indicator '{indicator_name}' not found in pandas-ta. Skipping.")
             return self
 
+        # Lấy danh sách các tên tham số hợp lệ từ chữ ký của hàm
+        valid_params = list(inspect.signature(indicator_function).parameters.keys())
+        # Thêm các tham số chung mà pandas-ta sử dụng
+        valid_params.extend(['append', 'col_names'])
+
         for config in configs:
-            try:
-                indicator_function(**config, append=True)
-            except TypeError as e:
-                print(f"Warning: Invalid parameter for '{indicator_name}' with config {config}. "
-                      f"Error: {e}. Skipping this specific config.")
+            # Tìm các key không hợp lệ trong config
+            invalid_keys = [key for key in config.keys() if key not in valid_params]
+            
+            if invalid_keys:
+                # Nếu có, in cảnh báo và bỏ qua config này
+                print(f"Warning: Invalid parameter(s) {invalid_keys} for '{indicator_name}' with config {config}. "
+                      f"Skipping this specific config.")
                 continue
+            
+            # Nếu không có key không hợp lệ, gọi hàm một cách an toàn
+            indicator_function(**config, append=True)
+
         return self
 
     # --- INDICATOR WRAPPER METHODS ---
