@@ -81,7 +81,10 @@ def test_error_handling_for_invalid_param(sample_ohlcv_data, capsys):
     
     captured = capsys.readouterr()
     # Kiểm tra xem có in ra cảnh báo lỗi không
-    assert "Warning: Invalid parameter for 'sma'" in captured.out
+    # Kiểm tra những phần cốt lõi của thông báo
+    assert "Warning: Invalid parameter" in captured.out
+    assert "'sma'" in captured.out
+    assert "'lengt'" in captured.out
     
     df = engine.get_features()
     # Đảm bảo không có cột nào được tạo ra từ config lỗi
