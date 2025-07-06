@@ -90,10 +90,12 @@ class PatternRecognizer:
 
     @register_pattern("Double Bottom")
     def _is_double_bottom(self, tolerance: float = 0.015) -> bool:
-        if len(self.troughs) < 2 or len(self.peaks) < 1: return False
+        if len(self.troughs) < 2 or len(self.peaks) < 1: 
+            return False
         t2, t1 = self.troughs.iloc[-1], self.troughs.iloc[-2]
         peaks_between = self.peaks[(self.peaks['index_in_df'] > t1.index_in_df) & (self.peaks['index_in_df'] < t2.index_in_df)]
-        if peaks_between.empty: return False
+        if peaks_between.empty: 
+            return False
         neckline = peaks_between.iloc[-1]
         depth_similarity = abs(t1.price - t2.price) / ((t1.price + t2.price) / 2) < tolerance
         is_confirmed = self.latest_row['close'] > neckline.price
@@ -101,13 +103,16 @@ class PatternRecognizer:
 
     @register_pattern("Head and Shoulders")
     def _is_head_and_shoulders(self, tolerance: float = 0.015) -> bool:
-        if len(self.peaks) < 3 or len(self.troughs) < 2: return False
+        if len(self.peaks) < 3 or len(self.troughs) < 2: 
+            return False
         p3, p2, p1 = self.peaks.iloc[-1], self.peaks.iloc[-2], self.peaks.iloc[-3]
         troughs_after_p1 = self.troughs[self.troughs['index_in_df'] > p1.index_in_df]
-        if len(troughs_after_p1) < 2: return False
+        if len(troughs_after_p1) < 2: 
+            return False
         t1, t2 = troughs_after_p1.iloc[0], troughs_after_p1.iloc[1]
         is_structured = (p1.index_in_df < t1.index_in_df < p2.index_in_df < t2.index_in_df < p3.index_in_df)
-        if not is_structured: return False
+        if not is_structured: 
+            return False
         head_is_highest = p2.price > p1.price and p2.price > p3.price
         shoulders_are_similar = abs(p1.price - p3.price) / ((p1.price + p3.price) / 2) < tolerance
         neckline_level = min(t1.price, t2.price)

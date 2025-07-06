@@ -11,10 +11,10 @@ class FeatureEngine:
         'ema': [{'length': 20}, {'length': 50}, {'length': 200}],
         'macd': [{'fast': 12, 'slow': 26, 'signal': 9}],
         'adx': [{'length': 14}],
-        'psar': [{'initial': 0.02, 'acceleration': 0.02, 'maximum': 0.2}],
+        'psar': [{}],
         # Momentum indicators
         'rsi': [{'length': 14}],
-        'stoch': [{'k': 14, 'd': 3, 'smooth_k': 3}],
+        'stoch': [{}],
         'cci': [{'length': 14}],
         'willr': [{'length': 14}],
         # Volatility indicators
@@ -39,15 +39,54 @@ class FeatureEngine:
         if 'ta' in self.df.columns:
             self.df.drop(columns=['ta'], inplace=True)
         
-    def get_features(self, copy: bool = True, dropna: bool = True, reset_index: bool = True) -> pd.DataFrame:
+    def get_features(self, copy: bool = True, handle_na_method: Optional[str] = 'forward_fill', reset_index: bool = True) -> pd.DataFrame:
+        """
+        Trả về DataFrame cuối cùng, với tùy chọn xử lý NaN thông minh.
+
+        Args:
+            copy (bool): Tạo bản sao trước khi xử lý hay không.
+            handle_na_method (Optional[str]): Phương pháp xử lý NaN. 
+                Nếu là None, sẽ không xử lý NaN.
+            reset_index (bool): Reset index sau khi xử lý hay không.
+        """
         df = self.df.copy() if copy else self.df
         
-        if dropna:
-            df = df.dropna()
+        if handle_na_method:
+            df = self._handle_nans(df, method=handle_na_method)
         
         if reset_index:
             df = df.reset_index(drop=True)
             
+        return df
+    
+    def _handle_nans(self, df: pd.DataFrame, method: str = 'forward_fill') -> pd.DataFrame:
+        """
+        Xử lý các giá trị NaN trong DataFrame sau khi tính toán các chỉ báo.
+
+        Args:
+            df (pd.DataFrame): DataFrame cần xử lý.
+            method (str, optional): Phương pháp xử lý.
+                'forward_fill': Điền giá trị NaN bằng giá trị hợp lệ gần nhất phía trước.
+                'drop_initial': Chỉ xóa các hàng NaN ở đầu DataFrame.
+                'mean': Điền bằng giá trị trung bình của cột (ít được khuyến nghị cho chuỗi thời gian).
+
+        Returns:
+            pd.DataFrame: DataFrame đã được xử lý NaN.
+        """
+        print(f"Handling NaNs using '{method}' method...")
+        
+        if method == 'forward_fill':
+            # ffill() sẽ điền các giá trị NaN bằng giá trị hợp lệ cuối cùng.
+            # Rất hiệu quả cho các chỉ báo như PSAR khi nó bị "kẹt".
+            df.ffill(inplace=True)
+        elif method == 'mean':
+            df.fillna(df.mean(), inplace=True)
+
+        # Sau khi điền, vẫn có thể còn NaN ở những hàng đầu tiên
+        # nếu không có giá trị nào phía trước để điền.
+        # Vì vậy, chúng ta vẫn cần drop các hàng NaN còn sót lại này.
+        df.dropna(inplace=True)
+        
         return df
     
     # --- CORE HELPER FUNCTION (PHIÊN BẢN NÂNG CẤP CUỐI CÙNG) ---
@@ -157,17 +196,24 @@ class FeatureEngine:
     def add_diff_from_sma(self, configs: Optional[List[Dict[str, int]]] = None):
         print("--- Adding Custom: Difference from SMA ---")
         if configs is None: configs = [{'sma_length': 50}, {'sma_length': 200}]
+        
         for config in configs:
             sma_length = config.get('sma_length')
             if sma_length:
                 sma_col_name = f'SMA_{sma_length}'
-                if sma_col_name not in self.df.columns:
-                    print(f"Info: '{sma_col_name}' not found. Calculating it for diff calculation.")
-                    self.add_sma(configs=[{'length': sma_length}])
                 
+                # --- LOGIC PHÒNG THỦ Ở ĐÂY ---
+                # 1. Kiểm tra xem cột SMA có tồn tại không.
+                if sma_col_name not in self.df.columns:
+                    print(f"Warning: Column '{sma_col_name}' not found. "
+                        f"Possibly not enough data to calculate. Skipping diff calculation for it.")
+                    continue # Bỏ qua config này và chuyển sang config tiếp theo
+
+                # 2. Nếu cột tồn tại, tiếp tục tính toán như bình thường.
                 new_col_name = f'diff_from_sma_{sma_length}'
                 # Thêm 1e-9 để tránh lỗi chia cho 0 nếu SMA bằng 0
                 self.df[new_col_name] = (self.df['close'] - self.df[sma_col_name]) / (self.df[sma_col_name] + 1e-9) * 100
+                
         return self
 
     def add_return_d(self, configs: Optional[List[Dict[str, int]]] = None):
@@ -194,11 +240,3 @@ class FeatureEngine:
              .add_return_d(all_configs.get('return_d') if all_configs else None)
              .add_all_candlestick_patterns())
         return self
-
-    def get_features(self, copy: bool = True, dropna: bool = True, reset_index: bool = True) -> pd.DataFrame:
-        df = self.df.copy() if copy else self.df
-        if dropna:
-            df = df.dropna()
-        if reset_index:
-            df = df.reset_index(drop=True)
-        return df
