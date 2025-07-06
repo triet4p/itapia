@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 
 # Import lớp cần test
-from app.technical.analysis_engine import SupportResistanceIdentifier
+from app.technical.analysis_engine.sr_identifier import SupportResistanceIdentifier
 
 # --- Dữ liệu giả lập (Fixture) ---
 @pytest.fixture(scope="module")
