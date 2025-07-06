@@ -3,7 +3,7 @@ import numpy as np
 from typing import List, Dict
 
 # Import lớp cần test
-from app.technical.analysis_engine.pattern_recoginzer import PatternRecognizer
+from app.technical.analysis_engine.pattern_recognizer import PatternRecognizer
 
 # --- Hàm Helper để tạo dữ liệu có mẫu hình ---
 def create_pattern_df(price_sequence: List[int], cdl_data: Dict[str, int] = None) -> pd.DataFrame:
