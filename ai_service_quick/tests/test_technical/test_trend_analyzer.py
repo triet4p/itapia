@@ -45,15 +45,15 @@ def test_adx_strength_analysis():
     
     # Test Strong
     analyzer.latest_row = pd.Series({'ADX_14': 30})
-    assert analyzer._get_adx_strength('ADX_14') == "Strong"
+    assert analyzer._get_adx_strength('ADX_14').get('strength') == "Strong"
     
     # Test Moderate
     analyzer.latest_row = pd.Series({'ADX_14': 22})
-    assert analyzer._get_adx_strength('ADX_14') == "Moderate"
+    assert analyzer._get_adx_strength('ADX_14').get('strength') == "Moderate"
     
     # Test Weak
     analyzer.latest_row = pd.Series({'ADX_14': 15})
-    assert analyzer._get_adx_strength('ADX_14') == "Weak"
+    assert analyzer._get_adx_strength('ADX_14').get('strength') == "Weak"
 
 def test_full_analysis_report_structure():
     """Kiểm tra cấu trúc của báo cáo tổng hợp cuối cùng."""
@@ -83,7 +83,7 @@ def test_full_analysis_report_structure():
     # Kiểm tra giá trị
     assert report['long_term']['direction'] == "Uptrend"
     assert report['medium_term']['direction'] == "Uptrend"
-    assert report['overall_strength'] == "Strong"
+    assert report['overall_strength']['strength'] == "Strong"
 
 def test_handling_missing_columns():
     """Kiểm tra xem analyzer có xử lý được khi thiếu cột dữ liệu không."""

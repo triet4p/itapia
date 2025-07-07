@@ -56,8 +56,9 @@ def test_analysis_engine_integration():
     assert isinstance(report["support_resistance"]["resistance"], list)
     
     # 4. Kiểm tra kết quả từ PatternRecognizer
-    assert "Double Bottom" in report["patterns"]
-    assert "Bullish Hammer" in report["patterns"]
+    pattern_names = [p['sentiment'] + ' ' + p['pattern_name'] for p in report["patterns"]]
+    assert "Bullish Double Bottom" in pattern_names
+    assert "Bullish Hammer" in pattern_names
     
     # 5. Kiểm tra kết quả từ _extract_key_indicators
     assert report["indicators"]["SMA_50"] == 92.0

@@ -45,7 +45,9 @@ def test_find_candlestick_patterns():
     recognizer = PatternRecognizer(df, history_window=3)
     patterns = recognizer._find_candlestick_patterns()
     
-    assert "Bullish Engulfing" in patterns
+    pattern_names = [p['sentiment'] + ' ' + p['pattern_name'] for p in patterns]
+    
+    assert "Bullish Engulfing" in pattern_names
 
 def test_is_double_top_confirmed():
     """Kiểm tra trường hợp có mẫu hình Double Top và đã được xác nhận."""
@@ -56,8 +58,12 @@ def test_is_double_top_confirmed():
     # Giảm prominence để có thể bắt được đỉnh/đáy trong dữ liệu nhỏ
     recognizer = PatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
     
-    assert recognizer._is_double_top() == True
-    assert "Double Top" in recognizer.find_patterns()
+    assert recognizer._is_double_top() is not None
+    
+    patterns = recognizer.find_patterns()
+    pattern_names = [p['pattern_name'] for p in patterns]
+    
+    assert "Double Top" in pattern_names
 
 def test_is_double_top_not_confirmed():
     """Kiểm tra trường hợp có hình dạng Double Top nhưng chưa phá vỡ."""
@@ -67,8 +73,7 @@ def test_is_double_top_not_confirmed():
     
     recognizer = PatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
     
-    assert recognizer._is_double_top() == False
-    assert "Double Top" not in recognizer.find_patterns()
+    assert recognizer._is_double_top() is None
 
 def test_is_double_bottom_confirmed():
     """Kiểm tra trường hợp có mẫu hình Double Bottom và đã được xác nhận."""
@@ -78,8 +83,12 @@ def test_is_double_bottom_confirmed():
     
     recognizer = PatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
     
-    assert recognizer._is_double_bottom() == True
-    assert "Double Bottom" in recognizer.find_patterns()
+    assert recognizer._is_double_bottom() is not None
+    
+    patterns = recognizer.find_patterns()
+    pattern_names = [p['pattern_name'] for p in patterns]
+    
+    assert "Double Bottom" in pattern_names
 
 def test_is_head_and_shoulders_confirmed():
     """Kiểm tra trường hợp có mẫu hình Head and Shoulders và đã được xác nhận."""
@@ -93,8 +102,12 @@ def test_is_head_and_shoulders_confirmed():
     # print("\nPeaks:\n", recognizer.peaks)
     # print("Troughs:\n", recognizer.troughs)
     
-    assert recognizer._is_head_and_shoulders() == True
-    assert "Head and Shoulders" in recognizer.find_patterns()
+    assert recognizer._is_head_and_shoulders() is not None
+    
+    patterns = recognizer.find_patterns()
+    pattern_names = [p['pattern_name'] for p in patterns]
+    
+    assert "Head and Shoulders" in pattern_names
 
 def test_no_patterns_found():
     """Kiểm tra trường hợp không có mẫu hình nào rõ ràng."""

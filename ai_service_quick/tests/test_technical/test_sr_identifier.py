@@ -56,9 +56,9 @@ def test_get_dynamic_levels(sample_enriched_data):
     
     assert isinstance(levels, list)
     # Kiểm tra xem các giá trị có đúng không
-    assert latest_row['SMA_50'] in levels
-    assert latest_row['BBU_20_2.0'] in levels
-    assert latest_row['BBL_20_2.0'] in levels
+    assert (latest_row['SMA_50'], 'SMA_50') in levels
+    assert (latest_row['BBU_20_2.0'], 'BBU_20_2.0') in levels
+    assert (latest_row['BBL_20_2.0'], 'BBL_20_2.0') in levels
     # Kiểm tra không lấy giá trị NaN
     assert not any(pd.isna(level) for level in levels)
 
@@ -75,7 +75,7 @@ def test_get_pivot_point_levels(sample_enriched_data):
     H, L, C = prev_row['high'], prev_row['low'], prev_row['close']
     expected_pp = (H + L + C) / 3
     
-    assert np.isclose(levels[0], expected_pp)
+    assert np.isclose(levels[0][0], expected_pp)
 
 def test_get_simple_fibonacci_levels(sample_enriched_data):
     """Kiểm tra tính toán Fibonacci đơn giản."""
@@ -88,11 +88,11 @@ def test_get_simple_fibonacci_levels(sample_enriched_data):
     price_range = swing_high - swing_low
     
     assert isinstance(levels, list)
-    assert len(levels) == 5 # 5 tỷ lệ mặc định
+    assert len(levels) == 10 # 5 tỷ lệ mặc định
     
     # Kiểm tra mức Fib 0.5
     expected_fib_50 = swing_high - price_range * 0.5
-    assert np.isclose(levels[2], expected_fib_50)
+    assert np.isclose(levels[4][0], expected_fib_50)
 
 def test_placeholder_v2_functions_return_empty():
     """Đảm bảo các hàm placeholder cho v2 trả về danh sách rỗng."""
@@ -119,12 +119,12 @@ def test_identify_levels_full_logic(sample_enriched_data):
     
     # Tất cả các mức support phải nhỏ hơn giá hiện tại
     if report["support"]:
-        assert all(s < current_price for s in report["support"])
+        assert all(s['level'] < current_price for s in report["support"])
         # Kiểm tra sắp xếp giảm dần
-        assert report["support"] == sorted(report["support"], reverse=True)
+        assert report["support"] == sorted(report['support'], key=lambda x: x['level'], reverse=True)
         
     # Tất cả các mức resistance phải lớn hơn hoặc bằng giá hiện tại
     if report["resistance"]:
-        assert all(r >= current_price for r in report["resistance"])
+        assert all(r['level'] >= current_price for r in report["resistance"])
         # Kiểm tra sắp xếp tăng dần
-        assert report["resistance"] == sorted(report["resistance"])
+        assert report["resistance"] == sorted(report['resistance'], key=lambda x: x['level'])

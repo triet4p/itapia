@@ -40,7 +40,7 @@ def test_add_sma(sample_ohlcv_data):
     engine = FeatureEngine(sample_ohlcv_data)
     engine.add_sma(configs=[{'length': 20}, {'length': 50}])
     
-    df = engine.get_features(copy=False, dropna=False) # Lấy df nội bộ
+    df = engine.get_features(copy=False, handle_na_method=None) # Lấy df nội bộ
     assert 'SMA_20' in df.columns
     assert 'SMA_50' in df.columns
     # Kiểm tra giá trị đầu tiên của SMA_20 phải là NaN (vì không đủ dữ liệu)
@@ -53,7 +53,7 @@ def test_add_adx_and_dmp_dmn(sample_ohlcv_data):
     engine = FeatureEngine(sample_ohlcv_data)
     engine.add_adx(configs=[{'length': 14}])
 
-    df = engine.get_features(copy=False, dropna=False)
+    df = engine.get_features(copy=False, handle_na_method=None)
     assert 'ADX_14' in df.columns
     assert 'DMP_14' in df.columns
     assert 'DMN_14' in df.columns
@@ -63,7 +63,7 @@ def test_add_trend_indicators_group(sample_ohlcv_data):
     engine = FeatureEngine(sample_ohlcv_data)
     engine.add_trend_indicators() # Sử dụng config mặc định
     
-    df = engine.get_features(copy=False, dropna=False)
+    df = engine.get_features(copy=False, handle_na_method=None)
     # Chỉ kiểm tra một vài cột đại diện
     assert 'SMA_20' in df.columns
     assert 'EMA_50' in df.columns
@@ -96,10 +96,10 @@ def test_get_features_dropna_and_reset_index(sample_ohlcv_data):
     engine.add_sma(configs=[{'length': 50}]) # Sẽ tạo nhiều NaN ở đầu
     
     # Test dropna=True (mặc định)
-    df_dropped = engine.get_features()
+    df_dropped = engine.get_features(handle_na_method='forward_fill')
     assert df_dropped.isna().sum().sum() == 0
     assert df_dropped.index.is_monotonic_increasing
     
     # Test dropna=False
-    df_not_dropped = engine.get_features(dropna=False)
+    df_not_dropped = engine.get_features(handle_na_method=None)
     assert df_not_dropped.isna().sum().sum() > 0
