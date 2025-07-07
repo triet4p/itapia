@@ -18,26 +18,35 @@ class TrendAnalyzer:
         else:
             return "Downtrend"
         
-    def _get_adx_strength(self, adx_col: str) -> str:
+    def _get_adx_strength(self, adx_col: str) -> Dict:
         if adx_col not in self.latest_row:
-            return "Undefined"
+            return {"strength": "Undefined"}
         
         adx_val = self.latest_row[adx_col]
         if adx_val > 25:
-            return "Strong"
+            return {"strength": "Strong", "value": adx_val}
         elif adx_val >= 20:
-            return "Moderate"
+            return {"strength": "Moderate", "value": adx_val}
         else:
-            return "Weak"
+            return {"strength": "Weak", "value": adx_val}
         
     def _get_adx_direction(self, dmp_col: str, dmn_col: str) -> str:
         if dmp_col not in self.latest_row or dmn_col not in self.latest_row: 
             return "Undefined"
         return "Up" if self.latest_row[dmp_col] > self.latest_row[dmn_col] else "Down"
     
-    def _get_medium_term_view(self) -> Dict[str, str]:
+    def _get_medium_term_view(self) -> Dict[str, any]:
         # Cặp MA phù hợp cho trung hạn 20/50
-        trend_direction = self._analyze_ma_trend('SMA_20', 'SMA_50')
+        short_ma = 'SMA_20'
+        long_ma = 'SMA_50'
+        trend_direction = self._analyze_ma_trend(short_ma, long_ma)
+        
+        evidence = {
+            "short_ma_name": short_ma,
+            "short_ma_value": round(self.latest_row.get(short_ma, 0), 2),
+            "long_ma_name": long_ma,
+            "long_ma_value": round(self.latest_row.get(long_ma, 0), 2)
+        }
         
         # Kiểm tra vị trí giá so với MA trung hạn
         status = "Undefined"
@@ -50,12 +59,22 @@ class TrendAnalyzer:
         # Phân tích ADX để xem hướng đi hiện tại
         adx_direction = self._get_adx_direction('DMP_14', 'DMN_14')
 
-        return {"direction": trend_direction, "status": status, "adx_direction": adx_direction}
+        return {"direction": trend_direction, "status": status, 
+                "adx_direction": adx_direction, 'evidence': evidence}
     
-    def _get_long_term_view(self) -> Dict[str, str]:
+    def _get_long_term_view(self) -> Dict[str, any]:
         """Phân tích xu hướng dài hạn (vài tháng đến một năm)."""
         # Cặp MA kinh điển 50/200
-        trend_direction = self._analyze_ma_trend(short_ma_col='SMA_50', long_ma_col='SMA_200')
+        short_ma = 'SMA_50'
+        long_ma = 'SMA_200'
+        trend_direction = self._analyze_ma_trend(short_ma, long_ma)
+        
+        evidence = {
+            "short_ma_name": short_ma,
+            "short_ma_value": round(self.latest_row.get(short_ma, 0), 2),
+            "long_ma_name": long_ma,
+            "long_ma_value": round(self.latest_row.get(long_ma, 0), 2)
+        }
         
         # Kiểm tra vị trí giá so với MA dài hạn
         status = "Undefined"
@@ -65,7 +84,7 @@ class TrendAnalyzer:
             else:
                 status = "Below key moving average"
 
-        return {"direction": trend_direction, "status": status}
+        return {"direction": trend_direction, "status": status, 'evidence': evidence}
     
     def analyze_trend(self):
         """

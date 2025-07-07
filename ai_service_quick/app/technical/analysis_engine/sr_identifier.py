@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 import numpy as np
 
 class SupportResistanceIdentifier:
@@ -23,39 +23,35 @@ class SupportResistanceIdentifier:
         self.analysis_df = self.df.tail(history_window).copy()
         self.latest_row = self.analysis_df.iloc[-1]
         self.current_price = self.latest_row['close']
-
-    def identify_levels(self) -> Dict[str, List[float]]:
+        
+    def identify_levels(self) -> Dict[str, List[Dict]]:
         """
         Hàm chính, tổng hợp các mức S/R từ nhiều phương pháp.
         """
-        print("--- SupportResistanceIdentifier: Identifying S/R Levels (v1) ---")
         
-        # Tạo một tập hợp để chứa tất cả các mức và tự động loại bỏ trùng lặp
-        all_levels = set()
-
-        # --- Các phương pháp của phiên bản 1 ---
-        all_levels.update(self._get_dynamic_levels_from_ma_bb())
-        all_levels.update(self._get_pivot_point_levels())
-        all_levels.update(self._get_simple_fibonacci_levels())
+        all_levels_with_source = []
+        all_levels_with_source.extend(self._get_dynamic_levels_from_ma_bb())
+        all_levels_with_source.extend(self._get_pivot_point_levels())
+        all_levels_with_source.extend(self._get_simple_fibonacci_levels())
         
-        # --- Các phương pháp sẽ có trong phiên bản 2 ---
-        # Hàm này sẽ được nâng cấp khi có PatternRecognizer
-        all_levels.update(self._get_levels_from_extrema_v2()) 
+        support_objects = []
+        resistance_objects = []
         
-        # --- Phân loại và làm sạch kết quả ---
-        support_levels = [level for level in all_levels if level < self.current_price]
-        resistance_levels = [level for level in all_levels if level >= self.current_price]
-
-        # Sắp xếp và làm tròn để kết quả đẹp hơn
-        # Sắp xếp hỗ trợ từ cao đến thấp, kháng cự từ thấp đến cao
+        for level, source in all_levels_with_source:
+            level_obj = {"level": round(level, 2), "source": source}
+            if level < self.current_price:
+                support_objects.append(level_obj)
+            else:
+                resistance_objects.append(level_obj)
+                
         return {
-            "support": sorted(list(set(np.round(support_levels, 2))), reverse=True),
-            "resistance": sorted(list(set(np.round(resistance_levels, 2))))
+            "support": sorted(support_objects, key=lambda x: x['level'], reverse=True),
+            "resistance": sorted(resistance_objects, key=lambda x: x['level'])
         }
 
     # --- CÁC HÀM CỦA PHIÊN BẢN 1 ---
     
-    def _get_dynamic_levels_from_ma_bb(self) -> List[float]:
+    def _get_dynamic_levels_from_ma_bb(self) -> List[Tuple[float, str]]:
         """
         Lấy các mức S/R động từ các đường MA và Bollinger Bands.
         Đây là các mức thay đổi mỗi ngày.
@@ -69,11 +65,11 @@ class SupportResistanceIdentifier:
         
         for col in dynamic_level_cols:
             if col in self.latest_row and pd.notna(self.latest_row[col]):
-                levels.append(self.latest_row[col])
+                levels.append((self.latest_row[col], col))
         
         return levels
 
-    def _get_pivot_point_levels(self) -> List[float]:
+    def _get_pivot_point_levels(self) -> List[Tuple[float, str]]:
         """
         Tính toán các mức Pivot Points cổ điển dựa trên dữ liệu của ngày hôm trước.
         """
@@ -91,9 +87,16 @@ class SupportResistanceIdentifier:
         R3 = H + 2 * (PP - L)
         S3 = L - 2 * (H - PP)
         
-        return [PP, R1, S1, R2, S2, R3, S3]
+        names = [f'Pivot point {x}' for x in ['PP', 'R1', 'S1', 'R2', 'S2', 'R3', 'S3']]
+        vals = [PP, R1, S1, R2, S2, R3, S3]
+        
+        levels = []
+        for i in range(len(vals)):
+            levels.append((vals[i], names[i]))
+            
+        return levels
 
-    def _get_simple_fibonacci_levels(self) -> List[float]:
+    def _get_simple_fibonacci_levels(self) -> List[Tuple[float, float]]:
         """
         Phiên bản 1: Tính các mức Fibonacci Retracement dựa trên
         điểm cao nhất và thấp nhất trong cửa sổ phân tích.
@@ -112,10 +115,10 @@ class SupportResistanceIdentifier:
         levels = []
         # Giả định một xu hướng tăng (tính các mức hỗ trợ)
         for ratio in fib_ratios:
-            levels.append(swing_high - price_range * ratio)
+            levels.append((swing_high - price_range * ratio, f'Fibonacci Ratio {ratio:.4f}'))
             
-        # Thêm cả các mức mở rộng (có thể là kháng cự)
-        # levels.append(swing_high + price_range * 0.236)
+            # Thêm cả các mức mở rộng (có thể là kháng cự)
+            levels.append((swing_high + price_range * ratio, f'Fibonacci Ratio {-ratio:.4f}'))
         
         return levels
     
