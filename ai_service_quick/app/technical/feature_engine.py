@@ -4,33 +4,11 @@ import pandas_ta as ta
 import numpy as np
 from typing import Any, Optional, List, Dict
 
-class FeatureEngine:
-    DEFAULT_CONFIG: Dict[str, List[Dict[str, any]]] = {
-        # Trend indicators
-        'sma': [{'length': 20}, {'length': 50}, {'length': 200}],
-        'ema': [{'length': 20}, {'length': 50}, {'length': 200}],
-        'macd': [{'fast': 12, 'slow': 26, 'signal': 9}],
-        'adx': [{'length': 14}],
-        'psar': [{}],
-        # Momentum indicators
-        'rsi': [{'length': 14}],
-        'stoch': [{}],
-        'cci': [{'length': 14}],
-        'willr': [{'length': 14}],
-        # Volatility indicators
-        'bbands': [{'length': 20, 'std': 2.0}],
-        'atr': [{'length': 14}],
-        'donchian': [{'lower_length': 20, 'upper_length': 20}],
-        # Volume indicators
-        'mfi': [{'length': 14}],
-        'obv': [{}],
-        'vwap': [{}],
-        # Custom
-        'diff_from_sma': [{'sma_length': 50}, {'sma_length': 200}],
-        'return_d': [{'d': 5}, {'d': 20}] 
-    }
-    
+class _FeatureEngine:
     def __init__(self, ohlcv_df: pd.DataFrame):
+        if not isinstance(ohlcv_df.index, pd.DatetimeIndex):
+            raise TypeError("DataFrame index must be a DatetimeIndex for intraday analysis.")
+        
         required_cols = ['open', 'high', 'low', 'close', 'volume']
         self.df = ohlcv_df.copy()
         self.df.columns = [col.lower() for col in self.df.columns]
@@ -38,8 +16,8 @@ class FeatureEngine:
             raise ValueError(f"DataFrame must have cols: {required_cols}")
         if 'ta' in self.df.columns:
             self.df.drop(columns=['ta'], inplace=True)
-        
-    def get_features(self, copy: bool = True, handle_na_method: Optional[str] = 'forward_fill', reset_index: bool = True) -> pd.DataFrame:
+            
+    def get_features(self, copy: bool = True, handle_na_method: Optional[str] = 'forward_fill', reset_index: bool = False) -> pd.DataFrame:
         """
         Trả về DataFrame cuối cùng, với tùy chọn xử lý NaN thông minh.
 
@@ -125,6 +103,35 @@ class FeatureEngine:
             indicator_function(**config, append=True)
 
         return self
+
+class DailyFeatureEngine(_FeatureEngine):
+    DEFAULT_CONFIG: Dict[str, List[Dict[str, any]]] = {
+        # Trend indicators
+        'sma': [{'length': 20}, {'length': 50}, {'length': 200}],
+        'ema': [{'length': 20}, {'length': 50}, {'length': 200}],
+        'macd': [{'fast': 12, 'slow': 26, 'signal': 9}],
+        'adx': [{'length': 14}],
+        'psar': [{}],
+        # Momentum indicators
+        'rsi': [{'length': 14}],
+        'stoch': [{}],
+        'cci': [{'length': 14}],
+        'willr': [{'length': 14}],
+        # Volatility indicators
+        'bbands': [{'length': 20, 'std': 2.0}],
+        'atr': [{'length': 14}],
+        'donchian': [{'lower_length': 20, 'upper_length': 20}],
+        # Volume indicators
+        'mfi': [{'length': 14}],
+        'obv': [{}],
+        'vwap': [{}],
+        # Custom
+        'diff_from_sma': [{'sma_length': 50}, {'sma_length': 200}],
+        'return_d': [{'d': 5}, {'d': 20}] 
+    }
+    
+    def __init__(self, ohlcv_df: pd.DataFrame):
+        super().__init__(ohlcv_df)
 
     # --- INDICATOR WRAPPER METHODS ---
     def add_sma(self, configs: Optional[List[Dict[str, any]]] = None):
@@ -239,4 +246,86 @@ class FeatureEngine:
              .add_diff_from_sma(all_configs.get('diff_from_sma') if all_configs else None)
              .add_return_d(all_configs.get('return_d') if all_configs else None)
              .add_all_candlestick_patterns())
+        return self
+    
+class IntradayFeatureEngine(_FeatureEngine):
+    DEFAULT_CONFIG: Dict[str, List[Dict[str, Any]]] = {
+        # Sử dụng EMA làm MA chính
+        'ema': [{'length': 9}, {'length': 12}, {'length': 26}],
+        # MACD tiêu chuẩn hoạt động rất tốt
+        'macd': [{'fast': 12, 'slow': 26, 'signal': 9}],
+        # RSI tiêu chuẩn
+        'rsi': [{'length': 14}],
+        # Bollinger Bands với chu kỳ 26 (tương đương 1 ngày)
+        'bbands': [{'length': 26, 'std': 2.0}],
+        # ATR để đo biến động của mỗi cây nến 15 phút
+        'atr': [{'length': 14}],
+        # VWAP không cần tham số, nó sẽ tự reset mỗi ngày
+        'vwap': [{}],
+    }
+    
+    def __init__(self, ohlcv_df: pd.DataFrame):
+        super().__init__(ohlcv_df)
+        
+    def add_intraday_ma(self, configs: Optional[List[Dict[str, int]]] = None):
+        """Thêm các đường EMA phù hợp cho intraday."""
+        return self._add_generic_indicator('ema', configs)
+
+    def add_intraday_momentum(self, rsi_configs: Optional[List[Dict]] = None, macd_configs: Optional[List[Dict]] = None):
+        """Thêm các chỉ báo động lượng như RSI và MACD."""
+        self._add_generic_indicator('rsi', rsi_configs)
+        self._add_generic_indicator('macd', macd_configs)
+        return self
+
+    def add_intraday_volatility(self, bbands_configs: Optional[List[Dict]] = None, atr_configs: Optional[List[Dict]] = None):
+        """Thêm Bollinger Bands và ATR."""
+        self._add_generic_indicator('bbands', bbands_configs)
+        self._add_generic_indicator('atr', atr_configs)
+        return self
+        
+    def add_intraday_volume(self, vwap_configs: Optional[List[Dict]] = None):
+        """
+        Thêm các chỉ báo khối lượng, đặc biệt là VWAP.
+        Lưu ý: pandas-ta sẽ tự động xử lý việc reset VWAP mỗi ngày nếu index là DatetimeIndex.
+        """
+        # VWAP là quan trọng nhất
+        self._add_generic_indicator('vwap', vwap_configs)
+        # Có thể thêm MFI nếu muốn
+        # self._add_generic_indicator('mfi', [{'length': 14}])
+        return self
+
+    def add_opening_range(self, minutes: int = 30):
+        """
+        Thêm các mức cao và thấp của một khoảng thời gian đầu ngày (Opening Range).
+        Đây là một đặc trưng intraday rất quan trọng.
+        """
+        print(f"Adding {minutes}-minute Opening Range...")
+        # Lấy ngày của mỗi dòng
+        df_date = self.df.index.date
+        
+        # Nhóm theo ngày và áp dụng hàm để tìm high/low trong N phút đầu
+        def get_or(x, minutes):
+            start_time = x.index[0].time()
+            end_time = (pd.to_datetime(start_time.strftime('%H:%M:%S')) + pd.Timedelta(minutes=minutes)).time()
+            opening_range_df = x.between_time(start_time, end_time)
+            return opening_range_df['high'].max(), opening_range_df['low'].min()
+            
+        or_levels = self.df.groupby(df_date, group_keys=False).apply(lambda x: get_or(x, minutes))
+        
+        # Ánh xạ kết quả trở lại DataFrame
+        self.df[f'OR_{minutes}m_High'] = self.df.index.date.map(or_levels.str[0])
+        self.df[f'OR_{minutes}m_Low'] = self.df.index.date.map(or_levels.str[1])
+        
+        return self
+
+    def add_all_intraday_features(self):
+        """Hàm tiện ích để thêm tất cả các chỉ báo intraday tiêu chuẩn."""
+        print("--- Adding all standard intraday features ---")
+        (self
+            .add_intraday_ma()
+            .add_intraday_momentum()
+            .add_intraday_volatility()
+            .add_intraday_volume()
+            .add_opening_range(minutes=30) # Thêm vùng giá 30 phút đầu ngày
+        )
         return self
