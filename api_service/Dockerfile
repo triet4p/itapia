@@ -1,11 +1,11 @@
 FROM python:3.13-slim
 
-WORKDIR /app
+WORKDIR /api-service
 
-COPY ./requirements.txt /app/requirements.txt
+COPY ./requirements.txt /api-service/requirements.txt
 
-RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /api-service/requirements.txt
 
-COPY . /app
+COPY . /api-service
 
-RUN ls /app -l
+RUN ls /api-service -l

@@ -39,8 +39,7 @@ def process_single_ticker(ticker_sym: str, redis_mng: RedisManager):
         'last_update_utc': datetime.now(timezone.utc).isoformat()
     }
     
-    name = f'intraday:{ticker_sym}'
-    redis_mng.save_candle(provisional_candle, name, 86400)
+    redis_mng.add_intraday_candle(ticker=ticker_sym, candle_data=provisional_candle)
     
     print(f"  - Successfully update {ticker_sym} with last price is {info.last_price}")
     
@@ -80,6 +79,8 @@ def main_orchestrator():
         schedule.every().hour.at(":15").do(partial_job)
         schedule.every().hour.at(":30").do(partial_job)
         schedule.every().hour.at(":45").do(partial_job)
+        # schedule.every().hour.at(":40").do(partial_job)
+        # schedule.every().hour.at(":50").do(partial_job)
         
     # Vòng lặp thực thi
     while True:

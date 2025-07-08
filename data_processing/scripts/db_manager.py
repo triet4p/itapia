@@ -230,4 +230,35 @@ class RedisManager:
         except Exception as e:
             print(e)
             raise FetchException(f'An exception appear when save candle with name {identify}')
+        
+    def add_intraday_candle(self, ticker: str, candle_data: dict, max_entries: int = 300):
+        """
+        Thêm một cây nến 5 phút vào Redis Stream cho một ticker.
+        Stream sẽ được tự động giới hạn kích thước.
+
+        Args:
+            ticker (str): Mã cổ phiếu.
+            candle_data (dict): Dictionary chứa dữ liệu OHLCV.
+            max_entries (int): Số lượng entry tối đa cần giữ lại trong stream.
+        """
+        if not candle_data:
+            return
+
+        conn = self.get_connection()
+        stream_key = f"intraday_stream:{ticker}"
+        
+        try:
+            # Chuyển đổi tất cả giá trị sang string để tương thích với Redis Stream
+            mapping_to_save = {k: str(v) for k, v in candle_data.items()}
+
+            # Lệnh XADD để thêm entry mới. '*' để Redis tự tạo ID dựa trên timestamp.
+            # MAXLEN ~ max_entries giới hạn kích thước của stream.
+            conn.xadd(stream_key, mapping_to_save, maxlen=max_entries, approximate=True)
+            
+            # Không cần đặt TTL nữa vì stream sẽ tự cắt bớt dữ liệu cũ.
+            # Dữ liệu sẽ tự động được thay thế vào ngày hôm sau.
+
+        except Exception as e:
+            print(f"Lỗi khi thêm vào Redis Stream cho {ticker}: {e}")
+            raise
             

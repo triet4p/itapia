@@ -12,7 +12,14 @@ def read_history_prices(ticker: str, skip: int = 0, limit: int = 500, db: Sessio
     prices = crud.prices.get_history_prices(db, ticker.upper(), skip, limit)
     return prices
 
-@router.get("/prices/intraday/{ticker}", response_model=schemas.prices.IntradayPrice | None)
+@router.get("/prices/intraday/last/{ticker}", response_model=schemas.prices.IntradayPrice | None)
+def read_intraday_prices(ticker: str, conn: Redis = Depends(get_redis)):
+    price = crud.prices.get_latest_intraday_price(conn, ticker=ticker.upper())
+    if not price:
+        raise HTTPException(status_code=404, detail="Intraday price not found for this ticker")
+    return price
+
+@router.get("/prices/intraday/history/{ticker}", response_model=list[schemas.prices.IntradayPrice])
 def read_intraday_prices(ticker: str, conn: Redis = Depends(get_redis)):
     price = crud.prices.get_intraday_prices(conn, ticker=ticker.upper())
     if not price:

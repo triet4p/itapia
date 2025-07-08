@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 services:
   stocks_postgre_db:
     image: postgres:15-alpine
@@ -13,7 +13,7 @@ services:
     networks:
       - itapia-network
 
-  realtime_db:
+  realtime_redis_db:
     image: redis:7-alpine
     container_name: itapia-redis_db
     restart: unless-stopped
@@ -21,6 +21,8 @@ services:
       - .env
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     networks:
       - itapia-network
 
@@ -43,9 +45,11 @@ services:
     env_file:
       - .env
     depends_on:
-      - realtime_db
+      - realtime_redis_db
     networks:
       - itapia-network
+    volumes:
+      - ./data_processing:/app
     # Chạy script điều phối real-time
     command: python -u scripts/fetch_realtime_price.py
   
@@ -56,7 +60,7 @@ services:
     env_file:
       - .env
     depends_on:
-      - realtime_db
+      - realtime_redis_db
       - stocks_postgre_db
     ports:
       - "8000:8000"
@@ -66,6 +70,7 @@ services:
     
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   itapia-network:
