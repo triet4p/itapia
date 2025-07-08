@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 # Import lớp cần test
-from app.technical.feature_engine import FeatureEngine
+from app.technical.feature_engine import DailyFeatureEngine
 
 # --- Dữ liệu giả lập (Fixture) để tái sử dụng ---
 @pytest.fixture(scope="module")
@@ -19,7 +19,8 @@ def sample_ohlcv_data() -> pd.DataFrame:
         'close': np.random.uniform(98, 108, size=100),
         'volume': np.random.uniform(1e6, 5e6, size=100)
     }
-    df = pd.DataFrame(data)
+    dates = pd.date_range(start="2023-01-01", periods=100, freq="D")
+    df = pd.DataFrame(data, index=dates)
     # Đảm bảo cột high luôn cao nhất và low luôn thấp nhất
     df['high'] = df[['open', 'close']].max(axis=1) + np.random.uniform(0, 5, size=100)
     df['low'] = df[['open', 'close']].min(axis=1) - np.random.uniform(0, 5, size=100)
@@ -29,7 +30,7 @@ def sample_ohlcv_data() -> pd.DataFrame:
 
 def test_feature_engine_initialization(sample_ohlcv_data):
     """Kiểm tra việc khởi tạo có thành công không."""
-    engine = FeatureEngine(sample_ohlcv_data)
+    engine = DailyFeatureEngine(sample_ohlcv_data)
     assert isinstance(engine.df, pd.DataFrame)
     assert not engine.df.empty
     # Kiểm tra xem có tạo bản sao không (không làm thay đổi df gốc)
@@ -37,7 +38,7 @@ def test_feature_engine_initialization(sample_ohlcv_data):
 
 def test_add_sma(sample_ohlcv_data):
     """Kiểm tra hàm add_sma có thêm đúng cột không."""
-    engine = FeatureEngine(sample_ohlcv_data)
+    engine = DailyFeatureEngine(sample_ohlcv_data)
     engine.add_sma(configs=[{'length': 20}, {'length': 50}])
     
     df = engine.get_features(copy=False, handle_na_method=None) # Lấy df nội bộ
@@ -50,7 +51,7 @@ def test_add_sma(sample_ohlcv_data):
 
 def test_add_adx_and_dmp_dmn(sample_ohlcv_data):
     """Kiểm tra hàm add_adx có thêm cả 3 cột ADX, DMP, DMN không."""
-    engine = FeatureEngine(sample_ohlcv_data)
+    engine = DailyFeatureEngine(sample_ohlcv_data)
     engine.add_adx(configs=[{'length': 14}])
 
     df = engine.get_features(copy=False, handle_na_method=None)
@@ -60,7 +61,7 @@ def test_add_adx_and_dmp_dmn(sample_ohlcv_data):
 
 def test_add_trend_indicators_group(sample_ohlcv_data):
     """Kiểm tra hàm nhóm add_trend_indicators."""
-    engine = FeatureEngine(sample_ohlcv_data)
+    engine = DailyFeatureEngine(sample_ohlcv_data)
     engine.add_trend_indicators() # Sử dụng config mặc định
     
     df = engine.get_features(copy=False, handle_na_method=None)
@@ -75,7 +76,7 @@ def test_error_handling_for_invalid_param(sample_ohlcv_data, capsys):
     Kiểm tra xem hệ thống có xử lý lỗi một cách duyên dáng khi gặp tham số sai không.
     capsys là một fixture của pytest để bắt output từ print().
     """
-    engine = FeatureEngine(sample_ohlcv_data)
+    engine = DailyFeatureEngine(sample_ohlcv_data)
     # 'lengt' là tham số sai
     engine.add_sma(configs=[{'lengt': 20}])
     
@@ -92,7 +93,7 @@ def test_error_handling_for_invalid_param(sample_ohlcv_data, capsys):
     
 def test_get_features_dropna_and_reset_index(sample_ohlcv_data):
     """Kiểm tra các tham số của hàm get_features."""
-    engine = FeatureEngine(sample_ohlcv_data)
+    engine = DailyFeatureEngine(sample_ohlcv_data)
     engine.add_sma(configs=[{'length': 50}]) # Sẽ tạo nhiều NaN ở đầu
     
     # Test dropna=True (mặc định)

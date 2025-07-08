@@ -15,7 +15,7 @@ def test_long_term_uptrend():
         'SMA_200': 120 # SMA_50 > SMA_200
     })
     # Chỉ cần dòng cuối để test, nhưng class cần DataFrame
-    df = pd.DataFrame([latest_row])
+    df = pd.DataFrame([latest_row], index=[pd.to_datetime("2025-01-01")])
     analyzer = TrendAnalyzer(df)
     report = analyzer._get_long_term_view()
     
@@ -31,7 +31,7 @@ def test_medium_term_downtrend_under_pressure():
         'DMP_14': 15,
         'DMN_14': 25   # DMN > DMP -> Hướng xuống
     })
-    df = pd.DataFrame([latest_row])
+    df = pd.DataFrame([latest_row], index=[pd.to_datetime("2025-01-01")])
     analyzer = TrendAnalyzer(df)
     report = analyzer._get_medium_term_view()
 
@@ -41,7 +41,7 @@ def test_medium_term_downtrend_under_pressure():
 
 def test_adx_strength_analysis():
     """Kiểm tra logic phân loại sức mạnh xu hướng của ADX."""
-    analyzer = TrendAnalyzer(pd.DataFrame([{'ADX_14': -1}])) # Khởi tạo tạm
+    analyzer = TrendAnalyzer(pd.DataFrame([{'ADX_14': -1}], index=[pd.to_datetime("2025-01-01")])) # Khởi tạo tạm
     
     # Test Strong
     analyzer.latest_row = pd.Series({'ADX_14': 30})
@@ -63,7 +63,7 @@ def test_full_analysis_report_structure():
         'SMA_10': 155, 'SMA_20': 150, 'SMA_50': 140, 'SMA_200': 120,
         'ADX_14': 28, 'DMP_14': 30, 'DMN_14': 15
     }
-    df = pd.DataFrame([data])
+    df = pd.DataFrame([data], index=[pd.to_datetime("2025-01-01")])
     analyzer = TrendAnalyzer(df)
     report = analyzer.analyze_trend()
 
@@ -88,7 +88,7 @@ def test_full_analysis_report_structure():
 def test_handling_missing_columns():
     """Kiểm tra xem analyzer có xử lý được khi thiếu cột dữ liệu không."""
     # Thiếu cột SMA_200
-    df = pd.DataFrame([{'SMA_50': 140}])
+    df = pd.DataFrame([{'SMA_50': 140}], index=[pd.to_datetime("2025-01-01")])
     analyzer = TrendAnalyzer(df)
     report = analyzer._get_long_term_view()
     

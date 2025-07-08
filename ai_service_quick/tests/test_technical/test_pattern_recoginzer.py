@@ -11,6 +11,11 @@ def create_pattern_df(price_sequence: List[int], cdl_data: Dict[str, int] = None
     Tạo một DataFrame từ một chuỗi giá để kiểm tra các mẫu hình.
     """
     size = len(price_sequence)
+    # --- THAY ĐỔI CHÍNH Ở ĐÂY ---
+    # Tạo một dải ngày tháng làm index
+    dates = pd.date_range(start="2023-01-01", periods=size, freq="D")
+    
+    df = pd.DataFrame(index=dates) # Sử dụng index mới
     df = pd.DataFrame({
         'open': np.array(price_sequence) - 0.5,
         'high': np.array(price_sequence) + 1.0,

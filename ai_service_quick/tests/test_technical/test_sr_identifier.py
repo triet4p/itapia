@@ -96,8 +96,14 @@ def test_get_simple_fibonacci_levels(sample_enriched_data):
 
 def test_placeholder_v2_functions_return_empty():
     """Đảm bảo các hàm placeholder cho v2 trả về danh sách rỗng."""
-    # Chỉ cần một DataFrame nhỏ để khởi tạo
-    df = pd.DataFrame({'close': [1,2,3,4,5], 'high': [1,2,3,4,5], 'low': [1,2,3,4,5], 'open': [1,2,3,4,5], 'volume': [1,2,3,4,5]})
+    # --- THAY ĐỔI CHÍNH Ở ĐÂY ---
+    # Tạo DataFrame nhỏ với DatetimeIndex
+    dates = pd.date_range(start="2023-01-01", periods=5)
+    df = pd.DataFrame({
+        'close': [1,2,3,4,5], 'high': [1,2,3,4,5], 'low': [1,2,3,4,5], 
+        'open': [1,2,3,4,5], 'volume': [1,2,3,4,5]
+    }, index=dates)
+    
     identifier = SupportResistanceIdentifier(df, history_window=3)
     
     assert identifier._get_levels_from_extrema_v2() == []

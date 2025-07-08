@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 
-from app.technical.feature_engine import FeatureEngine
+from app.technical.feature_engine import DailyFeatureEngine
 from app.technical.analysis_engine import AnalysisEngine
 
 def generate_mock_ohlcv_with_pattern(days=150) -> pd.DataFrame:
@@ -36,6 +36,8 @@ def generate_mock_ohlcv_with_pattern(days=150) -> pd.DataFrame:
     df['low'] = df[['open', 'close']].min(axis=1) - np.random.uniform(0, 1, days)
     df['volume'] = np.random.randint(1_000_000, 5_000_000, size=days)
     
+    print(df.head(5))
+    
     return df
 
 if __name__ == "__main__":
@@ -45,7 +47,7 @@ if __name__ == "__main__":
     # --- Phần còn lại của file main giữ nguyên ---
     # ... (code để gọi FeatureEngine và AnalysisEngine) ...
     print("\n2. Running FeatureEngine to enrich data...")
-    feature_engine = FeatureEngine(mock_df)
+    feature_engine = DailyFeatureEngine(mock_df)
     enriched_df = (feature_engine
                    .add_all_features() # Dùng add_all để có đủ chỉ báo
                    .get_features(handle_na_method='forward_fill'))
