@@ -82,8 +82,11 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
             delta_day = 2
         elif now_date.isoweekday() == 7:
             delta_day = 1
+            
+        delta_day += 1
 
-        end_date = datetime(now_date.year, now_date.month, now_date.day, tzinfo=timezone.utc) - timedelta(days=delta_day)
+        end_date = datetime(now_date.year, now_date.month, now_date.day,
+                            22, 0, 0, tzinfo=timezone.utc) - timedelta(days=delta_day)
         
         print(f'Start collect from {start_date} to {end_date}')
         

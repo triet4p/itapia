@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import redis.exceptions
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.schema import Table, MetaData
@@ -179,7 +179,7 @@ class PostgreDBManager:
                 result = connection.execute(stmt).scalar()
                 if result:
                     # Chuyển đổi từ date của DB sang datetime của Python
-                    return datetime.combine(result, datetime.min.time())
+                    return datetime.combine(result, datetime.min.time()).replace(tzinfo=timezone.utc)
                 return default_return_date # Trả về None nếu bảng trống
         except Exception as e:
             print(f"Lỗi khi truy vấn ngày cuối cùng từ CSDL: {e}")
