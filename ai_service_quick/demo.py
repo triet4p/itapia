@@ -4,7 +4,8 @@ import numpy as np
 import json
 
 from app.technical.feature_engine import DailyFeatureEngine
-from app.technical.analysis_engine import AnalysisEngine
+from app.technical.analysis_engine.daily import DailyAnalysisEngine
+from app.technical.analysis_engine.intraday import IntradayAnalysisEngine
 
 def generate_mock_ohlcv_with_pattern(days=150) -> pd.DataFrame:
     """
@@ -59,7 +60,7 @@ if __name__ == "__main__":
         print(enriched_df.columns[:50])
         print("\n4. Initializing and running AnalysisEngine...")
         # Giảm distance để bắt được các đỉnh/đáy gần nhau trong dữ liệu giả lập
-        analysis_engine = AnalysisEngine(enriched_df, 
+        analysis_engine = DailyAnalysisEngine(enriched_df, 
                                          history_window=90, 
                                          distance=3, 
                                          prominence_pct=0.01)
