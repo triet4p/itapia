@@ -300,21 +300,39 @@ class IntradayFeatureEngine(_FeatureEngine):
         Đây là một đặc trưng intraday rất quan trọng.
         """
         print(f"Adding {minutes}-minute Opening Range...")
-        # Lấy ngày của mỗi dòng
+        
+        # Lấy ngày của mỗi dòng để nhóm
         df_date = self.df.index.date
         
-        # Nhóm theo ngày và áp dụng hàm để tìm high/low trong N phút đầu
+        # Hàm helper để tính OR
         def get_or(x, minutes):
+            # Xác định thời gian bắt đầu và kết thúc của Opening Range
+            # between_time bao gồm cả start và end, nên cần cẩn thận
+            # Ví dụ: 9:30 -> 9:59 (cho 30 phút)
             start_time = x.index[0].time()
-            end_time = (pd.to_datetime(start_time.strftime('%H:%M:%S')) + pd.Timedelta(minutes=minutes)).time()
-            opening_range_df = x.between_time(start_time, end_time)
+            # Tính toán end_time một cách an toàn hơn
+            end_time = (pd.to_datetime(f"1970-01-01 {start_time}") + pd.Timedelta(minutes=minutes-1)).time()
+            
+            opening_range_df = x.between_time(start_time, end_time, inclusive='both')
+            
+            if opening_range_df.empty:
+                return np.nan, np.nan
+                
             return opening_range_df['high'].max(), opening_range_df['low'].min()
             
-        or_levels = self.df.groupby(df_date, group_keys=False).apply(lambda x: get_or(x, minutes))
+        # Nhóm theo ngày và tính OR
+        or_levels = self.df.groupby(df_date).apply(lambda x: get_or(x, minutes))
         
-        # Ánh xạ kết quả trở lại DataFrame
-        self.df[f'OR_{minutes}m_High'] = self.df.index.date.map(or_levels.str[0])
-        self.df[f'OR_{minutes}m_Low'] = self.df.index.date.map(or_levels.str[1])
+        # or_levels là một Series với index là các ngày và value là các tuple (high, low)
+        # Tách Series này thành 2 Series riêng biệt cho high và low
+        or_high_series = or_levels.str[0]
+        or_low_series = or_levels.str[1]
+        
+        # Tạo các cột mới trong DataFrame gốc bằng cách map Series or_high/low
+        # vào df gốc dựa trên ngày của index
+        # self.df.index.to_series().dt.date sẽ tạo ra một Series các ngày
+        self.df[f'OR_{minutes}m_High'] = self.df.index.to_series().dt.date.map(or_high_series)
+        self.df[f'OR_{minutes}m_Low'] = self.df.index.to_series().dt.date.map(or_low_series)
         
         return self
 
