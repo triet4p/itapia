@@ -3,7 +3,7 @@ import numpy as np
 from typing import List, Dict
 
 # Import lớp cần test
-from app.technical.analysis_engine.pattern_recognizer import PatternRecognizer
+from app.technical.analysis_engine.daily.pattern_recognizer import DailyPatternRecognizer
 
 # --- Hàm Helper để tạo dữ liệu có mẫu hình ---
 def create_pattern_df(price_sequence: List[int], cdl_data: Dict[str, int] = None) -> pd.DataFrame:
@@ -47,7 +47,7 @@ def test_find_candlestick_patterns():
     cdl_data = {'cdl_engulfing': 100} # Giá trị dương là Bullish
     df = create_pattern_df(price_seq, cdl_data)
     
-    recognizer = PatternRecognizer(df, history_window=3)
+    recognizer = DailyPatternRecognizer(df, history_window=3)
     patterns = recognizer._find_candlestick_patterns()
     
     pattern_names = [p['sentiment'] + ' ' + p['pattern_name'] for p in patterns]
@@ -61,7 +61,7 @@ def test_is_double_top_confirmed():
     df = create_pattern_df(price_seq)
     
     # Giảm prominence để có thể bắt được đỉnh/đáy trong dữ liệu nhỏ
-    recognizer = PatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
+    recognizer = DailyPatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
     
     assert recognizer._is_double_top() is not None
     
@@ -76,7 +76,7 @@ def test_is_double_top_not_confirmed():
     price_seq = [90, 105, 110, 100, 108, 110, 101]
     df = create_pattern_df(price_seq)
     
-    recognizer = PatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
+    recognizer = DailyPatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
     
     assert recognizer._is_double_top() is None
 
@@ -86,7 +86,7 @@ def test_is_double_bottom_confirmed():
     price_seq = [110, 95, 90, 100, 92, 90, 102]
     df = create_pattern_df(price_seq)
     
-    recognizer = PatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
+    recognizer = DailyPatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
     
     assert recognizer._is_double_bottom() is not None
     
@@ -101,7 +101,7 @@ def test_is_head_and_shoulders_confirmed():
     price_seq = [105, 110, 100, 115, 101, 110, 98]
     df = create_pattern_df(price_seq)
     
-    recognizer = PatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
+    recognizer = DailyPatternRecognizer(df, history_window=7, prominence_pct=0.01, distance=1)
     
     # Debugging: In ra các đỉnh/đáy được tìm thấy
     # print("\nPeaks:\n", recognizer.peaks)
@@ -120,7 +120,7 @@ def test_no_patterns_found():
     price_seq = [100, 101, 102, 103, 104, 105, 106, 107]
     df = create_pattern_df(price_seq)
     
-    recognizer = PatternRecognizer(df, history_window=8, distance=1)
+    recognizer = DailyPatternRecognizer(df, history_window=8, distance=1)
     patterns = recognizer.find_patterns()
     
     # Trả về danh sách rỗng nếu không có gì
@@ -135,7 +135,7 @@ def test_find_extrema_correctness():
     df = create_pattern_df(price_seq)
     
     # Giảm distance để bắt được các điểm gần nhau
-    recognizer = PatternRecognizer(df, history_window=len(price_seq), prominence_pct=0.01, distance=1)
+    recognizer = DailyPatternRecognizer(df, history_window=len(price_seq), prominence_pct=0.01, distance=1)
 
     peaks = recognizer.peaks
     troughs = recognizer.troughs

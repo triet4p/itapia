@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 
 # Import lớp cần test
-from app.technical.analysis_engine.sr_identifier import SupportResistanceIdentifier
+from app.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
 
 # --- Dữ liệu giả lập (Fixture) ---
 @pytest.fixture(scope="module")
@@ -39,17 +39,17 @@ def sample_enriched_data() -> pd.DataFrame:
 def test_sr_identifier_initialization(sample_enriched_data):
     """Kiểm tra khởi tạo thành công và xử lý lỗi."""
     # Test khởi tạo thành công
-    identifier = SupportResistanceIdentifier(sample_enriched_data, history_window=90)
+    identifier = DailySRIdentifier(sample_enriched_data, history_window=90)
     assert identifier.current_price == sample_enriched_data['close'].iloc[-1]
     assert len(identifier.analysis_df) == 90
 
     # Test lỗi khi không đủ dữ liệu
     with pytest.raises(ValueError, match="at least 90 rows"):
-        SupportResistanceIdentifier(sample_enriched_data.head(50), history_window=90)
+        DailySRIdentifier(sample_enriched_data.head(50), history_window=90)
 
 def test_get_dynamic_levels(sample_enriched_data):
     """Kiểm tra việc lấy các mức S/R động từ MA và BB."""
-    identifier = SupportResistanceIdentifier(sample_enriched_data)
+    identifier = DailySRIdentifier(sample_enriched_data)
     levels = identifier._get_dynamic_levels_from_ma_bb()
     
     latest_row = sample_enriched_data.iloc[-1]
@@ -64,7 +64,7 @@ def test_get_dynamic_levels(sample_enriched_data):
 
 def test_get_pivot_point_levels(sample_enriched_data):
     """Kiểm tra tính toán Pivot Points."""
-    identifier = SupportResistanceIdentifier(sample_enriched_data)
+    identifier = DailySRIdentifier(sample_enriched_data)
     levels = identifier._get_pivot_point_levels()
 
     assert isinstance(levels, list)
@@ -79,7 +79,7 @@ def test_get_pivot_point_levels(sample_enriched_data):
 
 def test_get_simple_fibonacci_levels(sample_enriched_data):
     """Kiểm tra tính toán Fibonacci đơn giản."""
-    identifier = SupportResistanceIdentifier(sample_enriched_data, history_window=90)
+    identifier = DailySRIdentifier(sample_enriched_data, history_window=90)
     levels = identifier._get_simple_fibonacci_levels()
     
     analysis_df = sample_enriched_data.tail(90)
@@ -104,14 +104,14 @@ def test_placeholder_v2_functions_return_empty():
         'open': [1,2,3,4,5], 'volume': [1,2,3,4,5]
     }, index=dates)
     
-    identifier = SupportResistanceIdentifier(df, history_window=3)
+    identifier = DailySRIdentifier(df, history_window=3)
     
     assert identifier._get_levels_from_extrema_v2() == []
     assert identifier._get_advanced_fibonacci_levels_v2() == []
 
 def test_identify_levels_full_logic(sample_enriched_data):
     """Kiểm tra hàm tổng hợp cuối cùng."""
-    identifier = SupportResistanceIdentifier(sample_enriched_data)
+    identifier = DailySRIdentifier(sample_enriched_data)
     report = identifier.identify_levels()
     
     assert "support" in report

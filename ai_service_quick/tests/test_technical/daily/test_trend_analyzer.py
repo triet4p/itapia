@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 
 # Import lớp cần test
-from app.technical.analysis_engine.trend_analyzer import TrendAnalyzer
+from app.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
 
 # --- Các bài test cho TrendAnalyzer ---
 
@@ -16,7 +16,7 @@ def test_long_term_uptrend():
     })
     # Chỉ cần dòng cuối để test, nhưng class cần DataFrame
     df = pd.DataFrame([latest_row], index=[pd.to_datetime("2025-01-01")])
-    analyzer = TrendAnalyzer(df)
+    analyzer = DailyTrendAnalyzer(df)
     report = analyzer._get_long_term_view()
     
     assert report['direction'] == "Uptrend"
@@ -32,7 +32,7 @@ def test_medium_term_downtrend_under_pressure():
         'DMN_14': 25   # DMN > DMP -> Hướng xuống
     })
     df = pd.DataFrame([latest_row], index=[pd.to_datetime("2025-01-01")])
-    analyzer = TrendAnalyzer(df)
+    analyzer = DailyTrendAnalyzer(df)
     report = analyzer._get_medium_term_view()
 
     assert report['direction'] == "Downtrend"
@@ -41,7 +41,7 @@ def test_medium_term_downtrend_under_pressure():
 
 def test_adx_strength_analysis():
     """Kiểm tra logic phân loại sức mạnh xu hướng của ADX."""
-    analyzer = TrendAnalyzer(pd.DataFrame([{'ADX_14': -1}], index=[pd.to_datetime("2025-01-01")])) # Khởi tạo tạm
+    analyzer = DailyTrendAnalyzer(pd.DataFrame([{'ADX_14': -1}], index=[pd.to_datetime("2025-01-01")])) # Khởi tạo tạm
     
     # Test Strong
     analyzer.latest_row = pd.Series({'ADX_14': 30})
@@ -64,7 +64,7 @@ def test_full_analysis_report_structure():
         'ADX_14': 28, 'DMP_14': 30, 'DMN_14': 15
     }
     df = pd.DataFrame([data], index=[pd.to_datetime("2025-01-01")])
-    analyzer = TrendAnalyzer(df)
+    analyzer = DailyTrendAnalyzer(df)
     report = analyzer.analyze_trend()
 
     # Kiểm tra các key cấp cao nhất
@@ -89,7 +89,7 @@ def test_handling_missing_columns():
     """Kiểm tra xem analyzer có xử lý được khi thiếu cột dữ liệu không."""
     # Thiếu cột SMA_200
     df = pd.DataFrame([{'SMA_50': 140}], index=[pd.to_datetime("2025-01-01")])
-    analyzer = TrendAnalyzer(df)
+    analyzer = DailyTrendAnalyzer(df)
     report = analyzer._get_long_term_view()
     
     assert report['direction'] == "Undefined"

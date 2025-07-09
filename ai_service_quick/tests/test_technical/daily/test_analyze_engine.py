@@ -1,14 +1,14 @@
-# tests/test_technical/test_analysis_engine.py
+# tests/test_technical/test_analysis_engine.daily.py
 
 import pytest
 import pandas as pd
 import numpy as np
 
 # Import lớp chính và các lớp con để có thể mock nếu cần
-from app.technical.analysis_engine import AnalysisEngine
-from app.technical.analysis_engine.trend_analyzer import TrendAnalyzer
-from app.technical.analysis_engine.sr_identifier import SupportResistanceIdentifier
-from app.technical.analysis_engine.pattern_recognizer import PatternRecognizer
+from app.technical.analysis_engine.daily import DailyAnalysisEngine
+from app.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
+from app.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
+from app.technical.analysis_engine.daily.pattern_recognizer import DailyPatternRecognizer
 
 # Sử dụng lại hàm helper từ test_pattern_recognizer
 from .test_pattern_recoginzer import create_pattern_df
@@ -35,7 +35,7 @@ def test_analysis_engine_integration():
         df.loc[df.index[-1], key] = value
 
     # Khởi tạo Engine
-    engine = AnalysisEngine(df, history_window=7, distance=1, prominence_pct=0.01)
+    engine = DailyAnalysisEngine(df, history_window=7, distance=1, prominence_pct=0.01)
     
     # Lấy báo cáo
     report = engine.get_analysis_report()
