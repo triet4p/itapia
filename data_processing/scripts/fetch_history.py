@@ -58,8 +58,7 @@ def _handle_missing_data(df: pd.DataFrame,
     
     return filtered_df.copy()
     
-def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
-                  table_name: str,
+def full_pipeline(table_name: str,
                   db_mng: PostgreDBManager):
     """
     Pipeline lấy dữ liệu giá lịch sử (OHLCV) của các cổ phiếu thuộc 1 region được chỉ định
@@ -72,8 +71,10 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         db_manager (PostgreDBManager): Quản lý truy cập CSDL
     """
     try:
-        print(f'Fetch history data for region {region}.')
-        last_date = db_mng.get_last_history_date(region)
+        metadata = db_mng.get_active_tickers_with_info()
+        tickers = list(metadata.keys())
+        
+        last_date = db_mng.get_last_history_date(table_name, tickers)
         start_date = last_date + timedelta(days=1)
             
         now_date = datetime.now(timezone.utc)      
@@ -88,7 +89,7 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         end_date = datetime(now_date.year, now_date.month, now_date.day,
                             22, 0, 0, tzinfo=timezone.utc) - timedelta(days=delta_day)
         
-        print(f'Start collect from {start_date} to {end_date}')
+        print(f'Start collect from {start_date} to {end_date} for {len(tickers)} tickers')
         
         if start_date >= end_date:
             print('Invalid date')
@@ -97,7 +98,7 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         start_collect_date = start_date - timedelta(days=30)
         end_collect_date = end_date + timedelta(days=delta_day)
         
-        raw_df = _extract_raw_data(TO_FETCH_TICKERS_BY_REGION[region], start_collect_date, end_collect_date)
+        raw_df = _extract_raw_data(tickers, start_collect_date, end_collect_date)
         
         # 2. Transform
         reconstructed_df = _reconstruct_table(raw_df, 'float32')
@@ -122,16 +123,11 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         print(f"An unknown exception occured: {e}")
     
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Require region parameter (americas, europe, asia_pacific)")
-        sys.exit(1)
     
-    target_region = sys.argv[1].lower()
-    
-    TABLE_NAME = 'history_prices'
+    TABLE_NAME = 'daily_prices'
     
     db_mng = PostgreDBManager()
     
-    full_pipeline(region=target_region, table_name=TABLE_NAME, db_mng=db_mng)
+    full_pipeline(table_name=TABLE_NAME, db_mng=db_mng)
     
     

@@ -18,6 +18,7 @@ from utils import TO_FETCH_TICKERS_BY_REGION, FetchException, DEFAULT_START_DATE
 class PostgreDBManager:
     def __init__(self):
         self._engine: Engine = None
+        self._ticker_info_cache = None
     
     def get_engine(self) -> Engine:
         """
@@ -148,7 +149,7 @@ class PostgreDBManager:
         else:
             self._bulk_insert_on_conflict_do_update(table_name, _data, unique_cols, chunk_size)
     
-    def get_last_history_date(self, region: Literal['americas', 'europe', 'asia_pacific']):
+    def get_last_history_date(self, table_name: str, tickers: list[str]):
         """
         Hỗ trợ lấy ngày lịch sử gần nhất mà pipeline đã lấy dữ liệu lịch sử của một khu vực.
         Thực chất để đảm bảo đồng bộ, vì thường ngày này thường là ngày làm việc gần nhất của
@@ -163,20 +164,15 @@ class PostgreDBManager:
                 hoặc không tìm thấy dữ liệu tương ứng.
         """
         default_return_date = DEFAULT_START_DATE - timedelta(days=1)
-        
-        if region not in ['americas', 'europe', 'asia_pacific']:
-            print('Not support region, return default')
-            return default_return_date
-        
-        tickers = tuple(TO_FETCH_TICKERS_BY_REGION[region])
-        query = f"SELECT MAX(collect_date) FROM history_prices WHERE ticker IN {tickers};"
+
+        query = f"SELECT MAX(collect_date) FROM {table_name} WHERE ticker IN :tickers;"
         stmt = text(query)
         
         engine = self.get_engine()
         
         try:
             with engine.connect() as connection:
-                result = connection.execute(stmt).scalar()
+                result = connection.execute(stmt, {"tickers": tuple(tickers)}).scalar()
                 if result:
                     # Chuyển đổi từ date của DB sang datetime của Python
                     return datetime.combine(result, datetime.min.time()).replace(tzinfo=timezone.utc)
@@ -185,6 +181,55 @@ class PostgreDBManager:
             print(f"Lỗi khi truy vấn ngày cuối cùng từ CSDL: {e}")
             # Nếu có lỗi (ví dụ bảng chưa tồn tại), coi như chưa có dữ liệu
             return default_return_date
+        
+    def _load_ticker_metadata(self):
+        """
+        Tải thông tin chi tiết của tất cả các ticker đang hoạt động từ DB
+        và lưu vào cache trong bộ nhớ.
+        Hàm này chỉ nên được gọi một lần.
+        """
+        print("Loading ticker metadata into cache...")
+        query = text("""
+            SELECT 
+                t.ticker_sym, 
+                t.company_name, 
+                e.exchange_code, 
+                e.currency, 
+                e.timezone,
+                e.open_time,
+                e.close_time,
+                s.sector_name
+            FROM 
+                tickers t
+            JOIN 
+                exchanges e ON t.exchange_code = e.exchange_code
+            JOIN 
+                sectors s ON t.sector_code = s.sector_code
+            WHERE 
+                t.is_active = TRUE;
+        """)
+        
+        engine = self.get_engine()
+        with engine.connect() as connection:
+            result = connection.execute(query)
+            df = pd.DataFrame(result.fetchall(), columns=result.keys())
+            
+        # Chuyển DataFrame thành dictionary để tra cứu nhanh
+        self._ticker_info_cache = df.set_index('ticker_sym').to_dict('index')
+        print(f"Metadata cache loaded with {len(self._ticker_info_cache)} active tickers.")
+        
+    def get_active_tickers_with_info(self) -> dict[str, dict[str, any]]:
+        """
+        Lấy danh sách các ticker đang hoạt động cùng với thông tin metadata của chúng.
+        Sử dụng cơ chế cache để chỉ truy vấn DB một lần duy nhất.
+
+        Returns:
+            Dict[str, Dict[str, Any]]: Một dictionary với key là ticker và value là 
+                                       một dict chứa thông tin chi tiết.
+        """
+        if self._ticker_info_cache is None:
+            self._load_ticker_metadata()
+        return self._ticker_info_cache
     
 class RedisManager:
     def __init__(self):
@@ -262,3 +307,5 @@ class RedisManager:
             print(f"Lỗi khi thêm vào Redis Stream cho {ticker}: {e}")
             raise
             
+db_mng = PostgreDBManager()
+print(type(db_mng.get_active_tickers_with_info()['NVDA']['open_time']))

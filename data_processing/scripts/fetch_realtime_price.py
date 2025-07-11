@@ -1,5 +1,5 @@
+from datetime import datetime, timezone, time as dt_time
 import time
-from datetime import datetime, timezone
 from typing import Literal
 import pytz
 import yfinance as yf
@@ -7,18 +7,34 @@ import schedule
 from functools import partial
 
 from utils import TO_FETCH_TICKERS_BY_REGION, REGION_TIME_ZONE, MARKET_OPEN_TIME, MARKET_CLOSE_TIME, FetchException
-from db_manager import RedisManager
+from db_manager import PostgreDBManager, RedisManager
 
-def is_market_open(region_timezone: str) -> bool:
+def is_market_open_for_ticker(ticker_info: dict) -> bool:
+    """
+    Kiểm tra xem thị trường có đang mở cửa cho một ticker cụ thể không,
+    dựa trên thông tin metadata của nó.
+    """
     try:
-        tz = pytz.timezone(region_timezone)
+        # Lấy thông tin từ cache
+        tz_str = ticker_info['timezone']
+        #open_time_str = ticker_info['open_time'] # Ví dụ: "09:30:00"
+        #close_time_str = ticker_info['close_time'] # Ví dụ: "16:00:00"
+
+        open_time = ticker_info['open_time']
+        close_time = ticker_info['close_time']
+        
+        # Lấy thời gian hiện tại theo đúng múi giờ của sàn
+        tz = pytz.timezone(tz_str)
         local_dt = datetime.now(tz)
         local_time = local_dt.time()
         
+        # Kiểm tra ngày trong tuần
         is_weekday = local_dt.isoweekday() <= 5
         
-        return is_weekday and MARKET_OPEN_TIME <= local_time and MARKET_CLOSE_TIME >= local_time
+        return is_weekday and open_time <= local_time < close_time
+
     except Exception as e:
+        print(f"Error checking market open status: {e}")
         return False
     
 def process_single_ticker(ticker_sym: str, redis_mng: RedisManager):
@@ -34,8 +50,8 @@ def process_single_ticker(ticker_sym: str, redis_mng: RedisManager):
         'open': info.open,
         'high': info.day_high,
         'low': info.day_low,
-        'last_price': info.last_price,
-        'last_volume': info.last_volume,
+        'close': info.last_price,
+        'volume': info.last_volume,
         'last_update_utc': datetime.now(timezone.utc).isoformat()
     }
     
@@ -43,38 +59,53 @@ def process_single_ticker(ticker_sym: str, redis_mng: RedisManager):
     
     print(f"  - Successfully update {ticker_sym} with last price is {info.last_price}")
     
-def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
-                  redis_mng: RedisManager,
-                  relax_time: int = 5):
-    region_tz = REGION_TIME_ZONE.get(region)
+def full_pipeline(db_mng: PostgreDBManager, redis_mng: RedisManager, relax_time: int = 2):
+    """
+    Pipeline chính, chạy định kỳ (ví dụ: mỗi phút).
+    Nó sẽ lặp qua tất cả các ticker và chỉ xử lý những ticker có thị trường đang mở.
+    """
+    print(f"--- RUNNING REAL-TIME PIPELINE at {datetime.now().isoformat()} ---")
     
-    print(f"--- START REAL-TIME PIPELINE FOR REGION: {region.upper()}, at {datetime.now(timezone.utc).isoformat()} ---")
+    # 1. Lấy thông tin của tất cả các ticker đang hoạt động từ cache
+    # Thao tác này rất nhanh vì dữ liệu đã có trong bộ nhớ
+    active_tickers_info = db_mng.get_active_tickers_with_info()
+    tickers_to_process = []
     
-    tickers = TO_FETCH_TICKERS_BY_REGION.get(region)
+    # 2. Lọc ra danh sách các ticker cần xử lý ngay bây giờ
+    for ticker, info in active_tickers_info.items():
+        if is_market_open_for_ticker(info):
+            tickers_to_process.append(ticker)
+        else:
+            print(f'Ticker {ticker} not open, skip.')
     
-    if is_market_open(region_tz):
-        for ticker in tickers:
-            try:
-                process_single_ticker(ticker, redis_mng)
-            except FetchException as e:
-                print(f'Error in ticker {ticker}: {e}')
-            except Exception as e:
-                print(f'Unknown Error in {ticker}: {e}')
-            time.sleep(relax_time)
-            
-        print('Complete cycle')
-    else:
-        print(f"[{datetime.now(pytz.timezone(region_tz)).strftime('%Y-%m-%d %H:%M:%S')}] Market not open in {region}")
+    if not tickers_to_process:
+        print("No markets are currently open. Skipping cycle.")
+        return
+        
+    print(f"Markets open for {len(tickers_to_process)} tickers: {tickers_to_process[:5]}...")
+    
+    # 3. Xử lý các ticker đã lọc
+    for ticker in tickers_to_process:
+        try:
+            process_single_ticker(ticker, redis_mng)
+        except Exception as e:
+            # Bắt lỗi chung để pipeline không bị sập
+            print(f'Unknown Error processing ticker {ticker}: {e}')
+        
+        time.sleep(relax_time) # Nghỉ một chút giữa các ticker
+
+    print('--- COMPLETED PIPELINE CYCLE ---')
         
 def main_orchestrator():
     print("--- REAL-TIME ORCHESTRATOR (SCHEDULE-BASED) HAS BEEN STARTED ---")
     
     redis_mng = RedisManager() # Tạo đối tượng manager một lần
+    db_mng = PostgreDBManager()
     
     # --- Lập lịch cho các công việc ---
     for region in REGION_TIME_ZONE.keys():
         print(f"Scheduling for region {region.upper()}, run each 15 minute...")
-        partial_job = partial(full_pipeline, region=region, redis_mng=redis_mng, relax_time=4)
+        partial_job = partial(full_pipeline, db_mng=db_mng, redis_mng=redis_mng, relax_time=4)
         schedule.every().hour.at(":00").do(partial_job)
         schedule.every().hour.at(":15").do(partial_job)
         schedule.every().hour.at(":30").do(partial_job)

@@ -54,7 +54,6 @@ def _transform_element(element: dict):
         raise FetchException(f"News with id {transformed['news_uuid']} do not have 'pubDate'")
 
     transformed['collect_time'] = datetime.now(timezone.utc)
-    transformed['content_type'] = content.get('contentType', '')
 
     # Lấy 'provider' một cách an toàn
     provider_info = content.get('provider') # Có thể là dict hoặc None
@@ -79,8 +78,7 @@ def _transform(data: list[dict]):
             continue
     return transformed_data
 
-def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
-                  table_name: str,
+def full_pipeline(table_name: str,
                   db_mng: PostgreDBManager,
                   max_news: int = 10,
                   sleep_time: int = 5):
@@ -96,9 +94,9 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         max_news (int): Số lượng tin tức nhiều nhất lấy từ mỗi cổ phiếu. Defaults to 10.
         sleep_time (int): Thời gian chờ giữa mỗi request để tránh time limit. Defaults to 5.
     """
-    tickers = TO_FETCH_TICKERS_BY_REGION[region]
+    tickers = list(db_mng.get_active_tickers_with_info().keys())
     try:
-        print(f'Lưu cho khu vực {region}')
+        print(f'Get news for {len(tickers)} tickers.')
         data = _extract_news_data(tickers, sleep_time, max_news)
         transformed_data = _transform(data)
         
@@ -117,15 +115,10 @@ def full_pipeline(region: Literal['americas', 'europe', 'asia_pacific'],
         print(f"An unknown exception occured: {e}")
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Require region parameter (americas, europe, asia_pacific)")
-        sys.exit(1)
-    
-    target_region = sys.argv[1].lower()
     
     TABLE_NAME = 'relevant_news'
     
     db_mng = PostgreDBManager()
     
-    full_pipeline(region=target_region, table_name=TABLE_NAME, db_mng=db_mng,
+    full_pipeline(table_name=TABLE_NAME, db_mng=db_mng,
                   max_news=15, sleep_time=5)

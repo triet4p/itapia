@@ -129,6 +129,7 @@ TO_FETCH_TICKERS_BY_REGION = {
     ]
 }
 
+
 DEFAULT_START_DATE = datetime(2018, 1, 1, tzinfo=timezone.utc)
 
 REGION_TIME_ZONE = {
