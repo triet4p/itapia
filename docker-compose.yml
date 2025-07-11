@@ -62,6 +62,8 @@ services:
     depends_on:
       - realtime_redis_db
       - stocks_postgre_db
+    volumes:
+      - ./api_service:/api-service
     ports:
       - "8000:8000"
     networks:
