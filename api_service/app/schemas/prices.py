@@ -1,26 +1,20 @@
-from pydantic import BaseModel
-from datetime import datetime
+# schemas/prices.py
+from pydantic import BaseModel, Field
+from typing import List
+from app.schemas.metadata import TickerMetadata
 
-class HistoryPrice(BaseModel):
-    ticker: str
+class PriceDataPoint(BaseModel):
     open: float|None = None
     high: float|None = None
     low: float|None = None
     close: float|None = None
     volume: int|None = None
-    collect_date: datetime
+    timestamp: int = Field(..., description="Unix timestamp (seconds) for the start of the day (UTC).")
     
     class Config:
         from_attributes = True
     
-class IntradayPrice(BaseModel):
-    ticker: str
-    open: float|None = None
-    high: float|None = None
-    low: float|None = None
-    last_price: float|None = None
-    last_volume: float|None = None
-    last_update_utc: datetime
-    
-    class Config:
-        from_attributes = True
+        
+class PriceFullPayload(BaseModel):
+    metadata: TickerMetadata = Field(..., description='metadata of a ticker')
+    datas: List[PriceDataPoint] = Field(..., description='daily data or intraday data')

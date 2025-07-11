@@ -1,13 +1,19 @@
-from pydantic import BaseModel
-from datetime import datetime
+# schemas/news.py
+from typing import List
+from pydantic import BaseModel, Field
+from app.schemas.metadata import TickerMetadata
 
-class News(BaseModel):
+class NewsPoint(BaseModel):
     news_uuid: str
-    ticker: str
     title: str
     summary: str|None = None
     provider: str|None = None
     link: str|None = None
-    content_type: str|None = None
-    publish_time: datetime|None = None
-    collect_time: datetime
+    publish_ts: int|None = None
+    collect_ts: int
+    class Config:
+        from_attributes = True
+    
+class NewsFullPayload(BaseModel):
+    metadata: TickerMetadata = Field(..., description='metadata of a ticker')
+    datas: List[NewsPoint] = Field(..., description='news')

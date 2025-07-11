@@ -1,1 +1,1 @@
-from . import news, prices
+from . import news, prices, metadata
