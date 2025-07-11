@@ -1,3 +1,4 @@
+# crud/news.py
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
