@@ -1,11 +1,11 @@
 FROM python:3.13-slim
 
-WORKDIR /api-service
+WORKDIR /api-gateway
 
-COPY ./requirements.txt /api-service/requirements.txt
+COPY ./requirements.txt /api-gateway/requirements.txt
 
-RUN pip install --no-cache-dir --upgrade -r /api-service/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /api-gateway/requirements.txt
 
-COPY . /api-service
+COPY . /api-gateway
 
-RUN ls /api-service -l
+RUN ls /api-gateway -l

@@ -13,3 +13,10 @@ class TickerMetadata(BaseModel):
     
     class Config:
         from_attributes = True
+        
+class SectorPayload(BaseModel):
+    sector_code: str
+    sector_name: str
+    
+    class Config:
+        from_attributes = True

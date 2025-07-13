@@ -3,11 +3,12 @@ from sqlalchemy.orm import Session
 from redis.client import Redis
 from typing import List
 
-from app.crud.metadata import get_metadata
-from app.crud.prices import get_daily_prices, get_intraday_prices, get_latest_intraday_price
+from app.crud.metadata import get_metadata, get_all_sectors
+from app.crud.prices import get_daily_prices, get_intraday_prices, \
+    get_latest_intraday_price, get_tickers_by_sector
 from app.crud.news import get_news
 
-from app.schemas.metadata import TickerMetadata
+from app.schemas.metadata import SectorPayload, TickerMetadata
 from app.schemas.prices import PriceDataPoint, PriceFullPayload
 from app.schemas.news import NewsPoint, NewsFullPayload
 
@@ -39,6 +40,41 @@ class DataService:
         
         return PriceFullPayload(metadata=TickerMetadata(**ticker_info), 
                                 datas=price_points)
+        
+    def get_daily_prices_payload_by_sector(self, sector_code: str, skip: int, limit: int):
+        """
+        Lấy dữ liệu giá hàng ngày cho tất cả các cổ phiếu trong một nhóm ngành.
+        """
+        print(f"Service: Preparing daily prices for sector {sector_code}...")
+        
+        # 1. Lấy danh sách các ticker thuộc ngành này
+        tickers_in_sector = get_tickers_by_sector(self.db, sector_code.upper())
+        
+        if not tickers_in_sector:
+            # Có thể trả về list rỗng hoặc ném lỗi tùy theo yêu cầu
+            # Trả về list rỗng thường thân thiện với client hơn
+            return []
+
+        all_payloads: List[PriceFullPayload] = []
+        
+        # 2. Lặp qua từng ticker và tạo payload cho nó
+        for ticker in tickers_in_sector:
+            try:
+                # --- TÁI SỬ DỤNG LOGIC ĐÃ CÓ ---
+                # Gọi lại hàm lấy dữ liệu cho một ticker duy nhất
+                single_ticker_payload = self.get_daily_prices_payload(
+                    ticker=ticker, 
+                    skip=skip, 
+                    limit=limit
+                )
+                if single_ticker_payload.datas: # Chỉ thêm vào nếu có dữ liệu giá
+                    all_payloads.append(single_ticker_payload)
+            except Exception as e:
+                # Bỏ qua các ticker bị lỗi và ghi log
+                print(f"Warning: Could not fetch data for ticker {ticker}. Error: {e}")
+                continue
+                
+        return all_payloads
         
     def get_intraday_prices_payload(self, ticker: str, latest_only: bool = False):
         ticker_info = self._get_validated_ticker_info(ticker)
@@ -78,5 +114,14 @@ class DataService:
         
         return NewsFullPayload(metadata=TickerMetadata(**ticker_info),
                                datas=news_points) 
+    
+    def get_all_sectors(self) -> List[SectorPayload]:
+        """
+        Lấy danh sách tất cả các nhóm ngành.
+        """
+        print("Service: Getting all sectors...")
+        sector_rows = get_all_sectors(self.db) # Giả sử đã tạo file metadata_crud.py
         
+        # Chuyển đổi kết quả thô thành danh sách các đối tượng Pydantic
+        return [SectorPayload(**row) for row in sector_rows]
     

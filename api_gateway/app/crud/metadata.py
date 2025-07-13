@@ -31,4 +31,13 @@ def get_metadata(db: Session):
     df = pd.DataFrame(result.fetchall(), columns=result.keys())
     _metadata_cache = df.set_index('ticker').to_dict('index')
     return _metadata_cache
+
+def get_all_sectors(db: Session):
+    """
+    Lấy toàn bộ thông tin về các nhóm ngành từ bảng 'sectors'.
+    """
+    query = text("SELECT sector_code, sector_name FROM sectors ORDER BY sector_name;")
+    result = db.execute(query)
+    # .mappings().all() trả về list các dict-like objects
+    return result.mappings().all()
     
