@@ -22,6 +22,7 @@ class DataService:
         ticker_info = self.metadata_cache.get(ticker.upper())
         if not ticker_info:
             raise HTTPException(status_code=404, detail=f"Ticker '{ticker}' not found.")
+        ticker_info['ticker'] = ticker
         return ticker_info
     
     def get_daily_prices_payload(self, ticker: str, skip: int, limit: int):
