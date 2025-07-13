@@ -53,17 +53,17 @@ services:
     # Chạy script điều phối real-time
     command: python -u scripts/fetch_realtime_price.py
   
-  api-service:
-    image: itapia-api-service:latest
+  api-gateway:
+    image: itapia-api-gateway:latest
     restart: unless-stopped
-    container_name: itapia-api-service
+    container_name: itapia-api-gateway
     env_file:
       - .env
     depends_on:
       - realtime_redis_db
       - stocks_postgre_db
     volumes:
-      - ./api_service:/api-service
+      - ./api_gateway:/api-gateway
     ports:
       - "8000:8000"
     networks:
