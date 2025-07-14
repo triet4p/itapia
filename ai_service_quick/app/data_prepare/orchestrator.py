@@ -55,3 +55,11 @@ class DataPrepareOrchestrator:
             return pd.DataFrame()
             
         return pd.DataFrame(sector_list)
+    
+    def get_all_sectors_code(self) -> List[str]:
+        print("Orchestrator: Preparing list of all sectors...")
+        sector_list = fetch_all_sectors()
+        if not sector_list:
+            return []
+        
+        return [x['sector_code'] for x in sector_list]

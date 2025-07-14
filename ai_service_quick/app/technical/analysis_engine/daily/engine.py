@@ -12,8 +12,8 @@ class DailyAnalysisEngine:
     def __init__(self, 
                  feature_df: pd.DataFrame, 
                  history_window: int = 90,
-                 prominence_pct: float = 0.015,
-                 distance: int = 5):
+                 prominence_pct: float = 0.02,
+                 distance: int = 7):
         """
         Khởi tạo với DataFrame đã được làm giàu bởi FeatureEngine.
 

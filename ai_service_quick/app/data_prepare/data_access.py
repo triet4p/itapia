@@ -1,9 +1,9 @@
 import requests
-from app.core.config import API_HTTP_BASE_URL
+from app.core.config import GATEWAY_HTTP_BASE_URL
 from typing import Dict, List
 
 def _make_request(endpoint: str, params: Dict = None):
-    url = f'{API_HTTP_BASE_URL}{endpoint}'
+    url = f'{GATEWAY_HTTP_BASE_URL}{endpoint}'
     try:
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status() # Ném lỗi cho các status code 4xx/5xx

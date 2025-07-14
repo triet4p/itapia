@@ -1,0 +1,9 @@
+pandas
+pandas-ta
+numpy==1.26.4
+pytest
+python-dotenv
+requests
+scipy==1.15.2
+fastapi
+uvicorn[standard]
