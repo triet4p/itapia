@@ -18,4 +18,4 @@ REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
 # Cấu hình API
-API_V1_BASE_ROUTE = os.getenv("API_V1_BASE_ROUTE", "/api/v1")
+GATEWAY_V1_BASE_ROUTE = os.getenv("GATEWAY_V1_BASE_ROUTE", "/api/v1")
