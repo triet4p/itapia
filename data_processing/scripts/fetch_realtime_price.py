@@ -6,7 +6,6 @@ import yfinance as yf
 import schedule
 from functools import partial
 
-from utils import TO_FETCH_TICKERS_BY_REGION, REGION_TIME_ZONE, MARKET_OPEN_TIME, MARKET_CLOSE_TIME, FetchException
 from db_manager import PostgreDBManager, RedisManager
 
 def is_market_open_for_ticker(ticker_info: dict) -> bool:
@@ -102,16 +101,14 @@ def main_orchestrator():
     redis_mng = RedisManager() # Tạo đối tượng manager một lần
     db_mng = PostgreDBManager()
     
-    # --- Lập lịch cho các công việc ---
-    for region in REGION_TIME_ZONE.keys():
-        print(f"Scheduling for region {region.upper()}, run each 15 minute...")
-        partial_job = partial(full_pipeline, db_mng=db_mng, redis_mng=redis_mng, relax_time=4)
-        schedule.every().hour.at(":00").do(partial_job)
-        schedule.every().hour.at(":15").do(partial_job)
-        schedule.every().hour.at(":30").do(partial_job)
-        schedule.every().hour.at(":45").do(partial_job)
-        # schedule.every().hour.at(":40").do(partial_job)
-        # schedule.every().hour.at(":50").do(partial_job)
+    print(f"Scheduling for job, run each 15 minute...")
+    partial_job = partial(full_pipeline, db_mng=db_mng, redis_mng=redis_mng, relax_time=4)
+    schedule.every().hour.at(":00").do(partial_job)
+    schedule.every().hour.at(":15").do(partial_job)
+    schedule.every().hour.at(":30").do(partial_job)
+    schedule.every().hour.at(":45").do(partial_job)
+    # schedule.every().hour.at(":40").do(partial_job)
+    # schedule.every().hour.at(":50").do(partial_job)
         
     # Vòng lặp thực thi
     while True:
