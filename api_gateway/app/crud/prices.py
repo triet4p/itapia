@@ -34,9 +34,9 @@ def get_intraday_prices(redis_conn: Redis, ticker: str):
     if entries:
         for entry_id, data in entries:
             for key, value in data.items():
-                if key in ['open', 'high', 'low', 'last_price']:
+                if key in ['open', 'high', 'low', 'close']:
                     data[key] = float(value)
-                elif key == 'last_volume':
+                elif key == 'volume':
                     data[key] = int(value)
                 elif key == 'last_update_utc':
                     data[key] = datetime.fromisoformat(data[key])
@@ -62,5 +62,5 @@ def get_latest_intraday_price(redis_conn: Redis, ticker: str):
         elif key == 'last_update_utc':
             data[key] = datetime.fromisoformat(data[key])
     data['ticker'] = ticker
-    
+
     return data
