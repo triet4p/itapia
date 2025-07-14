@@ -1,16 +1,20 @@
-import yfinance as yf
 from typing import List, Literal
+
 from datetime import datetime, timedelta, timezone
 import pandas as pd
-import sys
 
-from utils import FetchException, TO_FETCH_TICKERS_BY_REGION
+import yfinance as yf
+
+from utils import FetchException
 from db_manager import PostgreDBManager
+
+from logger import *
 
 
 def _extract_raw_data(tickers: List[str],
                      start_collect_date: datetime,
                      end_collect_date: datetime) -> pd.DataFrame:
+    """Thực hiện thu thập dữ liệu của một list các cổ phiếu trong một khung thời gian"""
     _start_collect_date = start_collect_date.strftime('%Y-%m-%d')
     _end_collect_date = end_collect_date.strftime('%Y-%m-%d')
     raw_df = yf.Tickers(tickers).history(period='max', interval='1d',
@@ -23,6 +27,7 @@ def _extract_raw_data(tickers: List[str],
     return raw_df
 
 def _reconstruct_table(raw_df: pd.DataFrame, numeric_type: Literal['float32', 'float64']='float32'):
+    """Thực hiện lại tái cấu trúc lại DataFrame đa cột, đồng thời chuyển đổi kiểu dữ liệu số."""
     stacked_df = raw_df.stack(level='Ticker', future_stack=True)
     stacked_df.reset_index(inplace=True)
     stacked_df.rename(columns={
@@ -46,6 +51,7 @@ def _reconstruct_table(raw_df: pd.DataFrame, numeric_type: Literal['float32', 'f
 def _handle_missing_data(df: pd.DataFrame, 
                          start_date: datetime, end_date: datetime, 
                          features: List[str]):
+    """Xử lý dữ liệu thiếu theo phương pháp ffill và bfill"""
     # Chuyển đổi datetime của Python sang Timestamp của Pandas
     pd_start_date = pd.Timestamp(start_date)
     pd_end_date = pd.Timestamp(end_date)
@@ -60,17 +66,21 @@ def _handle_missing_data(df: pd.DataFrame,
     
 def full_pipeline(table_name: str,
                   db_mng: PostgreDBManager):
-    """
-    Pipeline lấy dữ liệu giá lịch sử (OHLCV) của các cổ phiếu thuộc 1 region được chỉ định
-    rồi xử lý giá trị thiếu và lưu vào Postgre SQL
+    """Thực thi pipeline hoàn chỉnh để thu thập dữ liệu giá lịch sử hàng ngày.
+
+    Quy trình bao gồm:
+    1. Xác định khoảng thời gian cần lấy dữ liệu (từ ngày cuối cùng trong DB đến hôm qua).
+    2. Gọi API của yfinance để lấy dữ liệu thô.
+    3. Tái cấu trúc và làm sạch dữ liệu (xử lý giá trị thiếu).
+    4. Ghi dữ liệu đã làm sạch vào cơ sở dữ liệu PostgreSQL.
 
     Args:
-        region (Literal[&#39;americas&#39;, &#39;europe&#39;, &#39;asia_pacific&#39;]): Khu vực được hỗ trợ.
-            Dữ liệu thường phải lấy theo khu vực vì timezone khác nhau.
-        table_name (str): Tên bảng được lưu trong CSDL
-        db_manager (PostgreDBManager): Quản lý truy cập CSDL
+        table_name (str): Tên bảng trong CSDL để lưu dữ liệu (ví dụ: 'daily_prices').
+        db_mng (PostgreDBManager): Instance của DB manager để tương tác với CSDL.
     """
     try:
+        # 1. Xác định timing
+        info('Identify time window to process ...')
         metadata = db_mng.get_active_tickers_with_info()
         tickers = list(metadata.keys())
         
@@ -89,10 +99,10 @@ def full_pipeline(table_name: str,
         end_date = datetime(now_date.year, now_date.month, now_date.day,
                             22, 0, 0, tzinfo=timezone.utc) - timedelta(days=delta_day)
         
-        print(f'Start collect from {start_date} to {end_date} for {len(tickers)} tickers')
+        info(f'Start collect from {start_date} to {end_date} for {len(tickers)} tickers from Yahoo Finance API...')
         
         if start_date >= end_date:
-            print('Invalid date')
+            err('Invalid date')
             return
         
         start_collect_date = start_date - timedelta(days=30)
@@ -101,26 +111,27 @@ def full_pipeline(table_name: str,
         raw_df = _extract_raw_data(tickers, start_collect_date, end_collect_date)
         
         # 2. Transform
+        info('Reconstructing and handling missing data ...')
         reconstructed_df = _reconstruct_table(raw_df, 'float32')
         cleaned_df = _handle_missing_data(reconstructed_df, start_date, end_date, features=['open', 'high', 'low', 'close', 'volume'])
         
         if cleaned_df.empty:
-            print("Empty data after cleaning phase.")
+            err("Empty data after cleaning phase.")
             return
 
         # 3. Load
-        
+        info('Loading data into DB ...')
         selected_cols = ['collect_date', 'ticker', 'open', 'high', 'low', 'close', 'volume']
         selected_df = cleaned_df[selected_cols].copy()
         db_mng.bulk_insert(table_name, selected_df, 
                            unique_cols=['collect_date', 'ticker'],
                            chunk_size=1000,
                            on_conflict='update')
-        print(f"Successfully save {len(cleaned_df)} records.")
+        info(f"Successfully save {len(cleaned_df)} records.")
     except FetchException as e:
-        print(f"A fetch exception occured: {e}")
+        err(f"A fetch exception occured: {e}")
     except Exception as e:
-        print(f"An unknown exception occured: {e}")
+        err(f"An unknown exception occured: {e}")
     
 if __name__ == '__main__':
     

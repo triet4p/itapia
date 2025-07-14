@@ -1,20 +1,22 @@
-import sys
-from typing import Literal
-import yfinance as yf
-import time
 from datetime import datetime, timezone
+import time
+
 import uuid
 
-from utils import TO_FETCH_TICKERS_BY_REGION, FetchException
+import yfinance as yf
+
+from utils import FetchException
 from db_manager import PostgreDBManager
+
+from logger import *
 
 def _extract_news_data(tickers: list[str],
                        sleep_time: int = 5,
                        max_news: int = 10) -> list[dict]:
+    """Thực hiện thu thập dữ liệu tin tức của một list các cổ phiếu trong một khung thời gian"""
     data = []
     for ticker in tickers:
         new_data = yf.Ticker(ticker).get_news(max_news, 'news')
-        print(f'Successfully get {len(new_data)} for ticker {ticker}')
         
         for element in new_data:
             element['ticker'] = ticker
@@ -82,24 +84,30 @@ def full_pipeline(table_name: str,
                   db_mng: PostgreDBManager,
                   max_news: int = 10,
                   sleep_time: int = 5):
-    """
-    Pipeline lấy dữ liệu tin tức của các cổ phiếu thuộc 1 region được chỉ định
-    rồi xử lý giá trị thiếu và lưu vào Postgre SQL.
+    """Thực thi pipeline hoàn chỉnh để thu thập tin tức liên quan đến các cổ phiếu.
+
+    Quy trình bao gồm:
+    1. Lấy danh sách tất cả các ticker đang hoạt động từ DB manager.
+    2. Lặp qua từng ticker, gọi API của yfinance để lấy tin tức.
+    3. Chuyển đổi và chuẩn hóa dữ liệu tin tức thô.
+    4. Ghi các tin tức mới vào cơ sở dữ liệu, bỏ qua nếu đã tồn tại.
 
     Args:
-        region (Literal[&#39;americas&#39;, &#39;europe&#39;, &#39;asia_pacific&#39;]): Khu vực được hỗ trợ.
-            Dữ liệu thường phải lấy theo khu vực vì timezone khác nhau.
-        table_name (str): Tên bảng được lưu trong CSDL
-        db_manager (PostgreDBManager): Quản lý truy cập CSDL
-        max_news (int): Số lượng tin tức nhiều nhất lấy từ mỗi cổ phiếu. Defaults to 10.
-        sleep_time (int): Thời gian chờ giữa mỗi request để tránh time limit. Defaults to 5.
+        table_name (str): Tên bảng trong CSDL để lưu dữ liệu (ví dụ: 'relevant_news').
+        db_mng (PostgreDBManager): Instance của DB manager.
+        max_news (int, optional): Số lượng tin tức tối đa lấy cho mỗi ticker. Mặc định là 10.
+        sleep_time (int, optional): Thời gian nghỉ (giây) giữa các request API. Mặc định là 5.
     """
     tickers = list(db_mng.get_active_tickers_with_info().keys())
+    info(f'Successfully get {len(tickers)} to collect news...')
     try:
-        print(f'Get news for {len(tickers)} tickers.')
+        info(f'Getting news for {len(tickers)} tickers...')
         data = _extract_news_data(tickers, sleep_time, max_news)
+        
+        info(f'Transforming news data ...')
         transformed_data = _transform(data)
         
+        info(f'Loading news to DB ...')
         db_mng.bulk_insert(
             table_name, 
             transformed_data, 
@@ -108,11 +116,11 @@ def full_pipeline(table_name: str,
             on_conflict='nothing'
         )
         
-        print(f"Successfully!")
+        info(f"Successfully load!")
     except FetchException as e:
-        print(f"A fetch exception occured: {e}")
+        err(f"A fetch exception occured: {e}")
     except Exception as e:
-        print(f"An unknown exception occured: {e}")
+        err(f"An unknown exception occured: {e}")
 
 if __name__ == '__main__':
     
