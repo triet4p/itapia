@@ -19,12 +19,13 @@ class TechnicalOrchestrator:
         return engine.add_all_intraday_features().get_features(handle_na_method='forward_fill',
                                                                reset_index=False)
         
-    def get_daily_analysis(self, enriched_df: pd.DataFrame) -> Dict[str, Any]:
+    def get_daily_analysis(self, enriched_df: pd.DataFrame,
+                           analysis_type: Literal['short', 'medium', 'long'] = 'medium') -> Dict[str, Any]:
         """SERVICE 3: Chỉ phân tích một DataFrame hàng ngày đã có đặc trưng."""
         print("--- TechOrchestrator Service: get_daily_analysis ---")
         if enriched_df.empty:
             return {"error": "Cannot analyze empty enriched DataFrame."}
-        engine = DailyAnalysisEngine(enriched_df)
+        engine = DailyAnalysisEngine(enriched_df, analysis_type=analysis_type)
         return engine.get_analysis_report()
         
     def get_intraday_analysis(self, enriched_df: pd.DataFrame) -> Dict[str, Any]:
@@ -35,24 +36,27 @@ class TechnicalOrchestrator:
         engine = IntradayAnalysisEngine(enriched_df)
         return engine.get_analysis_report()
     
-    def _get_full_daily_analysis(self, ohlcv_df: pd.DataFrame):
+    def _get_full_daily_analysis(self, ohlcv_df: pd.DataFrame,
+                                 analysis_type: Literal['short', 'medium', 'long'] = 'medium'):
         enriched_df = self.get_daily_features(ohlcv_df)
-        return self.get_daily_analysis(enriched_df)
+        return self.get_daily_analysis(enriched_df, analysis_type)
     
     def _get_full_intraday_analysis(self, ohlcv_df: pd.DataFrame):
         enriched_df = self.get_intraday_features(ohlcv_df)
         return self.get_intraday_analysis(enriched_df)
     
-    def get_full_analysis(self, ohlcv_df: pd.DataFrame,
-                          required_type: Literal['daily', 'intraday', 'all'] = 'all'):
+    def get_full_analysis(self, ohlcv_daily_df: pd.DataFrame,
+                          ohlcv_intraday_df: pd.DataFrame,
+                          required_type: Literal['daily', 'intraday', 'all'] = 'all',
+                          daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium'):
         full_report = {
             'type': required_type
         }
         
         if required_type == 'daily' or required_type == 'all':
-            full_report['daily'] = self._get_full_daily_analysis(ohlcv_df)
+            full_report['daily'] = self._get_full_daily_analysis(ohlcv_daily_df, daily_analysis_type)
         if required_type == 'intraday' or required_type == 'all':
-            full_report['intraday'] = self._get_full_intraday_analysis(ohlcv_df)
+            full_report['intraday'] = self._get_full_intraday_analysis(ohlcv_intraday_df)
             
         return full_report
              

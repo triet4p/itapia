@@ -2,18 +2,37 @@ import pandas as pd
 from app.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
 from app.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
 from app.technical.analysis_engine.daily.pattern_recognizer import DailyPatternRecognizer
-from typing import Any, Dict
+from typing import Any, Dict, Literal, Optional
 
 class DailyAnalysisEngine:
+    PARAMS_BY_PERIOD = {
+        "short": {
+            "history_window": 30,
+            "prominence_pct": 0.01,
+            "distance": 3
+        },
+        "medium": {
+            "history_window": 90,
+            "prominence_pct": 0.02,
+            "distance": 7
+        },
+        "long": {
+            "history_window": 252,
+            "prominence_pct": 0.04,
+            "distance": 15
+        }
+    }
+    
     """
     Facade: Phân tích một DataFrame đã có đặc trưng và tạo ra một báo cáo.
     Nó điều phối các lớp chuyên gia để thực hiện các phân tích phức tạp.
     """
     def __init__(self, 
                  feature_df: pd.DataFrame, 
-                 history_window: int = 90,
-                 prominence_pct: float = 0.02,
-                 distance: int = 7):
+                 history_window: Optional[int] = None,
+                 prominence_pct: Optional[float] = None,
+                 distance: Optional[int] = None,
+                 analysis_type: Literal['manual', 'short', 'medium', 'long'] = 'manual'):
         """
         Khởi tạo với DataFrame đã được làm giàu bởi FeatureEngine.
 
@@ -29,6 +48,11 @@ class DailyAnalysisEngine:
         self.df = feature_df
         self.latest_row = self.df.iloc[-1]
         
+        history_window, prominence_pct, distance = self._set_params(history_window,
+                                                                    prominence_pct,
+                                                                    distance,
+                                                                    analysis_type)
+        
         # --- KHỞI TẠO TẤT CẢ CÁC CHUYÊN GIA ---
         # Truyền các tham số cấu hình xuống các lớp con tương ứng.
         self.trend_analyzer = DailyTrendAnalyzer(self.df)
@@ -37,6 +61,21 @@ class DailyAnalysisEngine:
                                                     history_window=history_window,
                                                     prominence_pct=prominence_pct,
                                                     distance=distance)
+        
+    def _set_params(self,
+                    history_window: Optional[int],
+                    prominence_pct: Optional[float],
+                    distance: Optional[int],
+                    analysis_type: Literal['manual', 'short', 'medium', 'long'] = 'manual'):
+        if analysis_type == 'manual':
+            if history_window is None or prominence_pct is None or distance is None:
+                raise ValueError("Manual type requires some parameters.")
+            return history_window, prominence_pct, distance
+
+        # Nếu không phải manual, luôn lấy từ profile
+        print(f"Using pre-defined parameters for '{analysis_type}' profile.")
+        params = self.PARAMS_BY_PERIOD[analysis_type]
+        return params['history_window'], params['prominence_pct'], params['distance']
 
     def get_analysis_report(self) -> Dict[str, Any]:
         """

@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-
+from typing import Literal
 import pandas as pd
 from app.technical.orchestrator import TechnicalOrchestrator
 from app.data_prepare.orchestrator import DataPrepareOrchestrator
@@ -15,7 +15,8 @@ class AIServiceQuickOrchestrator:
         self.data_preparer = DataPrepareOrchestrator()
         self.tech_analyzer = TechnicalOrchestrator()
         
-    def get_full_analysis_report(self, ticker: str):
+    def get_full_analysis_report(self, ticker: str, 
+                                 daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium'):
         """
         QUY TRÌNH 1: Tạo báo cáo phân tích A-Z cho một ticker duy nhất.
         Bao gồm lấy dữ liệu, tạo features, và phân tích.
@@ -34,7 +35,10 @@ class AIServiceQuickOrchestrator:
         # --- BƯỚC 2: THỰC HIỆN PHÂN TÍCH KỸ THUẬT ---
         # Ra lệnh cho "Trưởng phòng Kỹ thuật"
         print("CEO -> TechAnalyzer: Performing analyses...")
-        technical_analysis_report = self.tech_analyzer.get_full_analysis(daily_df, required_type='all')
+        technical_analysis_report = self.tech_analyzer.get_full_analysis(daily_df, 
+                                                                         intraday_df,
+                                                                         required_type='all',
+                                                                         daily_analysis_type=daily_analysis_type)
         
         # --- BƯỚC 3 (TƯƠNG LAI): GỌI CÁC PHÒNG BAN KHÁC ---
         # forecast_report = self.forecaster.get_forecast(...)

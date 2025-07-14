@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from scipy.signal import find_peaks
-from typing import List, Dict, Callable, Optional
+from typing import List, Dict, Callable, Literal, Optional
 
 # --- DECORATOR VÀ SỔ ĐĂNG KÝ ---
 # Sổ đăng ký sẽ là một dictionary, lưu tên mẫu hình và hàm kiểm tra tương ứng
@@ -18,11 +18,35 @@ def register_pattern(pattern_name: str):
 
 class DailyPatternRecognizer:
     CHART_PATTERN_METADATA = {
-        "Double Top": {"sentiment": "Bearish"},
-        "Double Bottom": {"sentiment": "Bullish"},
-        "Head and Shoulders": {"sentiment": "Bearish"}
+        "Double Top": {"sentiment": "Bearish", "score": 100},
+        "Double Bottom": {"sentiment": "Bullish", "score": 100},
+        "Head and Shoulders": {"sentiment": "Bearish", "score": 100}
         # ...
     }
+    
+    CANDLESTICK_METADATA = {
+        # Mẫu hình đảo chiều mạnh (3 nến) - Điểm cao
+        "Three Black Crows": {"sentiment": "Bearish", "score": 80},
+        "Three White Soldiers": {"sentiment": "Bullish", "score": 80},
+        "Morning Star": {"sentiment": "Bullish", "score": 85},
+        "Evening Star": {"sentiment": "Bearish", "score": 85},
+        
+        # Mẫu hình nhấn chìm (2 nến) - Điểm khá cao
+        "Bullish Engulfing": {"sentiment": "Bullish", "score": 75},
+        "Bearish Engulfing": {"sentiment": "Bearish", "score": 75},
+        
+        # Mẫu hình đơn lẻ có ý nghĩa mạnh
+        "Hammer": {"sentiment": "Bullish", "score": 60},
+        "Hanging Man": {"sentiment": "Bearish", "score": 60},
+        "Inverted Hammer": {"sentiment": "Bullish", "score": 60},
+        "Shooting Star": {"sentiment": "Bearish", "score": 60},
+        
+        # Doji (báo hiệu sự do dự, điểm thấp hơn)
+        "Doji": {"sentiment": "Neutral", "score": 30},
+        "Dragonfly Doji": {"sentiment": "Bullish", "score": 40},
+        "Gravestone Doji": {"sentiment": "Bearish", "score": 40},
+    }
+    
     def __init__(self, featured_df: pd.DataFrame, 
                  history_window: int = 90,
                  prominence_pct: float = 0.015, 
@@ -41,7 +65,10 @@ class DailyPatternRecognizer:
         all_patterns = []
         all_patterns.extend(self._find_candlestick_patterns())
         all_patterns.extend(self._find_chart_patterns())
-        return all_patterns
+        
+        finals = self._filter_and_prioritize(all_patterns)
+        
+        return finals
         
     def _find_extrema(self, prominence_pct: float, distance: int):
         avg_price = np.mean(self.analysis_df['high'])
@@ -62,44 +89,87 @@ class DailyPatternRecognizer:
         
         return peaks_df, troughs_df 
 
-    def _find_candlestick_patterns(self) -> List[Dict]:
-        patterns = []
-        latest_row_lower = self.latest_row.rename(index=str.lower)
-        for col, value in latest_row_lower.items():
-            col = str(col)
-            if col.startswith('cdl_') and value != 0:
-                pattern_name = col.replace('cdl_', '').replace('_', ' ').title()
-                sentiment = "Bullish" if value > 0 else "Bearish"
-                
-                result = {
-                    "pattern_name": pattern_name,
-                    "type": "Candlestick Pattern",
-                    "sentiment": sentiment,
-                    "evidence": {
-                        "date": str(self.latest_row.name)
-                    }
-                }
-                patterns.append(result)
-        return patterns
+    def _find_candlestick_patterns(self, lookback_period: int) -> List[Dict]:
+        """Quét N ngày cuối cùng và thu thập tất cả các mẫu hình nến."""
+        collected = []
+        recent_df = self.analysis_df.tail(lookback_period)
+        
+        for date, row in recent_df.iterrows():
+            latest_row_lower = row.rename(index=str.lower)
+            for col, value in latest_row_lower.items():
+                if str(col).startswith('cdl_') and value != 0:
+                    pattern_name_key = col.replace('cdl_', '').replace('_', ' ').title()
+
+                    metadata = self.get_pattern_metadata(pattern_name_key, 'candlestick')
+                    collected.append({
+                        "pattern_name": pattern_name_key,
+                        "type": "Candlestick Pattern",
+                        "sentiment": metadata.get("sentiment", "Unknown"),
+                        "score": metadata.get("score", 30),
+                        "evidence": {"confirmation_date": str(date.date())}
+                    })
+        return collected
     
     def _find_chart_patterns(self) -> List[Dict]:
         found_patterns = []
         for pattern_name, checker_function in _chart_pattern_registry.items():
             evidence = checker_function(self)
             if evidence is not None:
-                metadata = self.get_pattern_metadata(pattern_name)
+                metadata = self.get_pattern_metadata(pattern_name, 'chart')
                 res = {
                     "pattern_name": pattern_name,
                     "type": "Chart Pattern",
-                    "sentiment": metadata.get("sentiment", "Neutral"),
+                    "sentiment": metadata.get("sentiment", "Unknown"),
+                    "score": metadata.get("score", 30),
                     "evidence": evidence
                 }
                 found_patterns.append(res)
 
         return found_patterns
     
-    def get_pattern_metadata(self, pattern_name: str) -> Dict:
-        return DailyPatternRecognizer.CHART_PATTERN_METADATA.get(pattern_name, {})
+    def _filter_and_prioritize(self, patterns: List[Dict]) -> List[Dict]:
+        """
+        Lọc bỏ các mẫu hình nhiễu và sắp xếp theo mức độ quan trọng.
+        """
+        if not patterns:
+            return []
+
+        # 1. Loại bỏ các mẫu hình chung chung nếu có mẫu hình cụ thể hơn trong cùng một ngày
+        df = pd.DataFrame(patterns)
+        
+        # Ví dụ: Nếu ngày X có cả 'Doji' và 'Dragonfly Doji', chúng ta muốn bỏ 'Doji'
+        # Tạo một cột để xác định ngày của bằng chứng
+        df['evidence_date'] = pd.to_datetime(df['evidence'].apply(lambda x: x['confirmation_date']))
+        
+        # Danh sách các mẫu hình chung chung cần loại bỏ nếu có "con" của nó
+        generic_patterns = {"Doji"}
+        specific_patterns = {"Dragonfly Doji", "Gravestone Doji"}
+        
+        indices_to_drop = []
+        for date, group in df.groupby('evidence_date'):
+            names_in_group = set(group['name'])
+            if names_in_group.intersection(generic_patterns) and names_in_group.intersection(specific_patterns):
+                # Tìm index của các mẫu hình chung chung trong ngày này để xóa
+                indices = group[group['name'].isin(generic_patterns)].index
+                indices_to_drop.extend(indices)
+                
+        df.drop(indices_to_drop, inplace=True)
+        
+        # 2. Sắp xếp kết quả cuối cùng
+        # Ưu tiên 1: Điểm số (Score) cao hơn
+        # Ưu tiên 2: Ngày gần đây hơn
+        df = df.sort_values(by=['score', 'evidence_date'], ascending=[False, False])
+        
+        # Chuyển lại thành list of dicts
+        return df.to_dict('records')
+    
+    def get_pattern_metadata(self, pattern_name: str,
+                             pattern_type: Literal['chart', 'candlestick']) -> Dict:
+        if pattern_type == 'chart':
+            return DailyPatternRecognizer.CHART_PATTERN_METADATA.get(pattern_name, {})
+        elif pattern_type == 'candlestick':
+            return DailyPatternRecognizer.CANDLESTICK_METADATA.get(pattern_name, {})
+        return {}
     
     # --- ĐĂNG KÝ CÁC HÀM KIỂM TRA MẪU HÌNH ---
 
