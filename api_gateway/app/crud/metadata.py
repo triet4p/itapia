@@ -1,4 +1,7 @@
+# app/crud/metadata.py
+
 import pandas as pd
+
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -33,9 +36,6 @@ def get_metadata(db: Session):
     return _metadata_cache
 
 def get_all_sectors(db: Session):
-    """
-    Lấy toàn bộ thông tin về các nhóm ngành từ bảng 'sectors'.
-    """
     query = text("SELECT sector_code, sector_name FROM sectors ORDER BY sector_name;")
     result = db.execute(query)
     # .mappings().all() trả về list các dict-like objects

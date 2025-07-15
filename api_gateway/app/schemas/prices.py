@@ -1,6 +1,8 @@
-# schemas/prices.py
+# app/schemas/prices.py
+
 from pydantic import BaseModel, Field
 from typing import List
+
 from app.schemas.metadata import TickerMetadata
 
 class PriceDataPoint(BaseModel):

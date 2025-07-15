@@ -1,4 +1,5 @@
-# schemas/metadata.py
+# app/schemas/metadata.py
+
 from typing import Literal
 from pydantic import BaseModel
 

@@ -1,6 +1,8 @@
-# schemas/news.py
+# app/schemas/news.py
+
 from typing import List
 from pydantic import BaseModel, Field
+
 from app.schemas.metadata import TickerMetadata
 
 class NewsPoint(BaseModel):

@@ -1,3 +1,12 @@
+# app/core/config.py
+"""
+Module tập trung hóa việc quản lý và truy cập các biến cấu hình.
+
+Tự động đọc các giá trị từ file `.env` ở thư mục gốc của dự án.
+Cung cấp các hằng số đã được định nghĩa cho các thành phần khác trong ứng dụng
+sử dụng, đảm bảo tính nhất quán và dễ dàng thay đổi cấu hình từ một nơi duy nhất.
+"""
+
 import os
 from dotenv import load_dotenv
 from pathlib import Path
@@ -9,7 +18,7 @@ load_dotenv(dotenv_path=env_path)
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost") # DB_HOST là tên service trong Docker
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", 5432)
 DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 

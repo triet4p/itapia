@@ -1,7 +1,11 @@
-from fastapi import HTTPException
-from sqlalchemy.orm import Session
-from redis.client import Redis
+# app/services/data_service.py
 from typing import List
+
+from fastapi import HTTPException
+
+from sqlalchemy.orm import Session
+
+from redis.client import Redis
 
 from app.crud.metadata import get_metadata, get_all_sectors
 from app.crud.prices import get_daily_prices, get_intraday_prices, \
@@ -12,7 +16,16 @@ from app.schemas.metadata import SectorPayload, TickerMetadata
 from app.schemas.prices import PriceDataPoint, PriceFullPayload
 from app.schemas.news import NewsPoint, NewsFullPayload
 
+from app.logger import *
+
 class DataService:
+    """Lớp dịch vụ chứa logic nghiệp vụ chính để truy xuất và đóng gói dữ liệu.
+
+    Lớp này hoạt động như một tầng trung gian giữa lớp API (endpoints) và lớp
+    truy cập dữ liệu (CRUD). Nó chịu trách nhiệm điều phối việc lấy dữ liệu thô
+    từ CRUD, sau đó chuyển đổi và định dạng chúng thành các đối tượng Pydantic
+    (schemas) hoàn chỉnh để trả về cho API.
+    """
     def __init__(self, db: Session, redis_conn: Redis):
         self.db = db
         self.redis_conn = redis_conn
@@ -26,6 +39,8 @@ class DataService:
         return ticker_info
     
     def get_daily_prices_payload(self, ticker: str, skip: int, limit: int):
+        """Lấy và đóng gói dữ liệu giá lịch sử hàng ngày cho một ticker."""
+        info(f"SERVICE: Preparing daily prices for ticker {ticker}")
         ticker_info = self._get_validated_ticker_info(ticker)
         ticker_info['data_type'] = 'daily'
         
@@ -43,10 +58,8 @@ class DataService:
                                 datas=price_points)
         
     def get_daily_prices_payload_by_sector(self, sector_code: str, skip: int, limit: int):
-        """
-        Lấy dữ liệu giá hàng ngày cho tất cả các cổ phiếu trong một nhóm ngành.
-        """
-        print(f"Service: Preparing daily prices for sector {sector_code}...")
+        """Lấy và đóng gói dữ liệu giá hàng ngày cho tất cả các cổ phiếu trong một nhóm ngành."""
+        info(f"SERVICE: Preparing daily prices for sector {sector_code}...")
         
         # 1. Lấy danh sách các ticker thuộc ngành này
         tickers_in_sector = get_tickers_by_sector(self.db, sector_code.upper())
@@ -72,12 +85,14 @@ class DataService:
                     all_payloads.append(single_ticker_payload)
             except Exception as e:
                 # Bỏ qua các ticker bị lỗi và ghi log
-                print(f"Warning: Could not fetch data for ticker {ticker}. Error: {e}")
+                warn(f"Warning: Could not fetch data for ticker {ticker}. Error: {e}")
                 continue
                 
         return all_payloads
         
     def get_intraday_prices_payload(self, ticker: str, latest_only: bool = False):
+        """Lấy và đóng gói dữ liệu giá trong ngày từ Redis cho một ticker."""
+        info(f"SERVICE: Preparing intraday prices for ticker {ticker}")
         ticker_info = self._get_validated_ticker_info(ticker)
         ticker_info['data_type'] = 'intraday'
 
@@ -100,6 +115,8 @@ class DataService:
                                 datas=price_points)
         
     def get_news_payload(self, ticker: str, skip: int, limit: int):
+        """Lấy và đóng gói dữ liệu tin tức cho một ticker."""
+        info(f"SERVICE: Preparing news data for ticker {ticker}")
         ticker_info = self._get_validated_ticker_info(ticker)
         ticker_info['data_type'] = 'news'
         
@@ -117,12 +134,9 @@ class DataService:
                                datas=news_points) 
     
     def get_all_sectors(self) -> List[SectorPayload]:
-        """
-        Lấy danh sách tất cả các nhóm ngành.
-        """
-        print("Service: Getting all sectors...")
+        """Lấy danh sách tất cả các nhóm ngành được hỗ trợ."""
+        info("SERVICE: Preparing all sectors...")
         sector_rows = get_all_sectors(self.db) # Giả sử đã tạo file metadata_crud.py
         
         # Chuyển đổi kết quả thô thành danh sách các đối tượng Pydantic
         return [SectorPayload(**row) for row in sector_rows]
-    

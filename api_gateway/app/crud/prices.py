@@ -1,8 +1,11 @@
-# crud/prices.py
+# app/crud/prices.py
+
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+
 from redis.client import Redis
-from datetime import datetime
 
 def get_daily_prices(db: Session, ticker: str, skip: int = 0, limit: int = 500):
     query = text("""
