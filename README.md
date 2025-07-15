@@ -4,6 +4,8 @@ ITAPIA (Intelligent and Transparent AI-Powered Personal Investment Assistant) l�
 
 Khác với các công cụ "hộp đen" truyền thống, ITAPIA tập trung vào **khả năng giải thích (Explainability)**, **chi phí thấp**, và khả năng **học hỏi, đồng phát triển** cùng người dùng.
 
+**English version of README**: [README-en.md](./README-en.md)
+
 ---
 
 ## 🏗️ Kiến trúc Hệ thống
