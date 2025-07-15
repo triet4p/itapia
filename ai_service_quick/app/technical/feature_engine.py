@@ -4,8 +4,23 @@ import pandas_ta as ta
 import numpy as np
 from typing import Any, Optional, List, Dict
 
+from app.logger import * 
+
 class _FeatureEngine:
+    """Lớp cơ sở trừu tượng cho các Feature Engine.
+
+    Lớp này định nghĩa các hành vi chung và các phương thức cốt lõi mà tất cả
+    các feature engine (daily, intraday) phải có. Nó bao gồm việc khởi tạo,
+    xử lý NaN, và một phương thức chung để thêm các chỉ báo từ thư viện
+    pandas-ta một cách an toàn và linh hoạt.
+
+    Attributes:
+        df (pd.DataFrame): DataFrame nội bộ chứa dữ liệu và các đặc trưng đang
+            được tính toán.
+        DEFAULT_CONFIG (Dict): Một dictionary cấu hình mặc định cho các chỉ báo.
+    """
     def __init__(self, ohlcv_df: pd.DataFrame):
+        """Khởi tạo Feature Engine với một DataFrame OHLCV."""
         if not isinstance(ohlcv_df.index, pd.DatetimeIndex):
             raise TypeError("DataFrame index must be a DatetimeIndex for intraday analysis.")
         
@@ -18,14 +33,10 @@ class _FeatureEngine:
             self.df.drop(columns=['ta'], inplace=True)
             
     def get_features(self, copy: bool = True, handle_na_method: Optional[str] = 'forward_fill', reset_index: bool = False) -> pd.DataFrame:
-        """
-        Trả về DataFrame cuối cùng, với tùy chọn xử lý NaN thông minh.
+        """Trả về DataFrame cuối cùng đã được làm giàu với các đặc trưng.
 
-        Args:
-            copy (bool): Tạo bản sao trước khi xử lý hay không.
-            handle_na_method (Optional[str]): Phương pháp xử lý NaN. 
-                Nếu là None, sẽ không xử lý NaN.
-            reset_index (bool): Reset index sau khi xử lý hay không.
+        Hàm này cung cấp các tùy chọn để xử lý giá trị thiếu (NaN) và
+        đặt lại index, cho phép người gọi tùy chỉnh output cuối cùng.
         """
         df = self.df.copy() if copy else self.df
         
@@ -51,7 +62,7 @@ class _FeatureEngine:
         Returns:
             pd.DataFrame: DataFrame đã được xử lý NaN.
         """
-        print(f"Handling NaNs using '{method}' method...")
+        info(f"Feature Engine: Handling NaNs using '{method}' method...")
         
         if method == 'forward_fill':
             # ffill() sẽ điền các giá trị NaN bằng giá trị hợp lệ cuối cùng.
@@ -73,15 +84,16 @@ class _FeatureEngine:
         Hàm chung để thêm bất kỳ chỉ báo nào từ pandas-ta.
         Chủ động kiểm tra tham số hợp lệ bằng inspect.signature.
         """
+        info(f"Feature Engine: Adding indicator {indicator_name} to Frame ...")
         if configs is None:
             configs = self.DEFAULT_CONFIG.get(indicator_name)
             if configs is None:
-                print(f"Warning: No default config for '{indicator_name}'. Skipping.")
+                warn(f"Warning: No default config for '{indicator_name}'. Skipping.")
                 return self
         try:
             indicator_function = getattr(self.df.ta, indicator_name)
         except AttributeError:
-            print(f"Warning: Indicator '{indicator_name}' not found in pandas-ta. Skipping.")
+            err(f"Warning: Indicator '{indicator_name}' not found in pandas-ta. Skipping.")
             return self
 
         # Lấy danh sách các tên tham số hợp lệ từ chữ ký của hàm
@@ -95,8 +107,8 @@ class _FeatureEngine:
             
             if invalid_keys:
                 # Nếu có, in cảnh báo và bỏ qua config này
-                print(f"Warning: Invalid parameter(s) {invalid_keys} for '{indicator_name}' with config {config}. "
-                      f"Skipping this specific config.")
+                warn(f"Warning: Invalid parameter(s) {invalid_keys} for '{indicator_name}' with config {config}. "
+                     f"Skipping this specific config.")
                 continue
             
             # Nếu không có key không hợp lệ, gọi hàm một cách an toàn
@@ -105,6 +117,13 @@ class _FeatureEngine:
         return self
 
 class DailyFeatureEngine(_FeatureEngine):
+    """Chuyên gia tạo đặc trưng cho dữ liệu chuỗi thời gian hàng ngày.
+
+    Kế thừa từ _FeatureEngine và định nghĩa một bộ `DEFAULT_CONFIG` riêng,
+    tối ưu hóa cho việc phân tích trung và dài hạn. Cung cấp các phương thức
+    tiện ích để thêm các nhóm chỉ báo (trend, momentum, etc.) và các
+    đặc trưng tùy chỉnh.
+    """
     DEFAULT_CONFIG: Dict[str, List[Dict[str, any]]] = {
         # Trend indicators
         'sma': [{'length': 20}, {'length': 50}, {'length': 200}],
@@ -181,7 +200,7 @@ class DailyFeatureEngine(_FeatureEngine):
 
     # --- GROUP METHODS ---
     def _add_indicator_group(self, group_name: str, indicators: List[str], all_configs: Optional[Dict[str, List[Dict[str, any]]]] = None):
-        print(f"--- Adding {group_name} Indicators ---")
+        info(f"Daily Feature Engine: Adding {group_name} Indicators ---")
         for indicator in indicators:
             indicator_config = all_configs.get(indicator) if all_configs else None
             getattr(self, f'add_{indicator}')(indicator_config)
@@ -201,7 +220,7 @@ class DailyFeatureEngine(_FeatureEngine):
 
     # --- CUSTOM & AGGREGATE METHODS ---
     def add_diff_from_sma(self, configs: Optional[List[Dict[str, int]]] = None):
-        print("--- Adding Custom: Difference from SMA ---")
+        info("Daily Feature Engine: Adding Custom: Difference from SMA ...")
         if configs is None: configs = [{'sma_length': 50}, {'sma_length': 200}]
         
         for config in configs:
@@ -224,7 +243,7 @@ class DailyFeatureEngine(_FeatureEngine):
         return self
 
     def add_return_d(self, configs: Optional[List[Dict[str, int]]] = None):
-        print("--- Adding Custom: N-day Return ---")
+        info("Daily Feature Engine: Adding Custom: N-day Return ...")
         if configs is None: configs = [{'d': 1}, {'d': 5}, {'d': 20}]
         for config in configs:
             d_period = config.get('d')
@@ -233,12 +252,12 @@ class DailyFeatureEngine(_FeatureEngine):
         return self
 
     def add_all_candlestick_patterns(self):
-        print("--- Adding All Candlestick Patterns ---")
+        info("Daily Feature Engine: Adding All Candlestick Patterns ...")
         self.df.ta.cdl_pattern(name="all", append=True)
         return self
 
     def add_all_features(self, all_configs: Optional[Dict[str, List[Dict[str, any]]]] = None):
-        print("=== Adding All Features ===")
+        info("Daily Feature Engine: === Adding All Features ===")
         (self.add_trend_indicators(all_configs)
              .add_momentum_indicators(all_configs)
              .add_volatility_indicators(all_configs)
@@ -249,6 +268,12 @@ class DailyFeatureEngine(_FeatureEngine):
         return self
     
 class IntradayFeatureEngine(_FeatureEngine):
+    """Chuyên gia tạo đặc trưng cho dữ liệu chuỗi thời gian trong ngày.
+
+    Kế thừa từ _FeatureEngine và định nghĩa `DEFAULT_CONFIG` phù hợp với các
+    khung thời gian ngắn (ví dụ: 15 phút), ưu tiên EMA và các chỉ báo
+    nhạy hơn như VWAP. Bao gồm các phương thức đặc thù như `add_opening_range`.
+    """
     DEFAULT_CONFIG: Dict[str, List[Dict[str, Any]]] = {
         # Sử dụng EMA làm MA chính
         'ema': [{'length': 9}, {'length': 12}, {'length': 26}],
@@ -268,17 +293,14 @@ class IntradayFeatureEngine(_FeatureEngine):
         super().__init__(ohlcv_df)
         
     def add_intraday_ma(self, configs: Optional[List[Dict[str, int]]] = None):
-        """Thêm các đường EMA phù hợp cho intraday."""
         return self._add_generic_indicator('ema', configs)
 
     def add_intraday_momentum(self, rsi_configs: Optional[List[Dict]] = None, macd_configs: Optional[List[Dict]] = None):
-        """Thêm các chỉ báo động lượng như RSI và MACD."""
         self._add_generic_indicator('rsi', rsi_configs)
         self._add_generic_indicator('macd', macd_configs)
         return self
 
     def add_intraday_volatility(self, bbands_configs: Optional[List[Dict]] = None, atr_configs: Optional[List[Dict]] = None):
-        """Thêm Bollinger Bands và ATR."""
         self._add_generic_indicator('bbands', bbands_configs)
         self._add_generic_indicator('atr', atr_configs)
         return self
@@ -295,11 +317,7 @@ class IntradayFeatureEngine(_FeatureEngine):
         return self
 
     def add_opening_range(self, minutes: int = 30):
-        """
-        Thêm các mức cao và thấp của một khoảng thời gian đầu ngày (Opening Range).
-        Đây là một đặc trưng intraday rất quan trọng.
-        """
-        print(f"Adding {minutes}-minute Opening Range...")
+        info(f"Intraday Feature Engine: Adding {minutes}-minute Opening Range...")
         
         # Lấy ngày của mỗi dòng để nhóm
         df_date = self.df.index.date
@@ -338,7 +356,7 @@ class IntradayFeatureEngine(_FeatureEngine):
 
     def add_all_intraday_features(self):
         """Hàm tiện ích để thêm tất cả các chỉ báo intraday tiêu chuẩn."""
-        print("--- Adding all standard intraday features ---")
+        info("Intraday Feature Engine: Adding all standard intraday features ...")
         (self
             .add_intraday_ma()
             .add_intraday_momentum()

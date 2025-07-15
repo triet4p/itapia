@@ -1,15 +1,19 @@
 import requests
-from app.core.config import GATEWAY_HTTP_BASE_URL
 from typing import Dict, List
+
+from app.core.config import GATEWAY_HTTP_BASE_URL
+
+from app.logger import *
 
 def _make_request(endpoint: str, params: Dict = None):
     url = f'{GATEWAY_HTTP_BASE_URL}{endpoint}'
+    info(f"Data Accessor: Getting data from url {url}")
     try:
         response = requests.get(url, params=params, timeout=30)
         response.raise_for_status() # Ném lỗi cho các status code 4xx/5xx
         return response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching data from {url}: {e}")
+        err(f"Data Accessor: Error fetching data from {url}: {e}")
         # Trả về None hoặc một cấu trúc lỗi chuẩn thay vì ném ValueError
         # để orchestrator có thể xử lý một cách duyên dáng.
         return None

@@ -1,40 +1,55 @@
+import pandas as pd
+
 from typing import Any, Dict, Literal
+
 from app.technical.feature_engine import DailyFeatureEngine, IntradayFeatureEngine
 from app.technical.analysis_engine.daily import DailyAnalysisEngine
 from app.technical.analysis_engine.intraday import IntradayAnalysisEngine
 
-import pandas as pd
+from app.logger import *
 
 class TechnicalOrchestrator:
     def get_daily_features(self, ohlcv_df: pd.DataFrame):
-        print("--- TechOrchestrator Service: get_daily_features ---")
-        engine = DailyFeatureEngine(ohlcv_df)
-        return engine.add_all_features().get_features(handle_na_method='forward_fill', 
-                                                      reset_index=False)
-        
+        info("TechOrchestrator Service: GENERATE DAILY FEATURES")
+        try:
+            engine = DailyFeatureEngine(ohlcv_df)
+            return engine.add_all_features().get_features(handle_na_method='forward_fill', 
+                                                        reset_index=False)
+        except (ValueError, TypeError) as e:
+            err(f"Daily Feature Engine: {e}. Returning empty DataFrame.")
+            return pd.DataFrame()
+            
+
     def get_intraday_features(self, ohlcv_df: pd.DataFrame) -> pd.DataFrame:
-        """SERVICE 2: Chỉ tạo và trả về DataFrame đặc trưng trong ngày."""
-        print("--- TechOrchestrator Service: get_intraday_features ---")
-        engine = IntradayFeatureEngine(ohlcv_df)
-        return engine.add_all_intraday_features().get_features(handle_na_method='forward_fill',
-                                                               reset_index=False)
+        info("TechOrchestrator Service: GENERATE INTRADAY FEATURES")
+        try:
+            engine = IntradayFeatureEngine(ohlcv_df)
+            return engine.add_all_intraday_features().get_features(handle_na_method='forward_fill',
+                                                                reset_index=False)
+        except (ValueError, TypeError) as e:
+            err(f"Intraday Feature Engine: {e}. Returning empty DataFrame.")
+            return pd.DataFrame()
         
     def get_daily_analysis(self, enriched_df: pd.DataFrame,
                            analysis_type: Literal['short', 'medium', 'long'] = 'medium') -> Dict[str, Any]:
-        """SERVICE 3: Chỉ phân tích một DataFrame hàng ngày đã có đặc trưng."""
-        print("--- TechOrchestrator Service: get_daily_analysis ---")
-        if enriched_df.empty:
-            return {"error": "Cannot analyze empty enriched DataFrame."}
-        engine = DailyAnalysisEngine(enriched_df, analysis_type=analysis_type)
-        return engine.get_analysis_report()
+        info("TechOrchestrator Service: GENERATE DAILY ANALYSIS")
+        try:
+            # DailyAnalysisEngine có thể ném ra ValueError nếu không đủ dữ liệu
+            engine = DailyAnalysisEngine(enriched_df, analysis_type=analysis_type)
+            return engine.get_analysis_report()
+        except (ValueError, TypeError) as e:
+            err(f"Daily Analysis Engine: {e}. Returning error report.")
+            return {"error": str(e)}
         
     def get_intraday_analysis(self, enriched_df: pd.DataFrame) -> Dict[str, Any]:
-        """SERVICE 4: Chỉ phân tích một DataFrame trong ngày đã có đặc trưng."""
-        print("--- TechOrchestrator Service: get_intraday_analysis ---")
-        if enriched_df.empty:
-            return {"error": "Cannot analyze empty enriched DataFrame."}
-        engine = IntradayAnalysisEngine(enriched_df)
-        return engine.get_analysis_report()
+        info("TechOrchestrator Service: GENERATE DAILY ANALYSIS")
+        try:
+            # DailyAnalysisEngine có thể ném ra ValueError nếu không đủ dữ liệu
+            engine = IntradayAnalysisEngine(enriched_df)
+            return engine.get_analysis_report()
+        except (ValueError, TypeError) as e:
+            err(f"Daily Analysis Engine: {e}. Returning error report.")
+            return {"error": str(e)}
     
     def _get_full_daily_analysis(self, ohlcv_df: pd.DataFrame,
                                  analysis_type: Literal['short', 'medium', 'long'] = 'medium'):

@@ -50,7 +50,8 @@ class DailyPatternRecognizer:
     def __init__(self, featured_df: pd.DataFrame, 
                  history_window: int = 90,
                  prominence_pct: float = 0.015, 
-                 distance: int = 5):
+                 distance: int = 5,
+                 lookback_period: int = 5):
         if featured_df.empty or len(featured_df) < history_window:
             raise ValueError(f"Input DataFrame must have at least {history_window} rows.")
         
@@ -58,17 +59,28 @@ class DailyPatternRecognizer:
         self.analysis_df = self.df.tail(history_window).copy()
         self.latest_row = self.analysis_df.iloc[-1]
         
+        self.lookback_period = lookback_period
+        self.history_window = history_window
+        self.prominence_pct = prominence_pct
+        self.distance = distance
+        
         self.peaks, self.troughs = self._find_extrema(prominence_pct, distance) 
         
     def find_patterns(self) -> List[Dict]:
-        print("--- PatternRecognizer: Finding Patterns (Extensible) ---")
         all_patterns = []
-        all_patterns.extend(self._find_candlestick_patterns())
+        all_patterns.extend(self._find_candlestick_patterns(self.lookback_period))
         all_patterns.extend(self._find_chart_patterns())
         
         finals = self._filter_and_prioritize(all_patterns)
-        
-        return finals
+        patterns_reports = {}
+        patterns_reports['params'] = {
+            "history_window": self.history_window,
+            "prominence_pct": self.prominence_pct,
+            "distance": self.distance,
+            "lookback_period": self.lookback_period
+        }
+        patterns_reports['patterns'] = finals
+        return patterns_reports
         
     def _find_extrema(self, prominence_pct: float, distance: int):
         avg_price = np.mean(self.analysis_df['high'])
@@ -106,7 +118,7 @@ class DailyPatternRecognizer:
                         "type": "Candlestick Pattern",
                         "sentiment": metadata.get("sentiment", "Unknown"),
                         "score": metadata.get("score", 30),
-                        "evidence": {"confirmation_date": str(date.date())}
+                        "evidence": {"confirmation_date": date.date().isoformat()}
                     })
         return collected
     
@@ -147,10 +159,10 @@ class DailyPatternRecognizer:
         
         indices_to_drop = []
         for date, group in df.groupby('evidence_date'):
-            names_in_group = set(group['name'])
+            names_in_group = set(group['pattern_name'])
             if names_in_group.intersection(generic_patterns) and names_in_group.intersection(specific_patterns):
                 # Tìm index của các mẫu hình chung chung trong ngày này để xóa
-                indices = group[group['name'].isin(generic_patterns)].index
+                indices = group[group['pattern_name'].isin(generic_patterns)].index
                 indices_to_drop.extend(indices)
                 
         df.drop(indices_to_drop, inplace=True)
@@ -188,13 +200,13 @@ class DailyPatternRecognizer:
         all_conditions = p1.price > neckline.price and p2.price > neckline.price and height_similarity and is_confirmed
         if all_conditions:
             evidence = {
-                "peak1_date": str(p1.index_in_df),
+                "peak1_date": p1.index_in_df.date().isoformat(),
                 "peak1_price": p1.price,
-                "peak2_date": str(p2.index_in_df),
+                "peak2_date": p2.index_in_df.date().isoformat(),
                 "peak2_price": p2.price,
-                "neckline_date": str(neckline.index_in_df),
+                "neckline_date": neckline.index_in_df.date().isoformat(),
                 "neckline_price": neckline.price,
-                "confirmation_date": str(self.latest_row.name),
+                "confirmation_date": self.latest_row.name.date().isoformat(),
                 "params": {
                     "tolerance": tolerance
                 }
@@ -219,13 +231,13 @@ class DailyPatternRecognizer:
         all_conditions = t1.price < neckline.price and t2.price < neckline.price and depth_similarity and is_confirmed
         if all_conditions:
             evidence = {
-                "trough1_date": str(t1.index_in_df),
+                "trough1_date": t1.index_in_df.date().isoformat(),
                 "trough1_price": t1.price,
-                "trough2_date": str(t2.index_in_df),
+                "trough2_date": t2.index_in_df.date().isoformat(),
                 "trough2_price": t2.price,
-                "neckline_date": str(neckline.index_in_df),
+                "neckline_date": neckline.index_in_df.date().isoformat(),
                 "neckline_price": neckline.price,
-                "confirmation_date": str(self.latest_row.name),
+                "confirmation_date": self.latest_row.name.date().isoformat(),
                 "params": {
                     "tolerance": tolerance
                 }
@@ -256,18 +268,18 @@ class DailyPatternRecognizer:
         
         if all_conditions:
             evidence = {
-                "peak1_date": str(p1.index_in_df),
+                "peak1_date": p1.index_in_df.date().isoformat(),
                 "peak1_price": p1.price,
-                "peak2_date": str(p2.index_in_df),
+                "peak2_date": p2.index_in_df.date().isoformat(),
                 "peak2_price": p2.price,
-                "peak3_date": str(p3.index_in_df),
+                "peak3_date": p3.index_in_df.date().isoformat(),
                 "peak3_price": p3.price,
-                "trough1_date": str(t1.index_in_df),
+                "trough1_date": t1.index_in_df.date().isoformat(),
                 "trough1_price": t1.price,
-                "trough2_date": str(t2.index_in_df),
+                "trough2_date": t2.index_in_df.date().isoformat(),
                 "trough2_price": t2.price,
                 "neckline_level": neckline_level,
-                "confirmation_date": str(self.latest_row.name),
+                "confirmation_date": self.latest_row.name.date().isoformat(),
                 "params": {
                     "tolerance": tolerance
                 }

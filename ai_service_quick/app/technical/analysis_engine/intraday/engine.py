@@ -5,6 +5,8 @@ from app.technical.analysis_engine.intraday.status_analyzer import IntradayStatu
 from app.technical.analysis_engine.intraday.level_identifier import IntradayLevelIdentifier
 from app.technical.analysis_engine.intraday.momentum_analyzer import IntradayMomentumAnalyzer
 
+from app.logger import *
+
 class IntradayAnalysisEngine:
     """
     Facade: Phân tích DataFrame intraday đã có đặc trưng và tạo báo cáo.
@@ -28,11 +30,20 @@ class IntradayAnalysisEngine:
         """
         Tạo báo cáo phân tích intraday tổng hợp.
         """
-        print("--- IntradayAnalysisEngine: Generating Intraday Report ---")
+        info("Intraday Analysis Engine: Generating Intraday Report ---")
+        
+        info("Status Analyzer: Analyzing current status ...")
+        current_status = self.status_analyzer.analyze_current_status()
+        
+        info("Level Identifier: Identifing key levels ...")
+        key_levels = self.level_identifier.identify_key_levels()
+        
+        info("Momentum Analyzer: Analyzing momentum and volume ...")
+        momentum = self.momentum_analyzer.analyze_momentum_and_volume()
         
         report = {
-            "current_status": self.status_analyzer.analyze_current_status(),
-            "key_levels": self.level_identifier.identify_key_levels(),
-            "momentum": self.momentum_analyzer.analyze_momentum_and_volume()
+            "current_status": current_status,
+            "key_levels": key_levels,
+            "momentum": momentum
         }
         return report

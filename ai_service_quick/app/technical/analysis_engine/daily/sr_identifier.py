@@ -24,6 +24,8 @@ class DailySRIdentifier:
         self.latest_row = self.analysis_df.iloc[-1]
         self.current_price = self.latest_row['close']
         
+        self.history_window = history_window
+        
     def identify_levels(self) -> Dict[str, List[Dict]]:
         """
         Hàm chính, tổng hợp các mức S/R từ nhiều phương pháp.
@@ -46,7 +48,10 @@ class DailySRIdentifier:
                 
         return {
             "support": sorted(support_objects, key=lambda x: x['level'], reverse=True),
-            "resistance": sorted(resistance_objects, key=lambda x: x['level'])
+            "resistance": sorted(resistance_objects, key=lambda x: x['level']),
+            "params": {
+                "history_window": self.history_window
+            }
         }
 
     # --- CÁC HÀM CỦA PHIÊN BẢN 1 ---
