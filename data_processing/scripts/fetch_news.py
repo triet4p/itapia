@@ -33,7 +33,10 @@ def _transform_element(element: dict):
     transformed = {}
     
     # Sử dụng uuid.uuid4() làm fallback nếu 'id' không tồn tại
-    transformed['news_uuid'] = element.get('id') or str(uuid.uuid4())
+    transformed['news_uuid'] = element.get('id')
+    if transformed['news_uuid'] is None:
+        transformed['news_uuid'] = str(uuid.uuid4())
+        warn('Use UUID generate alternative!')
     
     content = element.get('content')
     if not content: # Kiểm tra cả None và dictionary rỗng
