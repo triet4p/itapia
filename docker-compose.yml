@@ -46,6 +46,7 @@ services:
       - .env
     depends_on:
       - realtime_redis_db
+      - stocks_postgre_db
     networks:
       - itapia-network
     volumes:
@@ -69,7 +70,22 @@ services:
     networks:
       - itapia-network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    
+
+  ai-service-quick:
+    image: itapia-ai-service-quick:latest
+    restart: unless-stopped
+    container_name: itapia-ai-service-quick
+    env_file:
+      - .env
+    depends_on:
+      - api-gateway
+    volumes:
+      - ./ai_service_quick:/ai-service-quick
+    ports:
+      - "8001:8000"
+    networks:
+      - itapia-network
+    entrypoint: /ai-service-quick/entrypoint.sh
 volumes:
   postgres_data:
   redis_data:
