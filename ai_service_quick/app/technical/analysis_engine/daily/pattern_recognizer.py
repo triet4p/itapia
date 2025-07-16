@@ -24,34 +24,65 @@ class DailyPatternRecognizer:
         # ...
     }
     
+    CDL_NAME_MAPPING = {
+        'cdl_2crows': 'Two Crows',
+        'cdl_3blackcrows': 'Three Black Crows',
+        'cdl_3inside': 'Three Inside Up/Down',
+        'cdl_3linestrike': 'Three-Line Strike',
+        'cdl_3outside': 'Three Outside Up/Down',
+        'cdl_3starsinsouth': 'Three Stars In The South',
+        'cdl_3whitesoldiers': 'Three White Soldiers',
+        'cdl_abandonedbaby': 'Abandoned Baby',
+        'cdl_engulfing': 'Engulfing', # Đây là mẫu hình quan trọng
+        'cdl_eveningdojistar': 'Evening Doji Star',
+        'cdl_eveningstar': 'Evening Star',
+        'cdl_hammer': 'Hammer',
+        'cdl_hangingman': 'Hanging Man',
+        'cdl_harami': 'Harami',
+        'cdl_haramicross': 'Harami Cross',
+        'cdl_invertedhammer': 'Inverted Hammer',
+        'cdl_morningdojistar': 'Morning Doji Star',
+        'cdl_morningstar': 'Morning Star',
+        'cdl_piercing': 'Piercing Pattern',
+        'cdl_shootingstar': 'Shooting Star',
+        'cdl_doji': 'Doji', # Doji chung, nên có điểm thấp
+        'cdl_dragonflydoji': 'Dragonfly Doji',
+        'cdl_gravestonedoji': 'Gravestone Doji',
+        'cdl_longleggeddoji': 'Long-Legged Doji',
+    }
+    
     CANDLESTICK_METADATA = {
-        # Mẫu hình đảo chiều mạnh (3 nến) - Điểm cao
-        "Three Black Crows": {"sentiment": "Bearish", "score": 80},
-        "Three White Soldiers": {"sentiment": "Bullish", "score": 80},
-        "Morning Star": {"sentiment": "Bullish", "score": 85},
-        "Evening Star": {"sentiment": "Bearish", "score": 85},
+        # Mẫu hình đảo chiều mạnh (3 nến)
+        "Three Black Crows": {"sentiment": "Bearish", "score": 85},
+        "Three White Soldiers": {"sentiment": "Bullish", "score": 85},
+        "Morning Star": {"sentiment": "Bullish", "score": 80},
+        "Evening Star": {"sentiment": "Bearish", "score": 80},
+        "Abandoned Baby": {"sentiment": "Bullish", "score": 90}, # Rất hiếm nhưng mạnh
         
-        # Mẫu hình nhấn chìm (2 nến) - Điểm khá cao
-        "Bullish Engulfing": {"sentiment": "Bullish", "score": 75},
-        "Bearish Engulfing": {"sentiment": "Bearish", "score": 75},
-        
-        # Mẫu hình đơn lẻ có ý nghĩa mạnh
+        # Mẫu hình nhấn chìm (2 nến)
+        "Engulfing": {"sentiment": "Varies", "score": 75}, # Sentiment phụ thuộc vào giá trị
+        "Harami": {"sentiment": "Varies", "score": 70},
+        "Piercing Pattern": {"sentiment": "Bullish", "score": 70},
+
+        # Mẫu hình đơn lẻ
         "Hammer": {"sentiment": "Bullish", "score": 60},
         "Hanging Man": {"sentiment": "Bearish", "score": 60},
         "Inverted Hammer": {"sentiment": "Bullish", "score": 60},
         "Shooting Star": {"sentiment": "Bearish", "score": 60},
         
-        # Doji (báo hiệu sự do dự, điểm thấp hơn)
+        # Doji (do dự)
         "Doji": {"sentiment": "Neutral", "score": 30},
         "Dragonfly Doji": {"sentiment": "Bullish", "score": 40},
         "Gravestone Doji": {"sentiment": "Bearish", "score": 40},
+        "Long-Legged Doji": {"sentiment": "Neutral", "score": 35},
     }
     
     def __init__(self, featured_df: pd.DataFrame, 
                  history_window: int = 90,
                  prominence_pct: float = 0.015, 
                  distance: int = 5,
-                 lookback_period: int = 5):
+                 lookback_period: int = 5,
+                 top_patterns: int = 4):
         if featured_df.empty or len(featured_df) < history_window:
             raise ValueError(f"Input DataFrame must have at least {history_window} rows.")
         
@@ -63,6 +94,7 @@ class DailyPatternRecognizer:
         self.history_window = history_window
         self.prominence_pct = prominence_pct
         self.distance = distance
+        self.top_patterns = top_patterns
         
         self.peaks, self.troughs = self._find_extrema(prominence_pct, distance) 
         
@@ -77,9 +109,10 @@ class DailyPatternRecognizer:
             "history_window": self.history_window,
             "prominence_pct": self.prominence_pct,
             "distance": self.distance,
-            "lookback_period": self.lookback_period
+            "lookback_period": self.lookback_period,
+            "top_patterns": self.top_patterns
         }
-        patterns_reports['patterns'] = finals
+        patterns_reports['patterns'] = finals[:self.top_patterns]
         return patterns_reports
         
     def _find_extrema(self, prominence_pct: float, distance: int):
@@ -102,23 +135,35 @@ class DailyPatternRecognizer:
         return peaks_df, troughs_df 
 
     def _find_candlestick_patterns(self, lookback_period: int) -> List[Dict]:
-        """Quét N ngày cuối cùng và thu thập tất cả các mẫu hình nến."""
+        """
+        Quét N ngày cuối cùng và thu thập tất cả các mẫu hình nến bằng
+        cách sử dụng bảng ánh xạ tên.
+        """
         collected = []
         recent_df = self.analysis_df.tail(lookback_period)
         
         for date, row in recent_df.iterrows():
-            latest_row_lower = row.rename(index=str.lower)
-            for col, value in latest_row_lower.items():
-                if str(col).startswith('cdl_') and value != 0:
-                    pattern_name_key = col.replace('cdl_', '').replace('_', ' ').title()
+            row_lower_cols = row.rename(index=str.lower)
+            
+            for cdl_col_name, friendly_name in self.CDL_NAME_MAPPING.items():
+                # Kiểm tra xem cột có tồn tại và có giá trị không
+                if cdl_col_name in row_lower_cols and row_lower_cols[cdl_col_name] != 0:
+                    
+                    metadata = self.CANDLESTICK_METADATA.get(friendly_name, {})
+                    
+                    # Xác định sentiment dựa trên giá trị (100 là Bullish, -100 là Bearish)
+                    sentiment = "Bullish" if row_lower_cols[cdl_col_name] > 0 else "Bearish"
+                    
+                    # Ghi đè sentiment nếu metadata có định nghĩa khác (ví dụ: Neutral)
+                    if metadata.get("sentiment") != "Varies":
+                        sentiment = metadata.get("sentiment", "Neutral")
 
-                    metadata = self.get_pattern_metadata(pattern_name_key, 'candlestick')
                     collected.append({
-                        "pattern_name": pattern_name_key,
+                        "name": friendly_name,
                         "type": "Candlestick Pattern",
-                        "sentiment": metadata.get("sentiment", "Unknown"),
-                        "score": metadata.get("score", 30),
-                        "evidence": {"confirmation_date": date.date().isoformat()}
+                        "sentiment": sentiment,
+                        "score": metadata.get("score", 20), # Điểm mặc định thấp
+                        "evidence": {"date": date.date().isoformat()}
                     })
         return collected
     

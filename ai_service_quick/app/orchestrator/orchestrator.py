@@ -96,3 +96,11 @@ class AIServiceQuickOrchestrator:
         
         info(f"--- CEO: Training data for '{sector_code}' is ready. ---")
         return enriched_sector_df # Tạm thời trả về df đã có features
+    
+    def export_local_data_for_sector(self, sector_code: str):
+        df = self.prepare_training_data_for_sector(sector_code)
+        df.to_csv(f'/ai-service-quick/local/training_{sector_code}.csv')
+        
+if __name__ == '__main__':
+    orchestrator = AIServiceQuickOrchestrator()
+    orchestrator.export_local_data_for_sector('TECH')

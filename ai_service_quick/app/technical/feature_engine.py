@@ -146,7 +146,13 @@ class DailyFeatureEngine(_FeatureEngine):
         'vwap': [{}],
         # Custom
         'diff_from_sma': [{'sma_length': 50}, {'sma_length': 200}],
-        'return_d': [{'d': 5}, {'d': 20}] 
+        'return_d': [{'d': 1}, {'d': 5}, {'d': 20}],
+        'lag': [
+            {'column': 'close', 'periods': [1, 3, 5, 10, 20, 40]},
+            {'column': 'volume', 'periods': [1, 3, 5, 10, 20, 40]},
+            {'column': 'return_1d', 'periods': [1, 5, 20]},
+            {'column': 'diff_from_sma_50', 'periods': [1, 5, 20, 40]}
+        ]
     }
     
     def __init__(self, ohlcv_df: pd.DataFrame):
@@ -250,6 +256,79 @@ class DailyFeatureEngine(_FeatureEngine):
             if d_period:
                 self.df[f'return_{d_period}d'] = self.df['close'].pct_change(periods=d_period) * 100
         return self
+    
+    def add_lag_features(self, configs: Optional[List[Dict[str, any]]] = None):
+        info("Daily Feature Engine: Adding Lag Features ...")
+        if configs is None:
+            configs = self.DEFAULT_CONFIG.get('lag')
+
+        if not configs:
+            warn("Warning: No config found for 'lag'. Skipping.")
+            return self
+
+        for config in configs:
+            col_to_lag = config.get('column')
+            lag_periods = config.get('periods')
+
+            if not col_to_lag or not lag_periods:
+                warn(f"Warning: Invalid lag config {config}. Missing 'column' or 'periods'. Skipping.")
+                continue
+
+            # --- Logic phòng thủ: Kiểm tra cột có tồn tại không ---
+            if col_to_lag not in self.df.columns:
+                warn(f"Error: Column '{col_to_lag}' not found for lagging. "
+                    f"Ensure it is calculated before calling add_lag_features. Skipping config {config}.")
+                continue
+
+            # Tạo các cột lag
+            for period in lag_periods:
+                new_col_name = f'{col_to_lag}_lag_{period}'
+                self.df[new_col_name] = self.df[col_to_lag].shift(period)
+
+        return self
+    
+    def add_interaction_features(self):
+        """
+        Tạo các đặc trưng tương tác có ý nghĩa dựa trên kiến thức chuyên môn,
+        kết hợp các tín hiệu từ các nhóm khác nhau (trend, momentum, event).
+        """
+        info("Daily Feature Engine: Adding Interaction Features ...")
+        
+        # --- Tương tác 1: Momentum trong bối cảnh Trend ---
+        # Yêu cầu: diff_from_sma_200 và RSI_14 phải tồn tại
+        if 'diff_from_sma_200' in self.df.columns and 'RSI_14' in self.df.columns:
+            self.df['trend_direction'] = np.sign(self.df['diff_from_sma_200'])
+            self.df['RSI_x_trend'] = self.df['RSI_14'] * self.df['trend_direction']
+            # Có thể xóa cột trung gian nếu muốn
+            self.df.drop(columns=['trend_direction'], inplace=True)
+            info("  - Added: RSI_x_trend")
+        else:
+            warn("  - Skipped RSI_x_trend: Required columns not found.")
+
+        # --- Tương tác 2: Momentum được chuẩn hóa bởi Biến động ---
+        # Yêu cầu: CCI_14_0.015 và ATRr_14 phải tồn tại
+        if 'CCI_14_0.015' in self.df.columns and 'ATRr_14' in self.df.columns:
+            # pandas-ta có thể tạo tên cột khác nhau, kiểm tra trước
+            cci_col = 'CCI_14_0.015'
+            atr_col = 'ATRr_14' # Chú ý 'r' trong ATRr (ATR percentage)
+            
+            self.df['CCI_norm_by_ATR'] = self.df[cci_col] / (self.df[atr_col] + 1e-9)
+            info("  - Added: CCI_norm_by_ATR")
+        else:
+            warn("  - Skipped CCI_norm_by_ATR: Required columns not found.")
+            
+        # --- Tương tác 3: Sự kiện Nến trong bối cảnh Trạng thái ---
+        # Yêu cầu: CDLHAMMER_3g và RSI_14 phải tồn tại
+        if 'CDL_HAMMER' in self.df.columns and 'RSI_14' in self.df.columns:
+            self.df['is_oversold'] = (self.df['RSI_14'] < 30).astype(int)
+            # Giả sử giá trị của Hammer khi xuất hiện là 100
+            self.df['hammer_in_oversold'] = (self.df['CDL_HAMMER'] / 100) * self.df['is_oversold']
+            self.df.drop(columns=['is_oversold'], inplace=True)
+            info("  - Added: hammer_in_oversold")
+        else:
+            warn("  - Skipped hammer_in_oversold: Required columns not found.")
+            
+        return self
 
     def add_all_candlestick_patterns(self):
         info("Daily Feature Engine: Adding All Candlestick Patterns ...")
@@ -264,7 +343,9 @@ class DailyFeatureEngine(_FeatureEngine):
              .add_volume_indicators(all_configs)
              .add_diff_from_sma(all_configs.get('diff_from_sma') if all_configs else None)
              .add_return_d(all_configs.get('return_d') if all_configs else None)
-             .add_all_candlestick_patterns())
+             .add_lag_features(all_configs.get('lag') if all_configs else None)
+             .add_all_candlestick_patterns()
+             .add_interaction_features())
         return self
     
 class IntradayFeatureEngine(_FeatureEngine):

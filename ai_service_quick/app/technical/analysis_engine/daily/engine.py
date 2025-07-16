@@ -22,19 +22,22 @@ class DailyAnalysisEngine:
             "history_window": 30,
             "prominence_pct": 0.01,
             "distance": 3,
-            "lookback_period": 3
+            "lookback_period": 3,
+            "top_patterns": 4
         },
         "medium": {
             "history_window": 90,
             "prominence_pct": 0.02,
             "distance": 7,
             "lookback_period": 5,
+            "top_patterns": 5,
         },
         "long": {
             "history_window": 252,
             "prominence_pct": 0.04,
             "distance": 15,
-            "lookback_period": 7
+            "lookback_period": 7,
+            "top_patterns": 6
         }
     }
     
@@ -44,6 +47,7 @@ class DailyAnalysisEngine:
                  prominence_pct: Optional[float] = None,
                  distance: Optional[int] = None,
                  lookback_period: Optional[int] = None,
+                 top_patterns: Optional[int] = None,
                  analysis_type: Literal['manual', 'short', 'medium', 'long'] = 'manual'):
         """
         Khởi tạo với DataFrame đã được làm giàu bởi FeatureEngine.
@@ -65,10 +69,11 @@ class DailyAnalysisEngine:
         self.df = feature_df
         self.latest_row = self.df.iloc[-1]
         
-        history_window, prominence_pct, distance, lookback_period = self._set_params(history_window,
+        history_window, prominence_pct, distance, lookback_period, top_patterns = self._set_params(history_window,
                                                                                      prominence_pct,
                                                                                      distance,
                                                                                      lookback_period,
+                                                                                     top_patterns,
                                                                                      analysis_type)
         
         # --- KHỞI TẠO TẤT CẢ CÁC CHUYÊN GIA ---
@@ -79,23 +84,27 @@ class DailyAnalysisEngine:
                                                         history_window=history_window,
                                                         prominence_pct=prominence_pct,
                                                         distance=distance,
-                                                        lookback_period=lookback_period)
+                                                        lookback_period=lookback_period,
+                                                        top_patterns=top_patterns)
         
     def _set_params(self,
                     history_window: Optional[int],
                     prominence_pct: Optional[float],
                     distance: Optional[int],
                     lookback_period: Optional[int],
+                    top_pattenrs: Optional[int],
                     analysis_type: Literal['manual', 'short', 'medium', 'long'] = 'manual'):
         if analysis_type == 'manual':
-            if history_window is None or prominence_pct is None or distance is None or lookback_period is None:
+            if history_window is None or prominence_pct is None or distance is None \
+                or lookback_period is None or top_pattenrs is None:
                 raise ValueError("Manual type requires some parameters.")
-            return history_window, prominence_pct, distance
+            return history_window, prominence_pct, distance, lookback_period, top_pattenrs
 
         # Nếu không phải manual, luôn lấy từ profile
         info(f"Using pre-defined parameters for '{analysis_type}' profile.")
         params = self.PARAMS_BY_PERIOD[analysis_type]
-        return params['history_window'], params['prominence_pct'], params['distance'], params['lookback_period']
+        return params['history_window'], params['prominence_pct'], params['distance'], \
+            params['lookback_period'], params['top_patterns']
 
     def get_analysis_report(self) -> Dict[str, Any]:
         """
