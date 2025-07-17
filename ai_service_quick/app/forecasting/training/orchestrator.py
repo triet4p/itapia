@@ -12,6 +12,7 @@ class TrainingOrchestrator:
         self.df = df
         self.tasks: Dict[str, _MLTask] = {}
         self.feature_cols = [c for c in df.columns if not c.startswith('target_')]
+        self.feature_cols.remove('ticker')
         
     def register_task(self, new_task: _MLTask):
         info(f'Training Orchestrator: Registering problem: {new_task.task_id} ({new_task.task_type})')
