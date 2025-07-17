@@ -5,9 +5,12 @@ from datetime import datetime
 def train_test_split(df: pd.DataFrame,
                      train_test_split_date: datetime,
                      test_last_date: datetime):
- 
-    df_train = df[df.index <= train_test_split_date]
-    df_test = df[(df.index > train_test_split_date) & (df.index <= test_last_date)]
+    
+    _train_test_split_date = pd.to_datetime(train_test_split_date, utc=True)
+    _test_last_date = pd.to_datetime(test_last_date, utc=True)
+    
+    df_train = df[df.index <= _train_test_split_date]
+    df_test = df[(df.index > _train_test_split_date) & (df.index <= _test_last_date)]
     
     return df_train, df_test
 
