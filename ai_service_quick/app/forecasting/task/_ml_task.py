@@ -135,7 +135,7 @@ class _MLTask(ABC):
             raise
         finally:
             print(f"[{self.task_id}] Cleaning up temporary artifact directory...")
-            shutil.rmtree(artifact_dir)
+            #shutil.rmtree(artifact_dir)
 
     # --- HÀM LOAD ĐÃ VIẾT LẠI HOÀN TOÀN ---
     def load_model_from_kaggle(
