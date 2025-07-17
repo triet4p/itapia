@@ -79,7 +79,7 @@ class _MLTask(ABC):
         if self.model is None:
             raise TypeError('Final model must be set before registering.')
 
-        artifact_dir = f"./{self.task_id}_artifacts_to_upload"
+        artifact_dir = f"./{model_slug}-artifacts-to-upload"
         if os.path.exists(artifact_dir):
             shutil.rmtree(artifact_dir)
         os.makedirs(artifact_dir)
@@ -89,7 +89,7 @@ class _MLTask(ABC):
         try:
             # 1. Lưu tất cả artifacts vào thư mục tạm
             # (Logic lưu file không đổi so với phiên bản trước)
-            with open(os.path.join(artifact_dir, "final_model.pkl"), "wb") as f:
+            with open(os.path.join(artifact_dir, "final-model.pkl"), "wb") as f:
                 pickle.dump(self.model, f)
             with open(os.path.join(artifact_dir, "features.json"), "w") as f:
                 json.dump(self.selected_features, f, indent=4)
