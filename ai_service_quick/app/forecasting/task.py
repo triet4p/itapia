@@ -176,7 +176,10 @@ def find_triple_barrier_optimal_params(
     results_df['stability_score'] = results_df['stability_score'].clip(lower=0)
     
     # 4. Thưởng Risk/Reward (RR Bonus)
-    results_df['rr_bonus'] = (results_df['tp_pct'] / results_df['sl_pct']).clip(upper=3) / 10 # Thưởng tối đa 0.3 điểm
+    rr = results_df['tp_pct'] / results_df['sl_pct']
+    # Chuẩn hóa về thang điểm [0, 1]. Giả sử R/R hợp lý nằm trong khoảng [1, 3]
+    min_rr, max_rr = 1.0, 3.0
+    results_df['rr_score'] = (rr.clip(lower=min_rr, upper=max_rr) - min_rr) / (max_rr - min_rr)
 
     # 5. Điểm số Horizon (Horizon Score) - Ưu tiên horizon lớn hơn
     # Sử dụng một hàm tuyến tính hoặc log để chuẩn hóa horizon về thang điểm [0, 1]
@@ -184,10 +187,11 @@ def find_triple_barrier_optimal_params(
     
     # --- TÍNH ĐIỂM CUỐI CÙNG (CÓ TRỌNG SỐ) ---
     weights = {
-        'balance': 0.4,
-        'actionability': 0.4,
-        'stability': 0.12,
-        'horizon': 0.08
+        'balance': 0.35,
+        'actionability': 0.3,
+        'stability': 0.1,
+        'horizon': 0.1,
+        'rr': 0.15
     }
     results_df['final_score'] = (
         results_df['balance_score'] * weights['balance'] +
