@@ -128,10 +128,14 @@ def find_triple_barrier_optimal_params(
     print("--- Automatically finding optimal Triple Barrier parameters ---")
     results = []
 
+    print(f"--- Generating Grid result with {len(horizons)*len(tp_pcts)*len(sl_pcts)} candidates ---")
+    cnt = 0
     for h in horizons:
         for tp in tp_pcts:
             for sl in sl_pcts:
-                if sl >= tp: continue
+                cnt += 1
+                if sl >= tp: 
+                    continue
 
                 # Gán nhãn trên cả hai tập
                 train_labels = get_triple_barrier_labels(df_train[base_price_col], h, tp, sl).dropna()
@@ -148,6 +152,9 @@ def find_triple_barrier_optimal_params(
                     'win_train': train_dist.get(1, 0), 'loss_train': train_dist.get(-1, 0), 'timeout_train': train_dist.get(0, 0),
                     'win_test': test_dist.get(1, 0), 'loss_test': test_dist.get(-1, 0), 'timeout_test': test_dist.get(0, 0)
                 })
+                
+                if cnt % 10 == 0: 
+                    print(f"--- Generated {cnt}/{len(horizons)*len(tp_pcts)*len(sl_pcts)} candidates")
 
     if not results:
         raise ValueError("Grid search yielded no results. Check data and parameters.")
@@ -178,7 +185,7 @@ def find_triple_barrier_optimal_params(
     # 4. Thưởng Risk/Reward (RR Bonus)
     rr = results_df['tp_pct'] / results_df['sl_pct']
     # Chuẩn hóa về thang điểm [0, 1]. Giả sử R/R hợp lý nằm trong khoảng [1, 3]
-    min_rr, max_rr = 1.0, 3.0
+    min_rr, max_rr = 1.0, 2.5
     results_df['rr_score'] = (rr.clip(lower=min_rr, upper=max_rr) - min_rr) / (max_rr - min_rr)
 
     # 5. Điểm số Horizon (Horizon Score) - Ưu tiên horizon lớn hơn
@@ -188,17 +195,17 @@ def find_triple_barrier_optimal_params(
     # --- TÍNH ĐIỂM CUỐI CÙNG (CÓ TRỌNG SỐ) ---
     weights = {
         'balance': 0.35,
-        'actionability': 0.3,
+        'actionability': 0.35,
         'stability': 0.1,
         'horizon': 0.1,
-        'rr': 0.15
+        'rr': 0.1
     }
     results_df['final_score'] = (
         results_df['balance_score'] * weights['balance'] +
         results_df['actionability_score'] * weights['actionability'] +
         results_df['stability_score'] * weights['stability'] +
         results_df['horizon_score'] * weights['horizon'] +
-        results_df['rr_bonus']
+        results_df['rr_score'] * weights['rr']
     )
     
     # Sắp xếp và xem các ứng viên hàng đầu
