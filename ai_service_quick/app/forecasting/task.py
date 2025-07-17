@@ -179,11 +179,7 @@ def find_triple_barrier_optimal_params(
 
     # 5. Điểm số Horizon (Horizon Score) - Ưu tiên horizon lớn hơn
     # Sử dụng một hàm tuyến tính hoặc log để chuẩn hóa horizon về thang điểm [0, 1]
-    min_h, max_h = results_df['h'].min(), results_df['h'].max()
-    if max_h > min_h:
-        results_df['horizon_score'] = results_df['horizon_score'].apply(lambda x: 1 if x in [10, 15] else 1 - (max(10 - x, x - 15))/10).clip(lower=0)
-    else:
-        results_df['horizon_score'] = 0.5 # Nếu chỉ có 1 horizon
+    results_df['horizon_score'] = results_df['h'].apply(lambda x: 1 if x in [10, 15] else 1 - (max(10 - x, x - 15))/10).clip(lower=0)
     
     # --- TÍNH ĐIỂM CUỐI CÙNG (CÓ TRỌNG SỐ) ---
     weights = {
