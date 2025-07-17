@@ -161,10 +161,11 @@ def find_triple_barrier_optimal_params(
     results_df['balance_score'] = results_df[['win_train', 'loss_train']].min(axis=1) / results_df[['win_train', 'loss_train']].max(axis=1)
 
     # 2. Phạt Timeout (Timeout Penalty): Gần 1 là tốt nhất.
-    #    Bị phạt mạnh khi timeout > 50%.
+    #    Bị phạt mạnh khi timeout > 50%, nhưng timeout cũng k nên quá thấp (< 15%)
     results_df['actionability_score'] = 1 - results_df['timeout_train']
     # Phạt nặng hơn
     results_df.loc[results_df['timeout_train'] > 0.5, 'actionability_score'] *= 0.5 
+    results_df.loc[results_df['timeout_train'] < 0.15, 'actionability_score'] *= 0.75
 
     # 3. Phạt Bất ổn định (Stability Penalty): Gần 1 là tốt nhất.
     #    Đo chênh lệch tương đối giữa train và test.
