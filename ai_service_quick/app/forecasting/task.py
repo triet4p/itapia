@@ -164,8 +164,8 @@ def find_triple_barrier_optimal_params(
     #    Bị phạt mạnh khi timeout > 50%, nhưng timeout cũng k nên quá thấp (< 15%)
     results_df['actionability_score'] = 1 - results_df['timeout_train']
     # Phạt nặng hơn
-    results_df.loc[results_df['timeout_train'] > 0.5, 'actionability_score'] *= 0.5 
-    results_df.loc[results_df['timeout_train'] < 0.15, 'actionability_score'] *= 0.75
+    results_df.loc[results_df['timeout_train'] > 0.5, 'actionability_score'] *= 0.4 
+    results_df.loc[results_df['timeout_train'] < 0.2, 'actionability_score'] *= 0.55
 
     # 3. Phạt Bất ổn định (Stability Penalty): Gần 1 là tốt nhất.
     #    Đo chênh lệch tương đối giữa train và test.
@@ -184,10 +184,10 @@ def find_triple_barrier_optimal_params(
     
     # --- TÍNH ĐIỂM CUỐI CÙNG (CÓ TRỌNG SỐ) ---
     weights = {
-        'balance': 0.35,
-        'actionability': 0.35,
-        'stability': 0.15,
-        'horizon': 0.15
+        'balance': 0.4,
+        'actionability': 0.4,
+        'stability': 0.12,
+        'horizon': 0.08
     }
     results_df['final_score'] = (
         results_df['balance_score'] * weights['balance'] +
@@ -211,7 +211,7 @@ def find_triple_barrier_optimal_params(
     }
     
     print(f"\n==> Automatically selected best parameters: {best_params}")
-    return best_params
+    return best_params, results_df
     
 class TripleBarrierTask(_MLTask):
     def __init__(self, task_id: str,
