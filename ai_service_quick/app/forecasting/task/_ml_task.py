@@ -125,7 +125,7 @@ class _MLTask(ABC):
 
             kagglehub.model_upload(
                 handle=handle,
-                local_dir=artifact_dir,
+                local_model_dir=artifact_dir,
                 version_notes=version_notes
             )
             print(f"[{self.task_id}] Successfully uploaded a new version to handle: {handle}")
