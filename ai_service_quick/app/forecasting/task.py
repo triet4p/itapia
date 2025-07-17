@@ -237,7 +237,7 @@ class TripleBarrierTask(_MLTask):
         self.sl_pct = sl_pct
         
         self.targets = [f'target_tb_{horizon}d_{tp_pct*100:.0f}tp_{sl_pct*100:.0f}sl']
-        self.targets_for_selection = self.targets[0]
+        self.target_for_selection = self.targets[0]
         
     def get_metadata(self):
         _super_metadata = super().get_metadata()
