@@ -18,7 +18,7 @@ class TrainingOrchestrator:
         info(f'Training Orchestrator: Registering problem: {new_task.task_id} ({new_task.task_type})')
         self.tasks[new_task.task_id] = new_task
         
-    def _run_feature_selection_each_task(self, task: _MLTask,
+    def _prepare_feature_selection_each_task(self, task: _MLTask,
                                          weights: Dict,
                                          bonus_features: List[str],
                                          bonus_multiplier: float):
@@ -40,13 +40,13 @@ class TrainingOrchestrator:
         
         task.selected_features = selected
         
-    def run_feature_selection(self,
+    def prepare_feature(self,
                               weights: Dict,
                               bonus_features: List[str] = [],
                               bonus_multiplier: float = 1.0):
         info(f'Training Orchestrator: Running feature selection for all tasks ...')
         for task_id, task in self.tasks.items():
-            self._run_feature_selection_each_task(task,
+            self._prepare_feature_selection_each_task(task,
                                                   weights,
                                                   bonus_features, 
                                                   bonus_multiplier)
