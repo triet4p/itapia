@@ -44,6 +44,30 @@ def get_triple_barrier_labels(prices: pd.Series, h: int, tp_pct: float, sl_pct: 
     # Hàm này chỉ trả về chuỗi có chứa NaN.
     # Việc xóa NaN sẽ được thực hiện ở bước sau.
     return out
+
+def generate_adaptive_grid(atr_percent):
+    # atr_percent là biến động trung bình hàng ngày
+    # Một mục tiêu hợp lý có thể là từ 3 đến 10 lần biến động hàng ngày
+    
+    # tp_pcts sẽ là bội số của atr_percent
+    tp_multipliers = [3, 5, 8, 12] 
+    tp_pcts = [round(atr_percent * m, 3) for m in tp_multipliers]
+
+    # sl_pcts sẽ là một phần của tp_pcts
+    sl_ratios = [0.5, 0.67] 
+    sl_pcts = []
+    for tp in tp_pcts:
+        for ratio in sl_ratios:
+            sl_pcts.append(round(tp * ratio, 3))
+    
+    # Loại bỏ trùng lặp và sắp xếp
+    tp_pcts = sorted(list(set(tp_pcts)))
+    sl_pcts = sorted(list(set(sl_pcts)))
+
+    # horizons có thể vẫn giữ nguyên
+    horizons = [5, 10, 15, 20]
+    
+    return {"horizons": horizons, "tp_pcts": tp_pcts, "sl_pcts": sl_pcts}
     
 def find_triple_barrier_optimal_params(
     df_train: pd.DataFrame,
