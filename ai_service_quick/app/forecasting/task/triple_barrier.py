@@ -1,67 +1,7 @@
-# forecasting/task.py
-
 import pandas as pd
 import numpy as np
-from numpy.lib.stride_tricks import sliding_window_view
-from datetime import datetime
+from app.forecasting.task import _MLTask
 
-from abc import ABC, abstractmethod
-from typing import Literal, Dict, List
-
-class _MLTask(ABC):
-    def __init__(self, task_id: str, task_type: Literal['clf', 'reg'],
-                 require_cdl_features: int = 7,
-                 require_non_cdl_features: int = 45):
-        self.task_id = task_id
-        self.task_type = task_type
-        
-        self.targets: List[str] = []
-        self.selected_features: List[str] = []
-        self.non_cdl_features_cnt: int = require_non_cdl_features
-        self.cdl_features_cnt: int = require_cdl_features
-        
-        self.target_for_selection: str = ""
-        
-        self.model = None
-        self.model_name: str = None
-        self.model_params: Dict = None
-        
-    def get_metadata(self) -> Dict:
-        return {
-            "task_id": self.task_id,
-            "task_type": self.task_type,
-            "targets": self.targets,
-            "target_for_selection": self.target_for_selection,
-            "model_name": self.model_name,
-            "model_params": self.model_params,
-            "features": {
-                "selected": self.selected_features,
-                "cdl_features_cnt": self.cdl_features_cnt,
-                "non_cdl_features_cnt": self.non_cdl_features_cnt
-            }
-        }
-    
-    @abstractmethod
-    def create_targets(self, df: pd.DataFrame, base_price_col: str) -> pd.DataFrame:
-        pass
-    
-    def set_model(self, model_class, model_params: Dict, model_name: str):
-        self.model = model_class(**model_params)
-        self.model_name = model_name
-        self.model_params = model_params
-    
-    def register_model_to_kaggle(self):
-        if self.model is None:
-            raise TypeError('Model could not null')
-        
-        today = datetime.now().strftime("%Y_%m_%d")
-        model_identify = f'{self.model_name}-{today}-{self.task_id}'
-        
-        pass
-    
-    def load_model_from_kaggle(self, model_identify: str):
-        pass
-    
 def get_triple_barrier_labels(prices: pd.Series, h: int, tp_pct: float, sl_pct: float) -> pd.Series:
     """
     Gán nhãn dựa trên phương pháp Triple-Barrier (Phiên bản cải tiến).
@@ -109,9 +49,9 @@ def find_triple_barrier_optimal_params(
     df_train: pd.DataFrame,
     df_test: pd.DataFrame,
     base_price_col: str,
-    horizons: list = [5, 10, 15],
-    tp_pcts: list = [0.03, 0.05, 0.07],
-    sl_pcts: list = [0.02, 0.03, 0.05]
+    horizons: list,
+    tp_pcts: list,
+    sl_pcts: list
 ) -> dict:
     """
     Tự động tìm bộ tham số Triple Barrier tối ưu bằng cách chạy grid search
@@ -262,71 +202,3 @@ class TripleBarrierTask(_MLTask):
             all_labels.append(labels)
         
         return pd.concat(all_labels).to_frame(name=self.targets[0])
-    
-def create_distribution_targets(prices: pd.Series, horizon: int) -> pd.DataFrame:
-    """Phiên bản Vectorized sử dụng numpy để tránh vòng lặp for."""
-    
-    targets = pd.DataFrame(index=prices.index)
-    price_vals = prices.values
-    
-    # Tạo một view 2D của tất cả các cửa sổ tương lai có thể
-    # Ví dụ: [[p1,p2,p3], [p2,p3,p4], [p3,p4,p5], ...]
-    future_windows = sliding_window_view(price_vals, window_shape=horizon)
-    
-    # Dữ liệu của chúng ta là các cửa sổ BẮT ĐẦU từ ngày mai
-    # Nên chúng ta cần dịch chuyển kết quả tính toán đi 1 bước
-    
-    num_predictions = len(price_vals) - horizon
-    
-    if num_predictions <= 0:
-        return targets # Không đủ dữ liệu
-        
-    # Lấy các cửa sổ tương lai cho mỗi điểm (từ t+1 đến t+horizon)
-    # Cửa sổ cho ngày 0 là từ ngày 1 đến ngày horizon
-    # Cửa sổ cho ngày cuối cùng có thể dự báo là từ...
-    windows_for_prediction = future_windows[1 : num_predictions + 1]
-    
-    # Tính toán trên toàn bộ các cửa sổ cùng lúc
-    targets[f'target_mean_{horizon}d'] = np.nan
-    targets[f'target_std_{horizon}d'] = np.nan
-    targets[f'target_min_{horizon}d'] = np.nan
-    targets[f'target_max_{horizon}d'] = np.nan
-    targets[f'target_q25_{horizon}d'] = np.nan
-    targets[f'target_q75_{horizon}d'] = np.nan
-
-    targets.iloc[:num_predictions, 0] = np.mean(windows_for_prediction, axis=1)
-    targets.iloc[:num_predictions, 1] = np.std(windows_for_prediction, axis=1)
-    targets.iloc[:num_predictions, 2] = np.min(windows_for_prediction, axis=1)
-    targets.iloc[:num_predictions, 3] = np.max(windows_for_prediction, axis=1)
-    targets.iloc[:num_predictions, 4] = np.quantile(windows_for_prediction, 0.25, axis=1)
-    targets.iloc[:num_predictions, 5] = np.quantile(windows_for_prediction, 0.75, axis=1)
-    
-    return targets
-    
-class NDaysDistributionTask(_MLTask):
-    def __init__(self, task_id: str,
-                 horizon: int,
-                 require_cdl_features: int = 7,
-                 require_non_cdl_features: int = 45):
-        super().__init__(task_id, 'reg', require_cdl_features, require_non_cdl_features)
-        self.horizon = horizon
-        
-        self.targets = [f'target_{s}_{horizon}d' for s in ['mean', 'std', 'min', 'max', 'q25', 'q75']]
-        self.target_for_selection = f'target_mean_{horizon}d'
-        
-    def get_metadata(self):
-        _super_metadata = super().get_metadata()
-        _super_metadata['horizon'] = self.horizon
-        
-        return _super_metadata
-    
-    def create_targets(self, df: pd.DataFrame, base_price_col: str) -> pd.DataFrame:
-        if 'ticker' not in df.columns:
-            raise ValueError("DataFrame must have a 'ticker' column for group-aware target creation.")
-
-        all_targets = []
-        for _, group in df.groupby('ticker'):
-            targets = create_distribution_targets(group[base_price_col], self.horizon)
-            all_targets.append(targets)
-        
-        return pd.concat(all_targets)
