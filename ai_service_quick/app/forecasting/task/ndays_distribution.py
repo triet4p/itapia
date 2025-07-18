@@ -4,6 +4,8 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 from app.forecasting.task import ForecastingTask
 
+DISTRIBUTION_FEATURES = ['mean', 'std', 'min', 'max', 'q25', 'q75']
+
 def create_distribution_targets(prices: pd.Series, horizon: int) -> pd.DataFrame:
     """Phiên bản Vectorized sử dụng numpy để tránh vòng lặp for."""
     
@@ -52,7 +54,7 @@ class NDaysDistributionTask(ForecastingTask):
         super().__init__(task_id, 'reg', require_cdl_features, require_non_cdl_features)
         self.horizon = horizon
         
-        self.targets = [f'target_{s}_{horizon}d' for s in ['mean', 'std', 'min', 'max', 'q25', 'q75']]
+        self.targets = [f'target_{s}_{horizon}d' for s in DISTRIBUTION_FEATURES]
         self.target_for_selection = f'target_mean_{horizon}d'
         
     def get_metadata(self):

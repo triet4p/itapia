@@ -11,13 +11,15 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 from app.forecasting.task import ForecastingTask
+from app.forecasting.post_processing import PostProcessor
 import app.core.config as cfg
 
 class ForecastingModel(ABC):
     def __init__(self, name: str,
                  kernel_model_template,
                  framework: str,
-                 variation: str = 'original'):
+                 variation: str = 'original',
+                 post_processors: list[PostProcessor]|None = None):
         self.name = name
         self.kernel_model_template = kernel_model_template
         
@@ -30,6 +32,8 @@ class ForecastingModel(ABC):
         
         self.snapshot_models = {}
         self.metrics = []
+        
+        self.post_processors = post_processors
         
     def assign_task(self, task: ForecastingTask):
         self.task = task
@@ -227,12 +231,19 @@ class ForecastingModel(ABC):
                 raise TypeError("Main kernel model has not been trained yet. Call fit() without a snapshot_id.")
             model_to_use = self.kernel_model
         
-        return self.predict_kernel_model(model_to_use, X)
+        prediction = self.predict_kernel_model(model_to_use, X)
+        if self.post_processors is not None:
+            for processor in self.post_processors:
+                prediction = processor.apply(prediction)
+                
+        return prediction
     
 class ScikitLearnForecastingModel(ForecastingModel):
-    def __init__(self, name, kernel_model_template, variation = 'original'):
+    def __init__(self, name, kernel_model_template, variation = 'original',
+                 post_processors: list[PostProcessor]|None = None):
         super().__init__(name, kernel_model_template, 
-                         framework='scikitLearn', variation=variation)
+                         framework='scikitLearn', variation=variation,
+                         post_processors=post_processors)
         
     def clone_unfitted_kernel_model(self):
         return clone(self.kernel_model_template)
