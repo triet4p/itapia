@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from app.forecasting.task import _MLTask
+from app.forecasting.task import ForecastingTask
 
 def get_triple_barrier_labels(prices: pd.Series, h: int, tp_pct: float, sl_pct: float) -> pd.Series:
     """
@@ -193,7 +193,7 @@ def find_triple_barrier_optimal_params(
     print(f"\n==> Automatically selected best parameters: {best_params}")
     return best_params, results_df
     
-class TripleBarrierTask(_MLTask):
+class TripleBarrierTask(ForecastingTask):
     def __init__(self, task_id: str,
                  horizon: int,
                  tp_pct: float,

@@ -1,1 +1,1 @@
-from ._ml_task import _MLTask
+from ._task import ForecastingTask

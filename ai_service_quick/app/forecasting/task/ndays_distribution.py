@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
-from app.forecasting.task import _MLTask
+from app.forecasting.task import ForecastingTask
 
 def create_distribution_targets(prices: pd.Series, horizon: int) -> pd.DataFrame:
     """Phiên bản Vectorized sử dụng numpy để tránh vòng lặp for."""
@@ -44,7 +44,7 @@ def create_distribution_targets(prices: pd.Series, horizon: int) -> pd.DataFrame
     
     return targets
     
-class NDaysDistributionTask(_MLTask):
+class NDaysDistributionTask(ForecastingTask):
     def __init__(self, task_id: str,
                  horizon: int,
                  require_cdl_features: int = 7,
