@@ -17,7 +17,7 @@ class NDaysDistributionPostProcessor(PostProcessor):
         raw_df = pd.DataFrame(raw_predict, columns=self.task.targets)
         
         col_mapping = {col: col.split('_')[1] for col in raw_df.columns}
-        raw_df.rename(mapper=col_mapping, inplace=True)
+        raw_df.rename(mapper=col_mapping, axis=1, inplace=True)
         
         if set(raw_df.columns) != set(DISTRIBUTION_FEATURES):
             raise ValueError(
