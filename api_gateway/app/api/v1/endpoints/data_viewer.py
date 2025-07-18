@@ -24,12 +24,12 @@ def get_daily_prices(ticker: str, skip: int = 0, limit: int = 500,
 @router.get("/prices/intraday/last/{ticker}", response_model=PriceFullPayload | None, tags=['Prices'])
 def get_intraday_prices(ticker: str, data_service: DataService = Depends(get_data_service)):
     """API endpoint để lấy điểm dữ liệu giá trong ngày gần nhất của một cổ phiếu."""
-    return data_service.get_intraday_prices_payload(ticker, latest_only=False)
+    return data_service.get_intraday_prices_payload(ticker, latest_only=True)
 
 @router.get("/prices/intraday/history/{ticker}", response_model=PriceFullPayload | None, tags=['Prices'])
 def get_intraday_prices(ticker: str, data_service: DataService = Depends(get_data_service)):
     """API endpoint để lấy toàn bộ lịch sử giá trong ngày (giới hạn bởi stream) của một cổ phiếu."""
-    return data_service.get_intraday_prices_payload(ticker, latest_only=True)
+    return data_service.get_intraday_prices_payload(ticker, latest_only=False)
 
 @router.get("/news/{ticker}", response_model=NewsFullPayload | None, tags=['News'])
 def get_news(ticker: str, skip: int = 0, limit: int = 10,

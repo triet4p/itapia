@@ -59,7 +59,7 @@ def _process_single_ticker(ticker_sym: str, redis_mng: RedisManager):
     
     redis_mng.add_intraday_candle(ticker=ticker_sym, candle_data=provisional_candle)
     
-    info(f"  - Successfully update {ticker_sym} with last price is {info.last_price}")
+    log_info(f"  - Successfully update {ticker_sym} with last price is {info.last_price}")
     
 def full_pipeline(db_mng: PostgreDBManager, redis_mng: RedisManager, relax_time: int = 2):
     """Pipeline chính, chạy định kỳ để lấy dữ liệu giá real-time.
@@ -104,7 +104,7 @@ def full_pipeline(db_mng: PostgreDBManager, redis_mng: RedisManager, relax_time:
         
         time.sleep(relax_time) # Nghỉ một chút giữa các ticker
 
-    info('--- COMPLETED PIPELINE CYCLE ---')
+    log_info('--- COMPLETED PIPELINE CYCLE ---')
         
 def main_orchestrator():
     """Điểm vào chính, thiết lập và chạy lịch trình thu thập dữ liệu real-time.
