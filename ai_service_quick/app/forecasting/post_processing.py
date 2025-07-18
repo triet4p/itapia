@@ -19,8 +19,11 @@ class NDaysDistributionPostProcessor(PostProcessor):
         col_mapping = {col: col.split('_')[1] for col in raw_df.columns}
         raw_df.rename(mapper=col_mapping, inplace=True)
         
-        if raw_df.columns.tolist() != DISTRIBUTION_FEATURES:
-            raise ValueError('Column name not match')
+        if set(raw_df.columns) != set(DISTRIBUTION_FEATURES):
+            raise ValueError(
+                f"Column name mismatch. Expected: {set(DISTRIBUTION_FEATURES)}, "
+                f"Got: {set(raw_df.columns)}"
+            )
         
         # Std >= 0
         raw_df['std'] = raw_df['std'].clip(lower=0)
