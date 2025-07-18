@@ -118,14 +118,13 @@ class TrainingOrchestrator:
                 X_valid = valid_fold_df[task.selected_features]
                 y_valid_df = valid_fold_df[task.targets]
 
-                y_train = y_train_df.values.ravel() if task.task_type == 'clf' else y_train_df
-                y_valid = y_valid_df.values.ravel() if task.task_type == 'clf' else y_valid_df
+                y_train = y_train_df.values.ravel() if task.task_type == 'clf' else y_train_df.values
+                y_valid = y_valid_df.values.ravel() if task.task_type == 'clf' else y_valid_df.values
 
                 snapshot_id = f'model-fold-{i+1}'
-                model.clone_kernel_model(snapshot_id)
-                model.snapshot_fit(X_train, y_train, snapshot_id)
+                model.fit(X_train, y_train, snapshot_id)
                 
-                preds = model.snapshot_predict(X_valid, snapshot_id)
+                preds = model.predict(X_valid, snapshot_id)
                 if task.task_type == 'clf':
                     score = f1_score(y_valid, preds, average='micro')
                     metric_name = 'f1_micro'
@@ -151,11 +150,11 @@ class TrainingOrchestrator:
             
             X_final_train = self._train_df[task.selected_features]
             y_final_train_df = self._train_df[task.targets]
-            y_final_train = y_final_train_df.values.ravel() if task.task_type == 'clf' else y_final_train_df
+            y_final_train = y_final_train_df.values.ravel() if task.task_type == 'clf' else y_final_train_df.values
             
             X_final_test = self._test_df[task.selected_features]
             y_final_test_df = self._test_df[task.targets]
-            y_final_test = y_final_test_df.values.ravel() if task.task_type == 'clf' else y_final_test_df
+            y_final_test = y_final_test_df.values.ravel() if task.task_type == 'clf' else y_final_test_df.values
             
             model.fit(X_final_train, y_final_train)
             

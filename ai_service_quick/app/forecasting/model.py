@@ -4,7 +4,8 @@ import shutil
 import os
 import pickle
 import json
-
+import numpy as np
+from sklearn.base import clone
 from abc import ABC, abstractmethod
 
 import pandas as pd
@@ -14,12 +15,11 @@ import app.core.config as cfg
 
 class ForecastingModel(ABC):
     def __init__(self, name: str,
-                 kernel_model_class, kernel_model_params: dict,
+                 kernel_model_template,
                  framework: str,
                  variation: str = 'original'):
         self.name = name
-        self.kernel_model_class = kernel_model_class
-        self.kernel_model_params = kernel_model_params
+        self.kernel_model_template = kernel_model_template
         
         self.kernel_model = None
         
@@ -33,12 +33,6 @@ class ForecastingModel(ABC):
         
     def assign_task(self, task: ForecastingTask):
         self.task = task
-        
-    def clone_kernel_model(self, snapshot_id: str|None):
-        if snapshot_id is None:
-            self.kernel_model = self.kernel_model_class(self.kernel_model_params)
-        else:
-            self.snapshot_models[snapshot_id] = self.kernel_model_class(**self.kernel_model_params)
     
     def set_trained_kernel_model(self, trained_kernel_model):
         self.kernel_model = trained_kernel_model
@@ -204,37 +198,47 @@ class ForecastingModel(ABC):
             raise
         
     @abstractmethod
-    def fit(self, X: pd.DataFrame, y: pd.Series|pd.DataFrame):
+    def clone_unfitted_kernel_model(self):
         pass
     
     @abstractmethod
-    def predict(self, X: pd.DataFrame) -> (pd.DataFrame|pd.Series):
+    def fit_kernel_model(self, kernel_model, X: pd.DataFrame, y: pd.Series|pd.DataFrame) -> None:
         pass
     
     @abstractmethod
-    def snapshot_fit(self, X: pd.DataFrame, y: pd.Series|pd.DataFrame, snapshot_id: str):
+    def predict_kernel_model(self, kernel_model, X: pd.DataFrame) -> np.ndarray:
         pass
-    
-    @abstractmethod
-    def snapshot_predict(self, X: pd.DataFrame, snapshot_id: str) -> (pd.DataFrame|pd.Series):
-        pass
+        
+    def fit(self, X: pd.DataFrame, y: pd.Series|pd.DataFrame, snapshot_id: str|None = None):
+        kernel_model = self.clone_unfitted_kernel_model()
+        self.fit_kernel_model(kernel_model, X, y)
+        if snapshot_id is not None:
+            self.snapshot_models[snapshot_id] = kernel_model
+        else:
+            self.kernel_model = kernel_model
+
+    def predict(self, X: pd.DataFrame, snapshot_id: str|None = None) -> np.ndarray:
+        if snapshot_id is not None:
+            if snapshot_id not in self.snapshot_models:
+                raise KeyError(f"Snapshot ID '{snapshot_id}' not found.")
+            model_to_use = self.snapshot_models[snapshot_id]
+        else:
+            if self.kernel_model is None:
+                raise TypeError("Main kernel model has not been trained yet. Call fit() without a snapshot_id.")
+            model_to_use = self.kernel_model
+        
+        return self.predict_kernel_model(model_to_use, X)
     
 class ScikitLearnForecastingModel(ForecastingModel):
     def __init__(self, name, kernel_model_class, kernel_model_params, variation = 'original'):
         super().__init__(name, kernel_model_class, kernel_model_params, 
                          framework='scikitLearn', variation=variation)
         
-    def fit(self, X, y):
-        self.kernel_model = self.clone_kernel_model()
-        self.kernel_model.fit(X, y)
+    def clone_unfitted_kernel_model(self):
+        return clone(self.kernel_model_template)
     
-    def predict(self, X):
-        return self.kernel_model.predict(X)
-    
-    def snapshot_fit(self, X, y, snapshot_id):
-        if snapshot_id not in self.snapshot_models.keys():
-            self.clone_kernel_model(snapshot_id)
-        self.snapshot_models[snapshot_id].fit(X, y)
-    
-    def snapshot_predict(self, X, snapshot_id):
-        return self.snapshot_models[snapshot_id].predict(X)
+    def fit_kernel_model(self, kernel_model, X, y):
+        kernel_model.fit(X, y)
+        
+    def predict_kernel_model(self, kernel_model, X):
+        return kernel_model.predict(X)
