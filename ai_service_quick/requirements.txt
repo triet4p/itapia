@@ -7,6 +7,6 @@ requests
 scipy==1.15.2
 fastapi
 uvicorn[standard]
-scikit-learn
+scikit-learn>=1.4.0
 kaggle
 kagglehub

@@ -1,10 +1,11 @@
 # forecasting/training/orchestrator.py
 
+import math
 import pandas as pd
 from datetime import datetime
 from typing import Dict, List
 
-from sklearn.metrics import f1_score, root_mean_squared_error
+from sklearn.metrics import f1_score, mean_squared_error
 
 from app.forecasting.task import ForecastingTask
 from app.forecasting.model import ForecastingModel
@@ -129,7 +130,7 @@ class TrainingOrchestrator:
                     score = f1_score(y_valid, preds, average='micro')
                     metric_name = 'f1_micro'
                 else:
-                    score = root_mean_squared_error(y_valid, preds, squared=False, multioutput='uniform_average')
+                    score = math.sqrt(mean_squared_error(y_valid, preds, multioutput='uniform_average'))
                     metric_name = 'avg_rmse'
                 
                 evaluation_results.append({'fold': i+1, metric_name: score})
@@ -164,7 +165,7 @@ class TrainingOrchestrator:
                 score = f1_score(y_final_test, y_pred_test, average='micro')
                 metric_name = 'f1_micro'
             else:
-                score = root_mean_squared_error(y_final_test, y_pred_test, squared=False, multioutput='uniform_average')
+                score = math.sqrt(mean_squared_error(y_valid, preds, multioutput='uniform_average'))
                 metric_name = 'avg_rmse'
                 
             model.metrics.append({'fold': 'all', metric_name: score})
