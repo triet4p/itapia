@@ -4,7 +4,7 @@ numpy==1.26.4
 pytest
 python-dotenv
 requests
-scipy==1.15.2
+scipy
 fastapi
 uvicorn[standard]
 scikit-learn>=1.4.0

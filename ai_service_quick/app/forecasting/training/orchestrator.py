@@ -165,7 +165,7 @@ class TrainingOrchestrator:
                 score = f1_score(y_final_test, y_pred_test, average='micro')
                 metric_name = 'f1_micro'
             else:
-                score = math.sqrt(mean_squared_error(y_valid, preds, multioutput='uniform_average'))
+                score = math.sqrt(mean_squared_error(y_final_test, y_pred_test, multioutput='uniform_average'))
                 metric_name = 'avg_rmse'
                 
             model.metrics.append({'fold': 'all', metric_name: score})
