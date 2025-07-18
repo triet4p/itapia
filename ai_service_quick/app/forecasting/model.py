@@ -38,7 +38,7 @@ class ForecastingModel(ABC):
         if snapshot_id is None:
             self.kernel_model = self.kernel_model_class(self.kernel_model_params)
         else:
-            self.snapshot_models[snapshot_id] = self.kernel_model_class(self.kernel_model_params)
+            self.snapshot_models[snapshot_id] = self.kernel_model_class(**self.kernel_model_params)
     
     def set_trained_kernel_model(self, trained_kernel_model):
         self.kernel_model = trained_kernel_model
