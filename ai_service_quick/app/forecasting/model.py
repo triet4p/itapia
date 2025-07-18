@@ -230,8 +230,8 @@ class ForecastingModel(ABC):
         return self.predict_kernel_model(model_to_use, X)
     
 class ScikitLearnForecastingModel(ForecastingModel):
-    def __init__(self, name, kernel_model_class, kernel_model_params, variation = 'original'):
-        super().__init__(name, kernel_model_class, kernel_model_params, 
+    def __init__(self, name, kernel_model_template, variation = 'original'):
+        super().__init__(name, kernel_model_template, 
                          framework='scikitLearn', variation=variation)
         
     def clone_unfitted_kernel_model(self):
