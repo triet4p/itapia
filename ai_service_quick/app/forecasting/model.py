@@ -44,7 +44,7 @@ class ForecastingModel(ABC):
         return {
             'kernel_model': {
                 'name': self.name,
-                'params': self.kernel_model_params
+                'class': type(self.kernel_model_template).__name__
             },
             'task': self.task.get_metadata(),
             'snapshots': {
