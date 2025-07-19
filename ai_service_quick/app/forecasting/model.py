@@ -39,7 +39,7 @@ class ForecastingModel(ABC):
         self.task = task
     
     def set_trained_kernel_model(self, trained_kernel_model):
-        self.kernel_model = trained_kernel_model
+        self.kernel_model_template = trained_kernel_model
         
     def get_model_slug(self):
         return cfg.MODEL_SLUG_TEMPLATE.format(id=f"{self.name}-{self.task.task_id.lower().replace('_','-')}")
