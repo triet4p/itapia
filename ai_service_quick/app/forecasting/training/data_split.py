@@ -17,7 +17,8 @@ def train_test_split(df: pd.DataFrame,
 def get_walk_forward_splits(
     df: pd.DataFrame, 
     validation_months: int = 3,
-    min_train_months: int = 6
+    min_train_months: int = 6,
+    max_train_months: int = None
 ) -> Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None]:
     """
     Tạo các cặp (train, validation) cho quy trình Walk-Forward Validation theo từng năm,
@@ -42,6 +43,8 @@ def get_walk_forward_splits(
         raise TypeError("DataFrame index must be a DatetimeIndex.")
     if not 1 <= validation_months <= 11:
         raise ValueError("validation_months must be between 1 and 11.")
+    if max_train_months is not None and max_train_months <= 0:
+        raise ValueError("max_train_months must be a positive integer.")
 
     # Sắp xếp để đảm bảo thứ tự thời gian
     df = df.sort_index()
@@ -50,6 +53,10 @@ def get_walk_forward_splits(
     end_year = df.index.max().year
 
     print(f"Generating splits from {start_year} to {end_year} with {validation_months}-month validation...")
+    if max_train_months:
+        print(f"  - Mode: Sliding Window (max train size: {max_train_months} months)")
+    else:
+        print("  - Mode: Expanding Window (full history)")
 
     for year in range(start_year, end_year + 1):
         year_data = df[df.index.year == year]
@@ -71,7 +78,14 @@ def get_walk_forward_splits(
             continue
             
         validation_start_date = valid_df.index.min()
-        train_df = df[df.index < validation_start_date]
+        if max_train_months is not None:
+            # Chế độ Sliding Window
+            train_start_date = validation_start_date - pd.DateOffset(months=max_train_months)
+            train_df = df[(df.index >= train_start_date) & (df.index < validation_start_date)]
+        else:
+            # Chế độ Expanding Window (như cũ)
+            train_df = df[df.index < validation_start_date]
+
 
         if not train_df.empty:
             print(f"  - Yielding Split for year {year}:")

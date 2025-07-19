@@ -14,13 +14,14 @@ class OptunaObjective:
                  direction: Literal['minimize', 'maximize'],
                  generator: Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None],
                  time_weighted: Literal['balance', 'new-prior'],
-                 weight_bias: int = 1):
+                 weight_bias: int = 1,
+                 max_cv: int|None = 3):
         self.model = model
         if self.model.task is None:
             raise ValueError('Model must have been assigned to solve a task!')
         self.full_df = full_df
         self.direction = direction
-        self.cvs = self._store_cv(generator)
+        self.cvs = self._store_cv(generator, max_cv)
         self.time_weighted = time_weighted
         if time_weighted == 'new-prior':
             self.weight_bias = weight_bias
@@ -33,11 +34,12 @@ class OptunaObjective:
     def _cal_metric(self, y_true, y_pred) -> float:
         pass
     
-    def _store_cv(self, generator: Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None]):
+    def _store_cv(self, generator: Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None],
+                  max_cv: int|None):
         cvs: List[Tuple[pd.DataFrame, pd.DataFrame]] = []
         for train_fold_df, valid_fold_df in generator:
             cvs.append((train_fold_df, valid_fold_df))
-        return cvs
+        return cvs if max_cv is None else cvs[-max_cv:]
     
     def _run_validate_kernel_model(self, kernel_model) -> float:
         task = self.model.task
@@ -70,8 +72,9 @@ class LGBMClassifierObjective(OptunaObjective):
                  full_df: pd.DataFrame, direction: Literal['minimize', 'maximize'],
                  generator: Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None],
                  time_weighted: Literal['balance', 'new-prior'],
-                 weight_bias: int = 1):
-        super().__init__(model, full_df, direction, generator, time_weighted, weight_bias)
+                 weight_bias: int = 1,
+                 max_cv: int|None = 3):
+        super().__init__(model, full_df, direction, generator, time_weighted, weight_bias, max_cv)
     
     def _cal_metric(self, y_true, y_pred):
         return f1_score(y_true, y_pred, average='weighted')
@@ -124,8 +127,9 @@ class MultiOutLGBMRegressionObjective(OptunaObjective):
                  direction: Literal['minimize', 'maximize'],
                  generator: Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None],
                  time_weighted: Literal['balance', 'new-prior'],
-                 weight_bias: int = 1):
-        super().__init__(model, full_df, direction, generator, time_weighted, weight_bias)
+                 weight_bias: int = 1,
+                 max_cv: int|None = 3):
+        super().__init__(model, full_df, direction, generator, time_weighted, weight_bias, max_cv)
         
     def _cal_metric(self, y_true, y_pred):
         return math.sqrt(mean_squared_error(y_true, y_pred, multioutput='uniform_average'))

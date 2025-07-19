@@ -125,8 +125,8 @@ class TrainingOrchestrator:
                 
                 preds = model.predict(X_valid, snapshot_id)
                 if task.task_type == 'clf':
-                    score = f1_score(y_valid, preds, average='micro')
-                    metric_name = 'f1_micro'
+                    score = f1_score(y_valid, preds, average='weighted')
+                    metric_name = 'f1_weighted'
                 else:
                     score = math.sqrt(mean_squared_error(y_valid, preds, multioutput='uniform_average'))
                     metric_name = 'avg_rmse'
@@ -160,8 +160,8 @@ class TrainingOrchestrator:
             y_pred_test = model.predict(X_final_test)
             
             if task.task_type == 'clf':
-                score = f1_score(y_final_test, y_pred_test, average='micro')
-                metric_name = 'f1_micro'
+                score = f1_score(y_final_test, y_pred_test, average='weighted')
+                metric_name = 'f1_weighted'
             else:
                 score = math.sqrt(mean_squared_error(y_final_test, y_pred_test, multioutput='uniform_average'))
                 metric_name = 'avg_rmse'
