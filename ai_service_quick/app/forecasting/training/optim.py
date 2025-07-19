@@ -35,7 +35,7 @@ class OptunaObjective:
     
     def _store_cv(self, generator: Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None]):
         cvs: List[Tuple[pd.DataFrame, pd.DataFrame]] = []
-        for train_fold_df, valid_fold_df in self.generator:
+        for train_fold_df, valid_fold_df in generator:
             cvs.append((train_fold_df, valid_fold_df))
         return cvs
     
