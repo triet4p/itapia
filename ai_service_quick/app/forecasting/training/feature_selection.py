@@ -33,9 +33,9 @@ def get_ensemble_feature_ranks(X: pd.DataFrame, y: pd.Series, task_type: Literal
     # --- Phương pháp 2: LightGBM Importance (Split/Gain) ---
     print("Ranking with LightGBM...")
     if task_type == 'clf':
-        lgb = LGBMClassifier(random_state=42, n_jobs=-1)
+        lgb = LGBMClassifier(random_state=42, n_jobs=-1, verbose=-1)
     else:
-        lgb = LGBMRegressor(random_state=42, n_jobs=-1)
+        lgb = LGBMRegressor(random_state=42, n_jobs=-1, verbose=-1)
     lgb.fit(X, y)
     ranks['lgbm_score'] = lgb.feature_importances_
     ranks['lgbm_rank'] = ranks['lgbm_score'].rank(method='first', ascending=False)

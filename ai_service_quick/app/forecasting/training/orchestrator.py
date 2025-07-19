@@ -12,7 +12,6 @@ from app.forecasting.model import ForecastingModel
 from .feature_selection import get_ensemble_feature_ranks, get_ranked_features, select_k_plus_l_features
 from .data_split import get_walk_forward_splits, train_test_split
 from app.logger import info, warn
-import app.core.config as cfg
 
 class TrainingOrchestrator:
     def __init__(self, df: pd.DataFrame):

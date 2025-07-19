@@ -10,3 +10,4 @@ uvicorn[standard]
 scikit-learn>=1.4.0
 kaggle
 kagglehub
+lightgbm
