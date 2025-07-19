@@ -16,8 +16,8 @@ import app.core.config as cfg
 
 class ForecastingModel(ABC):
     def __init__(self, name: str,
-                 kernel_model_template,
                  framework: str,
+                 kernel_model_template = None,
                  variation: str = 'original',
                  post_processors: list[PostProcessor]|None = None):
         self.name = name
@@ -239,9 +239,9 @@ class ForecastingModel(ABC):
         return prediction
     
 class ScikitLearnForecastingModel(ForecastingModel):
-    def __init__(self, name, kernel_model_template, variation = 'original',
+    def __init__(self, name, kernel_model_template = None, variation = 'original',
                  post_processors: list[PostProcessor]|None = None):
-        super().__init__(name, kernel_model_template, 
+        super().__init__(name, kernel_model_template=kernel_model_template, 
                          framework='scikitLearn', variation=variation,
                          post_processors=post_processors)
         
