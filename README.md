@@ -80,6 +80,10 @@ GATEWAY_V1_BASE_ROUTE=/api/v1
 AI_QUICK_HOST=ai-service-quick
 AI_QUICK_PORT=8000
 AI_QUICK_V1_BASE_ROUTE=/api/v1
+
+# Kaggle Secrets
+KAGGLE_KEY=<your-kaggle-key>
+KAGGLE_USERNAME=<your-kaggle-username>
 ```
 
 ---
@@ -126,34 +130,99 @@ docker-compose up -d realtime-data-processor
 
 ---
 
-## 🤖 Dịch vụ AI & API Setup
+## 🤖 Cài đặt API Gateway
 
 ### 1. Build các Image
 ```bash
 # Build API Gateway
 docker build -t itapia-api-gateway:latest api_gateway
+```
 
-# Build AI Service Quick
+### 2. Khởi động các Dịch vụ
+Đảm bảo các dịch vụ CSDL đang chạy, sau đó khởi động các service ứng dụng:
+```bash
+docker-compose up -d api-gateway
+```
+
+### 3. Truy cập Tài liệu API
+Khi các dịch vụ đang chạy, bạn có thể truy cập:
+- **Tài liệu API Gateway**: http://localhost:8000/docs
+- **URL cơ sở của API Gateway**: http://localhost:8000/api/v1
+
+### 4. Các Endpoint chính
+- **GET /api/v1/metadata/sectors**: Lấy danh sách tất cả các nhóm ngành.
+- **GET /api/v1/prices/sector/daily/{sector_code}**: Lấy dữ liệu giá hàng ngày cho cả một ngành.
+- **GET /api/v1/prices/daily/{ticker}**: Lấy dữ liệu giá lịch sử cho một cổ phiếu.
+- **GET /api/v1/prices/intraday/last/{ticker}**: Lấy giá mới nhất của một cổ phiếu trong ngày.
+- **GET /api/v1/prices/intraday/history/{ticker}**: Lấy giá intraday lưu trữ trong 1-2 ngày gần nhất.
+
+---
+## 🤖 Cài đặt AI Service Quick
+
+### 1. Build các Image
+```bash
+# Build API Gateway
 docker build -t itapia-ai-service-quick:latest ai_service_quick
 ```
 
 ### 2. Khởi động các Dịch vụ
 Đảm bảo các dịch vụ CSDL đang chạy, sau đó khởi động các service ứng dụng:
 ```bash
-docker-compose up -d api-gateway ai-service-quick
+docker-compose up -d ai-service-quick
 ```
 
 ### 3. Truy cập Tài liệu API
 Khi các dịch vụ đang chạy, bạn có thể truy cập:
-- **Tài liệu API Gateway**: http://localhost:8000/docs
 - **Tài liệu AI Service Quick**: http://localhost:8001/docs
-- **URL cơ sở của API Gateway**: http://localhost:8000/api/v1
+- **URL cơ sở của AI Service Quick**: http://localhost:8001/api/v1
 
 ### 4. Các Endpoint chính
-- **GET /api/v1/metadata/sectors**: Lấy danh sách tất cả các nhóm ngành.
-- **GET /api/v1/prices/daily/sector/{sector_code}**: Lấy dữ liệu giá hàng ngày cho cả một ngành.
-- **GET /api/v1/prices/daily/{ticker}**: Lấy dữ liệu giá lịch sử cho một cổ phiếu.
-- **POST /api/v1/ai/quick/analysis/full/{ticker}**: **(Trong AI Service)** Yêu cầu một phân tích nhanh hoàn chỉnh cho một cổ phiếu.
+- **GET /api/v1/ai/quick/analysis/full/{ticker}**: Yêu cầu một phân tích nhanh hoàn chỉnh cho một cổ phiếu.
+
+### 5. Quy trình huấn luyện trên Kaggle
+Do giới hạn tài nguyên của máy local và docker, các quy trình huấn luyện nên được thực hiện trên các dịch vụ hỗ trợ mạnh tài nguyên như Kaggle hoặc Google Colab.
+
+Sau đây là hướng dẫn huấn luyện trên Kaggle, tương tự trên Colab.
+
+- **Lưu ý**: Với mỗi session (12 tiếng) của Kaggle, ta sẽ huấn luyện mô hình cho 3 task của cùng 1 sector, đó là:
+  - Triple Barrier Classification.
+  - 5-days Distribution Regression.
+  - 20-days Distribution Regression.
+
+#### 5.1. Chuẩn bị dữ liệu
+Do không thể kết nối trực tiếp Internet vào Docker Network để lấy dữ liệu từ API Gateway, nên ta sẽ lấy và lưu ở local trước, sau đó upload trên Kaggle Datasets.
+
+Thư mục dùng để lưu trữ tạm thời mặc định là `/ai-service-quick/local`. Bạn có thể tạo trước để không bị lỗi không mong muốn.
+
+Sau đó, xuất dữ liệu CSV bằng lệnh
+```bash
+docker exec -d itapia-ai-service-quick conda run -n itapia python -m app.orchestrator.orchestrator <SECTOR-CODE>
+```
+- **Lưu ý**: Để lấy đúng sector, hãy dùng API để xem danh sách sector.
+
+#### 5.2. Tải dữ liệu trên Kaggle Datasets
+Tạo mới một Datasets và tải lên các file ở thư mục tạm. 
+[Kaggle Datasets](https://www.kaggle.com/datasets)
+
+#### 5.3. Tạo Notebook trên Kaggle và chạy script
+Tạo một notebook trên Kaggle để chạy huấn luyện và tối ưu hóa mô hình. Template của notebook có thể tham khảo ở
+[Template Training Notebook](https://www.kaggle.com/code/trietp1253201581/itapia-training)
+
+#### 5.4. Tái sử dụng mô hình
+Trong mã nguồn đã cung cấp các phương thức để đăng ký và load lại các mô hình được quản lý bởi Kaggle, có thể xem trong [model.py](./ai_service_quick/app/forecasting/model.py).
+
+- **Lưu ý**: Khi bạn tạo một `ForecastingModel` để huấn luyện, **`Model Slug`** (đường dẫn truy cập model trên kaggle) sẽ được tạo tự động theo template.
+    ```python
+    MODEL_SLUG_TEMPLATE = 'itapia-final-{id}'
+    ```
+    với `id` thường được tạo thành bới `name` của `ForecastingModel` và `task_id` của `ForecastingTask` mà nó giải quyết. Để dễ quản lý, bạn nên đặt tên `model` trùng với tên thuật toán nó sử dụng và `task_id` dùng template đã được định nghĩa trong [config.py](./ai_service_quick/app/core/config.py):
+    ```python
+    TASK_ID_SECTOR_TEMPLATE = '{problem}-{sector}'
+    ```
+    với `problem` chính là tên bài toán giải quyết, bao gồm:
+    - `clf-triple-barrier`
+    - `reg-5d-dis`
+    - `reg-20d-dis`
 
 ---
 
@@ -169,7 +238,8 @@ itapia/
 │   │   ├── common/
 │   │   ├── core/
 │   │   ├── data_prepare/
-│   │   └── technical_analysis/
+│   │   └── technical/
+│   │   └── forecasting/
 │   └── Dockerfile
 ├── data_processing/         # Các script xử lý dữ liệu (ETL)
 │   ├── scripts/
@@ -187,7 +257,7 @@ itapia/
 
 - **AI Giải thích được (XAI)**: Các khuyến nghị đầu tư minh bạch với lý do rõ ràng và "bằng chứng" đi kèm.
 - **Kiến trúc Hai cấp độ (Quick Check & Deep Dive)**: Cung cấp cả phân tích nhanh tức thời và phân tích sâu toàn diện.
-- **Hỗ trợ Đa thị trường**: Nền tảng được thiết kế để xử lý dữ liệu từ nhiều thị trường với các múi giờ và tiền tệ khác nhau.
+- **Hỗ trợ Đa thị trường**: Nền tảng được thiết kế để xử lý dữ liệu từ nhiều thị trường với các múi giờ và tiền tệ khác nhau. Mặc dù hiện tại chỉ gói gọn trong thị trường Mĩ nhưng với thiết kế theo framework không phụ thuộc dữ liệu thì sẽ dễ dàng mở rộng sau này.
 - **Dữ liệu Thời gian thực**: Cập nhật giá và phân tích các động thái trong ngày.
 - **Tối ưu hóa Tiến hóa (`Evo Agent`)**: Khả năng tự động tìm kiếm và tối ưu hóa các chiến lược giao dịch.
 
