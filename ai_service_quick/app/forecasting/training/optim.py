@@ -82,10 +82,10 @@ class LGBMClassifierObjective(OptunaObjective):
     def __call__(self, trial):
         params = {
             # --- Các tham số cố định ---
-            'objective': 'multiclass',  # Hoặc 'binary' tùy thuộc vào bài toán
-            'n_jobs': -1,
-            'random_state': 42,
-            'verbose': -1,
+            'objective': trial.suggest_categorical('objective', ['multiclass']),  # Hoặc 'binary' tùy thuộc vào bài toán
+            'n_jobs': trial.suggest_categorical('n_jobs', [-1]),
+            'random_state': trial.suggest_categorical('random_state', [42]),
+            'verbose': trial.suggest_categorical('verbose', [-1]),
             
             # --- Các tham số được Optuna tối ưu ---
             # np.arange(32, 300, 7) -> suggest_int(low, high, step)
@@ -138,11 +138,11 @@ class MultiOutLGBMRegressionObjective(OptunaObjective):
     def __call__(self, trial):
         params = {
             # --- Các tham số cố định ---
-            'objective': 'regression_l1', # Tối ưu MAE, thường mạnh mẽ hơn MSE
-            'n_jobs': 1,
-            'random_state': 42,
-            'verbose': -1,
-            
+            'objective': trial.suggest_categorical('objective', ['regression_l1']),  # Hoặc 'binary' tùy thuộc vào bài toán
+            'n_jobs': trial.suggest_categorical('n_jobs', [1]),
+            'random_state': trial.suggest_categorical('random_state', [42]),
+            'verbose': trial.suggest_categorical('verbose', [-1]),
+
             # --- Các tham số được Optuna tối ưu ---
             'num_leaves': trial.suggest_int('num_leaves', 32, 298, step=7),
             'reg_lambda': trial.suggest_float('reg_lambda', 1e-5, 5.0, log=True),
