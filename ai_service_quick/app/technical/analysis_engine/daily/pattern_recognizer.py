@@ -159,11 +159,11 @@ class DailyPatternRecognizer:
                         sentiment = metadata.get("sentiment", "Neutral")
 
                     collected.append({
-                        "name": friendly_name,
+                        "pattern_name": friendly_name,
                         "type": "Candlestick Pattern",
                         "sentiment": sentiment,
                         "score": metadata.get("score", 20), # Điểm mặc định thấp
-                        "evidence": {"date": date.date().isoformat()}
+                        "evidence": {"confirmation_date": date.date().isoformat()}
                     })
         return collected
     

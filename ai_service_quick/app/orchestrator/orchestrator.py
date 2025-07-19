@@ -1,10 +1,27 @@
 from datetime import datetime, timezone
 from typing import Literal
+import numpy as np
 import pandas as pd
 from app.technical.orchestrator import TechnicalOrchestrator
 from app.data_prepare.orchestrator import DataPrepareOrchestrator
 
 from app.logger import *
+
+def clean_json_outliers(obj):
+    """
+    Quét đệ quy qua một đối tượng (dict, list) và thay thế các giá trị
+    numpy/float đặc biệt (inf, -inf, nan) bằng None.
+    """
+    if isinstance(obj, dict):
+        return {k: clean_json_outliers(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_json_outliers(elem) for elem in obj]
+    elif isinstance(obj, (np.integer, np.floating, float)):
+        # Kiểm tra xem có phải là nan, inf, hoặc -inf không
+        if not np.isfinite(obj):
+            return None  # Thay thế bằng None (sẽ trở thành null trong JSON)
+    return obj
+
 
 class AIServiceQuickOrchestrator:
     """
@@ -18,7 +35,8 @@ class AIServiceQuickOrchestrator:
         self.tech_analyzer = TechnicalOrchestrator()
         
     def get_full_analysis_report(self, ticker: str, 
-                                 daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium'):
+                                 daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
+                                 required_type: Literal['daily', 'intraday', 'all']='all') -> dict:
         """
         QUY TRÌNH 1: Tạo báo cáo phân tích A-Z cho một ticker duy nhất.
         Bao gồm lấy dữ liệu, tạo features, và phân tích.
@@ -40,7 +58,7 @@ class AIServiceQuickOrchestrator:
         info("CEO -> TechAnalyzer: Performing analyses...")
         technical_analysis_report = self.tech_analyzer.get_full_analysis(daily_df, 
                                                                          intraday_df,
-                                                                         required_type='daily',
+                                                                         required_type=required_type,
                                                                          daily_analysis_type=daily_analysis_type)
         
         # --- BƯỚC 3 (TƯƠNG LAI): GỌI CÁC PHÒNG BAN KHÁC ---
@@ -63,7 +81,7 @@ class AIServiceQuickOrchestrator:
         }
         
         info(f"--- CEO: Full analysis for '{ticker}' complete. ---")
-        return final_report
+        return clean_json_outliers(final_report)
     
     def prepare_training_data_for_sector(self, sector_code: str) -> pd.DataFrame:
         """

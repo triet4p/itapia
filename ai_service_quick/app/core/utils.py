@@ -1,3 +1,6 @@
+import numpy as np
+
+
 FORECASTING_TRAINING_BONUS_FEATURES = [
     'open', 'high', 'low', 'close', 'volume',
     'RSI_14', 'ATRr_14', 
@@ -12,4 +15,3 @@ FORECASTING_TRAINING_SCORE_WEIGHTS = {
     'rf': 0.3,
     'mi': 0.3
 }
-
