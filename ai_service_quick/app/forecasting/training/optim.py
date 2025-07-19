@@ -99,7 +99,7 @@ class LGBMClassifierObjective(OptunaObjective):
             'n_estimators': trial.suggest_int('n_estimators', 50, 530, step=40),
             
             # loguniform(0.001, 0.2) -> suggest_float(low, high, log=True)
-            'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.2, log=True),
+            'learning_rate': trial.suggest_float('learning_rate', 0.002, 0.2, log=True),
             
             # np.arange(15, 55, 4) -> suggest_int(low, high, step)
             'max_depth': trial.suggest_int('max_depth', 15, 51, step=4),
@@ -116,6 +116,7 @@ class LGBMClassifierObjective(OptunaObjective):
             # loguniform(0.25, 1) -> suggest_float(low, high, log=True)
             'subsample': trial.suggest_float('subsample', 0.25, 1.0, log=True),
             'colsample_bytree': trial.suggest_float('colsample_bytree', 0.25, 1.0, log=True),
+            'max_bin': trial.suggest_categorical('max_bin', [63, 255, 511])
         }
         
         kernel_model = LGBMClassifier(**params)
@@ -138,20 +139,23 @@ class MultiOutLGBMRegressionObjective(OptunaObjective):
         params = {
             # --- Các tham số cố định ---
             'objective': 'regression_l1', # Tối ưu MAE, thường mạnh mẽ hơn MSE
-            'n_jobs': -1,
+            'n_jobs': 1,
             'random_state': 42,
             'verbose': -1,
             
             # --- Các tham số được Optuna tối ưu ---
-            'num_leaves': trial.suggest_int('num_leaves', 20, 200, step=5),
+            'num_leaves': trial.suggest_int('num_leaves', 32, 298, step=7),
             'reg_lambda': trial.suggest_float('reg_lambda', 1e-5, 5.0, log=True),
             'reg_alpha': trial.suggest_float('reg_alpha', 1e-5, 5.0, log=True),
-            'n_estimators': trial.suggest_int('n_estimators', 100, 800, step=50),
-            'learning_rate': trial.suggest_float('learning_rate', 0.005, 0.1, log=True),
-            'max_depth': trial.suggest_int('max_depth', 5, 20, step=3),
-            'min_child_samples': trial.suggest_int('min_child_samples', 10, 50, step=5),
-            'subsample': trial.suggest_float('subsample', 0.4, 1.0),
-            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.4, 1.0),
+            'n_estimators': trial.suggest_int('n_estimators', 50, 530, step=40),
+            'learning_rate': trial.suggest_float('learning_rate', 0.002, 0.2, log=True),
+            'max_depth': trial.suggest_int('max_depth', 15, 51, step=4),
+            'min_split_gain': trial.suggest_float('min_split_gain', 1e-8, 0.1, log=True),
+            'min_child_weight': trial.suggest_float('min_child_weight', 1e-4, 0.1, log=True),
+            'min_child_samples': trial.suggest_int('min_child_samples', 8, 28, step=4),
+            'subsample': trial.suggest_float('subsample', 0.25, 1.0, log=True),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.25, 1.0, log=True),
+            'max_bin': trial.suggest_categorical('max_bin', [63, 255, 511])
         }
 
         # 2. Tạo đối tượng model cho trial này
