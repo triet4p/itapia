@@ -98,7 +98,8 @@ class TrainingOrchestrator:
         self._train_df, self._test_df = train_test_split(self.df_with_targets, train_test_split_date, test_last_date)
         print(f"Train set shape: {self._train_df.shape}, Test set shape: {self._test_df.shape}")
 
-    def run_walk_forward_validation(self, validation_months: int):
+    def run_walk_forward_validation(self, validation_months: int,
+                                    max_train_months: int|None = None):
         """Chạy Walk-Forward Validation cho tất cả các model."""
         info("--- STEP 4: Running Walk-Forward Validation ---")
         if self._train_df is None:
@@ -109,7 +110,8 @@ class TrainingOrchestrator:
             info(f"- Validating model for task: {id}")
 
             evaluation_results = []
-            generator = get_walk_forward_splits(self._train_df, validation_months)
+            generator = get_walk_forward_splits(self._train_df, validation_months, 
+                                                max_train_months=max_train_months)
 
             for i, (train_fold_df, valid_fold_df) in enumerate(generator):
                 X_train = train_fold_df[task.selected_features]
