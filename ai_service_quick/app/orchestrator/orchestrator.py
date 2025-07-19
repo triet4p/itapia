@@ -120,5 +120,7 @@ class AIServiceQuickOrchestrator:
         df.to_csv(f'/ai-service-quick/local/training_{sector_code}.csv')
         
 if __name__ == '__main__':
+    import sys
+    sector = sys.argv[1]
     orchestrator = AIServiceQuickOrchestrator()
-    orchestrator.export_local_data_for_sector('TECH')
+    orchestrator.export_local_data_for_sector(sector)
