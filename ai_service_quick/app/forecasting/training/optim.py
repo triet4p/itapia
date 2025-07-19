@@ -1,5 +1,5 @@
 import math
-from typing import Generator, Literal, Tuple
+from typing import Generator, List, Literal, Tuple
 import numpy as np
 import optuna
 import pandas as pd
@@ -20,7 +20,7 @@ class OptunaObjective:
             raise ValueError('Model must have been assigned to solve a task!')
         self.full_df = full_df
         self.direction = direction
-        self.generator = generator
+        self.cvs = self._store_cv(generator)
         self.time_weighted = time_weighted
         if time_weighted == 'new-prior':
             self.weight_bias = weight_bias
@@ -33,12 +33,18 @@ class OptunaObjective:
     def _cal_metric(self, y_true, y_pred) -> float:
         pass
     
+    def _store_cv(self, generator: Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None]):
+        cvs: List[Tuple[pd.DataFrame, pd.DataFrame]] = []
+        for train_fold_df, valid_fold_df in self.generator:
+            cvs.append((train_fold_df, valid_fold_df))
+        return cvs
+    
     def _run_validate_kernel_model(self, kernel_model) -> float:
         task = self.model.task
         evaluation_results = [0]
         weighted = [1]
         
-        for i, (train_fold_df, valid_fold_df) in enumerate(self.generator):
+        for i, (train_fold_df, valid_fold_df) in enumerate(self.cvs):
             X_train = train_fold_df[task.selected_features]
             y_train_df = train_fold_df[task.targets]
             X_valid = valid_fold_df[task.selected_features]
