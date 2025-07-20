@@ -7,16 +7,18 @@ from sqlalchemy.orm import Session
 
 from redis.client import Redis
 
-from app.crud.metadata import get_metadata, get_all_sectors
-from app.crud.prices import get_daily_prices, get_intraday_prices, \
+from itapia_common.dblib.crud.metadata import get_ticker_metadata, get_all_sectors
+from itapia_common.dblib.crud.prices import get_daily_prices, get_intraday_prices, \
     get_latest_intraday_price, get_tickers_by_sector
-from app.crud.news import get_news
+from itapia_common.dblib.crud.news import get_relevant_news
 
-from app.schemas.metadata import SectorPayload, TickerMetadata
-from app.schemas.prices import PriceDataPoint, PriceFullPayload
-from app.schemas.news import NewsPoint, NewsFullPayload
+from itapia_common.dblib.schemas.metadata import SectorMetadata, TickerMetadata
+from itapia_common.dblib.schemas.prices import PriceDataPoint, PriceFullPayload
+from itapia_common.dblib.schemas.news import RelevantNewsPoint, RelevantNewsFullPayload
 
-from app.logger import *
+from itapia_common.logger import ITAPIALogger
+
+logger = ITAPIALogger('Data Service API')
 
 class DataService:
     """Lớp dịch vụ chứa logic nghiệp vụ chính để truy xuất và đóng gói dữ liệu.
@@ -26,10 +28,10 @@ class DataService:
     từ CRUD, sau đó chuyển đổi và định dạng chúng thành các đối tượng Pydantic
     (schemas) hoàn chỉnh để trả về cho API.
     """
-    def __init__(self, db: Session, redis_conn: Redis):
-        self.db = db
-        self.redis_conn = redis_conn
-        self.metadata_cache = get_metadata(db)
+    def __init__(self, rdbms_session: Session, redis_client: Redis):
+        self.rdbms_session = rdbms_session
+        self.redis_client = redis_client
+        self.metadata_cache = get_ticker_metadata(rdbms_session)
         
     def _get_validated_ticker_info(self, ticker: str):
         ticker_info = self.metadata_cache.get(ticker.upper())
@@ -40,11 +42,11 @@ class DataService:
     
     def get_daily_prices_payload(self, ticker: str, skip: int, limit: int):
         """Lấy và đóng gói dữ liệu giá lịch sử hàng ngày cho một ticker."""
-        info(f"SERVICE: Preparing daily prices for ticker {ticker}")
+        logger.info(f"SERVICE: Preparing daily prices for ticker {ticker}")
         ticker_info = self._get_validated_ticker_info(ticker)
         ticker_info['data_type'] = 'daily'
         
-        price_rows = get_daily_prices(self.db, ticker, skip, limit)
+        price_rows = get_daily_prices(self.rdbms_session, ticker, skip, limit)
         
         # Chuyển đổi dữ liệu thành các đối tượng Pydantic
         price_points = [
@@ -59,10 +61,10 @@ class DataService:
         
     def get_daily_prices_payload_by_sector(self, sector_code: str, skip: int, limit: int):
         """Lấy và đóng gói dữ liệu giá hàng ngày cho tất cả các cổ phiếu trong một nhóm ngành."""
-        info(f"SERVICE: Preparing daily prices for sector {sector_code}...")
+        logger.info(f"SERVICE: Preparing daily prices for sector {sector_code}...")
         
         # 1. Lấy danh sách các ticker thuộc ngành này
-        tickers_in_sector = get_tickers_by_sector(self.db, sector_code.upper())
+        tickers_in_sector = get_tickers_by_sector(self.rdbms_session, sector_code.upper())
         
         if not tickers_in_sector:
             # Có thể trả về list rỗng hoặc ném lỗi tùy theo yêu cầu
@@ -85,21 +87,21 @@ class DataService:
                     all_payloads.append(single_ticker_payload)
             except Exception as e:
                 # Bỏ qua các ticker bị lỗi và ghi log
-                warn(f"Warning: Could not fetch data for ticker {ticker}. Error: {e}")
+                logger.warn(f"Warning: Could not fetch data for ticker {ticker}. Error: {e}")
                 continue
                 
         return all_payloads
         
     def get_intraday_prices_payload(self, ticker: str, latest_only: bool = False):
         """Lấy và đóng gói dữ liệu giá trong ngày từ Redis cho một ticker."""
-        info(f"SERVICE: Preparing intraday prices for ticker {ticker}")
+        logger.info(f"SERVICE: Preparing intraday prices for ticker {ticker}")
         ticker_info = self._get_validated_ticker_info(ticker)
         ticker_info['data_type'] = 'intraday'
 
         if latest_only:
-            price_rows = [get_latest_intraday_price(self.redis_conn, ticker.upper())]
+            price_rows = [get_latest_intraday_price(self.redis_client, ticker.upper())]
         else:
-            price_rows = get_intraday_prices(self.redis_conn, ticker.upper())
+            price_rows = get_intraday_prices(self.redis_client, ticker.upper())
             
         if not price_rows or price_rows[0] is None:
             raise HTTPException(status_code=400, detail=f'Intraday data not found for ticker {ticker}')
@@ -116,27 +118,27 @@ class DataService:
         
     def get_news_payload(self, ticker: str, skip: int, limit: int):
         """Lấy và đóng gói dữ liệu tin tức cho một ticker."""
-        info(f"SERVICE: Preparing news data for ticker {ticker}")
+        logger.info(f"SERVICE: Preparing news data for ticker {ticker}")
         ticker_info = self._get_validated_ticker_info(ticker)
         ticker_info['data_type'] = 'news'
         
-        news_rows = get_news(self.db, ticker, skip=skip, limit=limit)
+        news_rows = get_relevant_news(self.rdbms_session, ticker, skip=skip, limit=limit)
         
         news_points = [
-            NewsPoint(
+            RelevantNewsPoint(
                 collect_ts=int(row['collect_time'].timestamp()),
                 publish_ts=int(row['publish_time'].timestamp()) if row['publish_time'] else None,
                 **row
             ) for row in news_rows
         ]
         
-        return NewsFullPayload(metadata=TickerMetadata(**ticker_info),
+        return RelevantNewsFullPayload(metadata=TickerMetadata(**ticker_info),
                                datas=news_points) 
     
-    def get_all_sectors(self) -> List[SectorPayload]:
+    def get_all_sectors(self) -> List[SectorMetadata]:
         """Lấy danh sách tất cả các nhóm ngành được hỗ trợ."""
-        info("SERVICE: Preparing all sectors...")
-        sector_rows = get_all_sectors(self.db) # Giả sử đã tạo file metadata_crud.py
+        logger.info("SERVICE: Preparing all sectors...")
+        sector_rows = get_all_sectors(self.rdbms_session) # Giả sử đã tạo file metadata_crud.py
         
         # Chuyển đổi kết quả thô thành danh sách các đối tượng Pydantic
-        return [SectorPayload(**row) for row in sector_rows]
+        return [SectorMetadata(**row) for row in sector_rows]

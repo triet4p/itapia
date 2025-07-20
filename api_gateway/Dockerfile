@@ -1,11 +1,11 @@
-FROM python:3.13-slim
+FROM python:3.11-slim
 
 WORKDIR /api-gateway
 
-COPY ./requirements.txt /api-gateway/requirements.txt
+COPY ./api_gateway /api-gateway
+COPY ./shared /tmp/shared-itapia
 
 RUN pip install --no-cache-dir --upgrade -r /api-gateway/requirements.txt
+RUN pip install -e /tmp/shared-itapia
 
-COPY . /api-gateway
-
-RUN ls /api-gateway -l
+RUN ls -l /api-gateway
