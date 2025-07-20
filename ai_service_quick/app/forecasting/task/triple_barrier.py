@@ -195,9 +195,9 @@ def find_triple_barrier_optimal_params(
     
 class TripleBarrierTask(ForecastingTask):
     def __init__(self, task_id: str,
-                 horizon: int,
-                 tp_pct: float,
-                 sl_pct: float,
+                 horizon: int = 10,
+                 tp_pct: float = 0.05,
+                 sl_pct: float = 0.03,
                  require_cdl_features: int = 7,
                  require_non_cdl_features: int = 45):
         super().__init__(task_id, 'clf', require_cdl_features, require_non_cdl_features)
@@ -215,6 +215,13 @@ class TripleBarrierTask(ForecastingTask):
         _super_metadata['sl_pct'] = self.sl_pct
         
         return _super_metadata
+    
+    def load_metadata(self, task_meta):
+        super().load_metadata(task_meta)
+        self.horizon = int(task_meta['horizon'])
+        self.tp_pct = float(task_meta['tp_pct'])
+        self.sl_pct = float(task_meta['sl_pct'])
+        
     
     def create_targets(self, df: pd.DataFrame, base_price_col: str) -> pd.DataFrame:
         if 'ticker' not in df.columns:

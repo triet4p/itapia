@@ -48,7 +48,7 @@ def create_distribution_targets(prices: pd.Series, horizon: int) -> pd.DataFrame
     
 class NDaysDistributionTask(ForecastingTask):
     def __init__(self, task_id: str,
-                 horizon: int,
+                 horizon: int = 5,
                  require_cdl_features: int = 7,
                  require_non_cdl_features: int = 45):
         super().__init__(task_id, 'reg', require_cdl_features, require_non_cdl_features)
@@ -62,6 +62,10 @@ class NDaysDistributionTask(ForecastingTask):
         _super_metadata['horizon'] = self.horizon
         
         return _super_metadata
+    
+    def load_metadata(self, task_meta):
+        super().load_metadata(task_meta)
+        self.horizon = int(task_meta['horizon'])
     
     def create_targets(self, df: pd.DataFrame, base_price_col: str) -> pd.DataFrame:
         if 'ticker' not in df.columns:

@@ -91,7 +91,7 @@ KAGGLE_USERNAME=<your-kaggle-username>
 ### 1. Build Necessary Images
 ```bash
 # Image for data processing scripts
-docker build -t itapia-data-processor:latest data_processing
+docker build -t itapia-data-processor:latest -f data_processing/Dockerfile .
 ```
 
 ### 2. Start Database Services
@@ -113,10 +113,10 @@ These scripts will automatically fetch the list of tickers from the database to 
 
 ```bash
 # Collect historical price data
-docker-compose run --rm batch-data-processor python scripts/fetch_history.py
+docker-compose run --rm batch-data-processor python scripts/fetch_daily_prices.py
 
 # Collect news data
-docker-compose run --rm batch-data-processor python scripts/fetch_news.py
+docker-compose run --rm batch-data-processor python scripts/fetch_relevant_news.py
 ```
 The scripts will automatically find the most recent date collected and only fetch new data for the 92 configured stocks.
 
@@ -133,7 +133,7 @@ docker-compose up -d realtime-data-processor
 ### 1. Build the Image
 ```bash
 # Build API Gateway
-docker build -t itapia-api-gateway:latest api_gateway
+docker build -t itapia-api-gateway:latest -f api_gateway/Dockerfile .
 ```
 
 ### 2. Start the Services
@@ -161,7 +161,7 @@ With the services running, you can access:
 ### 1. Build the Image
 ```bash
 # Build AI Service Quick
-docker build -t itapia-ai-service-quick:latest ai_service_quick
+docker build -t itapia-ai-service-quick:latest -f ai_service_quick/Dockerfile .
 ```
 
 ### 2. Start the Services
@@ -205,7 +205,7 @@ Create a new Dataset and upload the files from the temporary directory.
 
 #### 5.3. Create and Run a Notebook on Kaggle
 Create a notebook on Kaggle to run the model training and optimization scripts. A template for the notebook can be found at:
-[Template Training Notebook](https://www.kaggle.com/code/trietp1253201581/itapia-training)
+[Template Training Notebook](https://www.kaggle.com/code/trietp1253201581/itapia-training) or [Local Template Training Notebook](./notebooks/itapia-training.ipynb)
 
 #### 5.4. Reusing Models
 The source code provides methods to register and load models managed by Kaggle. See [model.py](./ai_service_quick/app/forecasting/model.py) for details.

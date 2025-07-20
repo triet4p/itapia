@@ -14,10 +14,11 @@ RUN conda create -n itapia python=3.11 -y
 RUN conda run -n itapia conda install -c conda-forge -y ta-lib
 
 # 2.2. Cài đặt các gói còn lại bằng pip
-COPY ./requirements.txt /ai-service-quick/requirements.txt
-RUN conda run -n itapia pip install -r /ai-service-quick/requirements.txt
+COPY ./ai_service_quick /ai-service-quick
+COPY ./shared /tmp/shared-itapia
 
-COPY . /ai-service-quick
+RUN conda run -n itapia pip install -r /ai-service-quick/requirements.txt
+RUN conda run -n itapia pip install -e /tmp/shared-itapia
 
 RUN chmod +x /ai-service-quick/entrypoint.sh
 

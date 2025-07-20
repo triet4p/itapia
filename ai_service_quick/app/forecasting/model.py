@@ -149,12 +149,12 @@ class ForecastingModel(ABC):
         variation = self.variation
         
         # 1. Tạo thư mục tạm để tải về
-        download_dir = f"./{model_slug}_download"
-        if os.path.exists(download_dir):
-            shutil.rmtree(download_dir)
-        os.makedirs(download_dir)
+        #download_dir = f"./{model_slug}_download"
+        #if os.path.exists(download_dir):
+        #    shutil.rmtree(download_dir)
+        #os.makedirs(download_dir)
         
-        unzip_path = os.path.join(download_dir, "unzipped")
+        #unzip_path = os.path.join(download_dir, "unzipped")
 
         try:
             # 2. Xây dựng handle và tải về file ZIP
@@ -177,6 +177,7 @@ class ForecastingModel(ABC):
             if os.path.exists(main_model_path):
                 with open(main_model_path, "rb") as f:
                     self.kernel_model = pickle.load(f)
+                    self.kernel_model_template = self.clone_unfitted_kernel_model()
                 print(f"  - Successfully loaded main kernel model: {type(self.kernel_model)}")
             else:
                 raise FileNotFoundError(f"Main model file '{cfg.MODEL_MAIN_MODEL_FILE}' not found in downloaded artifacts.")
@@ -194,12 +195,31 @@ class ForecastingModel(ABC):
                 print(f"  - Successfully loaded {len(self.snapshot_models)} snapshot models.")
             else:
                 print("  - No snapshots directory found, skipping snapshot loading.")
+                
+            metadata_path = os.path.join(model_cache_path, cfg.MODEL_METADATA_FILE)
+            if os.path.exists(metadata_path):
+                with open(metadata_path, "r") as f:
+                    full_metadata = json.load(f)
+                
+                # Trích xuất phần metadata của task
+                task_metadata = full_metadata.get('task')
+                
+                if task_metadata:
+                    # Ra lệnh cho đối tượng task tự khôi phục trạng thái
+                    self.task.load_metadata(task_metadata)
+                else:
+                    print("Warning: 'task' key not found in metadata.json. Task state not restored.")
+            else:
+                print("Warning: metadata.json not found. Task state not restored.")
 
             print(f"[{self.name}] Model loading complete.")
 
         except Exception as e:
             print(f"[{self.name}] An error occurred while loading model from Kaggle Hub: {e}")
             raise
+        finally:
+            print(f"[{self.name}] Cleaning up temporary artifact directory...")
+            shutil.rmtree(model_cache_path)
         
     @abstractmethod
     def clone_unfitted_kernel_model(self):
@@ -246,7 +266,11 @@ class ScikitLearnForecastingModel(ForecastingModel):
                          post_processors=post_processors)
         
     def clone_unfitted_kernel_model(self):
-        return clone(self.kernel_model_template)
+        if self.kernel_model_template is not None:
+            return clone(self.kernel_model_template)
+        if self.kernel_model is not None:
+            return clone(self.kernel_model)
+        raise ValueError("Not found any template!")
     
     def fit_kernel_model(self, kernel_model, X, y):
         kernel_model.fit(X, y)

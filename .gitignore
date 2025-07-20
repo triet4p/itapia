@@ -3,3 +3,4 @@
 **/.pytest_cache
 doc/docx/*
 **/local
+**/.vscode

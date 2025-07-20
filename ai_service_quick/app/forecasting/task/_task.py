@@ -21,14 +21,12 @@ class ForecastingTask(ABC):
         
         self.target_for_selection: str = ""
         
-        self.metadata = None
-        
     def get_metadata(self) -> Dict:
-        self.metadata = {
+        return {
             "task_id": self.task_id,
             "task_type": self.task_type,
             "targets": self.targets,
-            "target_for_selection": self.target_for_selection,\
+            "target_for_selection": self.target_for_selection,
             "features": {
                 "num_selected": len(self.selected_features),
                 "cdl_features_cnt": self.cdl_features_cnt,
@@ -36,7 +34,28 @@ class ForecastingTask(ABC):
                 'details': self.selected_features
             }
         }
-        return self.metadata
+        
+    def load_metadata(self, task_meta: dict):
+        """
+        Khôi phục trạng thái của Task từ một dictionary metadata.
+        
+        Args:
+            task_meta (dict): Dictionary chứa metadata của task,
+                              thường được trích xuất từ file metadata.json.
+        """
+        print(f"  - Loading metadata into task '{self.task_id}'...")
+        
+        # Khôi phục các thuộc tính cơ bản
+        self.targets = task_meta.get('targets', [])
+        self.target_for_selection = task_meta.get('target_for_selection', '')
+        
+        # Khôi phục thông tin về features
+        features_meta = task_meta.get('features', {})
+        self.selected_features = features_meta.get('details', [])
+        self.non_cdl_features_cnt = features_meta.get('non_cdl_features_cnt', self.non_cdl_features_cnt)
+        self.cdl_features_cnt = features_meta.get('cdl_features_cnt', self.cdl_features_cnt)
+        
+        print("  - Task metadata loaded successfully.")
     
     def __eq__(self, value):
         if not isinstance(value, ForecastingTask):

@@ -93,7 +93,7 @@ KAGGLE_USERNAME=<your-kaggle-username>
 ### 1. Build các Image cần thiết
 ```bash
 # Image cho các script xử lý dữ liệu
-docker build -t itapia-data-processor:latest data_processing
+docker build -t itapia-data-processor:latest -f data_processing/Dockerfile .
 ```
 
 ### 2. Khởi động các Dịch vụ Cơ sở dữ liệu
@@ -115,10 +115,10 @@ Các script này sẽ tự động lấy danh sách ticker từ CSDL để xử 
 
 ```bash
 # Thu thập dữ liệu giá lịch sử
-docker-compose run --rm batch-data-processor python scripts/fetch_history.py
+docker-compose run --rm batch-data-processor python scripts/fetch_daily_prices.py
 
 # Thu thập dữ liệu tin tức
-docker-compose run --rm batch-data-processor python scripts/fetch_news.py
+docker-compose run --rm batch-data-processor python scripts/fetch_relevant_news.py
 ```
 Các script sẽ tự động tìm ngày gần nhất đã lấy và chỉ thu thập dữ liệu mới cho 92 cổ phiếu đã được cấu hình.
 
@@ -135,7 +135,7 @@ docker-compose up -d realtime-data-processor
 ### 1. Build các Image
 ```bash
 # Build API Gateway
-docker build -t itapia-api-gateway:latest api_gateway
+docker build -t itapia-api-gateway:latest -f api_gateway/Dockerfile .
 ```
 
 ### 2. Khởi động các Dịch vụ
@@ -161,8 +161,8 @@ Khi các dịch vụ đang chạy, bạn có thể truy cập:
 
 ### 1. Build các Image
 ```bash
-# Build API Gateway
-docker build -t itapia-ai-service-quick:latest ai_service_quick
+# Build AI service quick
+docker build -t itapia-ai-service-quick:latest -f ai_service_quick/Dockerfile .
 ```
 
 ### 2. Khởi động các Dịch vụ
@@ -206,7 +206,8 @@ Tạo mới một Datasets và tải lên các file ở thư mục tạm.
 
 #### 5.3. Tạo Notebook trên Kaggle và chạy script
 Tạo một notebook trên Kaggle để chạy huấn luyện và tối ưu hóa mô hình. Template của notebook có thể tham khảo ở
-[Template Training Notebook](https://www.kaggle.com/code/trietp1253201581/itapia-training)
+[Kaggle Template Training Notebook](https://www.kaggle.com/code/trietp1253201581/itapia-training)
+hoặc [Local Template Training Notebook](./notebooks/itapia-training.ipynb)
 
 #### 5.4. Tái sử dụng mô hình
 Trong mã nguồn đã cung cấp các phương thức để đăng ký và load lại các mô hình được quản lý bởi Kaggle, có thể xem trong [model.py](./ai_service_quick/app/forecasting/model.py).
