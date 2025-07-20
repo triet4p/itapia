@@ -32,7 +32,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data_processing:/app
+      - ./data_processing:/data-processing
     depends_on:
       - stocks_postgre_db
     networks:
@@ -50,7 +50,7 @@ services:
     networks:
       - itapia-network
     volumes:
-      - ./data_processing:/app
+      - ./data_processing:/data-processing
     # Chạy script điều phối real-time
     command: python -u scripts/fetch_realtime_price.py
   
