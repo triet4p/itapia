@@ -5,4 +5,4 @@ class FetchException(Exception):
         super().__init__()
         self.msg = msg
     
-DEFAULT_START_DATE = datetime(2018, 1, 1, tzinfo=timezone.utc)
+DEFAULT_RETURN_DATE = datetime(2017, 12, 31, tzinfo=timezone.utc)

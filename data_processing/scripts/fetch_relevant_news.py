@@ -6,9 +6,13 @@ import uuid
 import yfinance as yf
 
 from utils import FetchException
-from db_manager import PostgreDBManager
 
-from logger import *
+from itapia_common.dblib.session import get_singleton_rdbms_engine
+from itapia_common.dblib.crud.general_update import bulk_insert
+from itapia_common.dblib.crud.metadata import get_ticker_metadata
+from itapia_common.logger import ITAPIALogger
+
+logger = ITAPIALogger('Relevant news Processor')
 
 def _extract_news_data(tickers: list[str],
                        sleep_time: int = 5,
@@ -36,7 +40,7 @@ def _transform_element(element: dict):
     transformed['news_uuid'] = element.get('id')
     if transformed['news_uuid'] is None:
         transformed['news_uuid'] = str(uuid.uuid4())
-        warn('Use UUID generate alternative!')
+        logger.warn('Use UUID generate alternative!')
     
     content = element.get('content')
     if not content: # Kiểm tra cả None và dictionary rỗng
@@ -84,7 +88,6 @@ def _transform(data: list[dict]):
     return transformed_data
 
 def full_pipeline(table_name: str,
-                  db_mng: PostgreDBManager,
                   max_news: int = 10,
                   sleep_time: int = 5):
     """Thực thi pipeline hoàn chỉnh để thu thập tin tức liên quan đến các cổ phiếu.
@@ -97,21 +100,23 @@ def full_pipeline(table_name: str,
 
     Args:
         table_name (str): Tên bảng trong CSDL để lưu dữ liệu (ví dụ: 'relevant_news').
-        db_mng (PostgreDBManager): Instance của DB manager.
         max_news (int, optional): Số lượng tin tức tối đa lấy cho mỗi ticker. Mặc định là 10.
         sleep_time (int, optional): Thời gian nghỉ (giây) giữa các request API. Mặc định là 5.
     """
-    tickers = list(db_mng.get_active_tickers_with_info().keys())
-    info(f'Successfully get {len(tickers)} to collect news...')
+    
     try:
-        info(f'Getting news for {len(tickers)} tickers...')
+        engine = get_singleton_rdbms_engine()
+        tickers = list(get_ticker_metadata(rdbms_engine=engine).keys())
+        logger.info(f'Successfully get {len(tickers)} to collect news...')
+        logger.info(f'Getting news for {len(tickers)} tickers...')
         data = _extract_news_data(tickers, sleep_time, max_news)
         
-        info(f'Transforming news data ...')
+        logger.info(f'Transforming news data ...')
         transformed_data = _transform(data)
         
-        info(f'Loading news to DB ...')
-        db_mng.bulk_insert(
+        logger.info(f'Loading news to DB ...')
+        bulk_insert(
+            engine,
             table_name, 
             transformed_data, 
             unique_cols=['news_uuid'],
@@ -119,17 +124,15 @@ def full_pipeline(table_name: str,
             on_conflict='nothing'
         )
         
-        info(f"Successfully load!")
+        logger.info(f"Successfully load!")
     except FetchException as e:
-        err(f"A fetch exception occured: {e}")
+        logger.err(f"A fetch exception occured: {e}")
     except Exception as e:
-        err(f"An unknown exception occured: {e}")
+        logger.err(f"An unknown exception occured: {e}")
 
 if __name__ == '__main__':
     
     TABLE_NAME = 'relevant_news'
     
-    db_mng = PostgreDBManager()
-    
-    full_pipeline(table_name=TABLE_NAME, db_mng=db_mng,
+    full_pipeline(table_name=TABLE_NAME, 
                   max_news=15, sleep_time=5)

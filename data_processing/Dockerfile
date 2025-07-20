@@ -1,11 +1,11 @@
-FROM python:3.13-slim
+FROM python:3.11-slim
 
-WORKDIR /app
+WORKDIR /data-processing
 
-COPY ./requirements.txt /app/requirements.txt
+COPY ./data_processing /data-processing
+COPY ./shared /tmp/shared-itapia
 
-RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /data-processing/requirements.txt
+RUN pip install -e /tmp/shared-itapia
 
-COPY . /app
-
-RUN ls /app -l
+RUN ls -l /data-processing
