@@ -18,3 +18,9 @@ DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POST
 # Cấu hình Redis
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+
+DAILY_PRICES_TABLE_NAME = 'daily_prices'
+RELEVANT_NEWS_TABLE_NAME = 'relevant_news'
+UNIVERSAL_NEWS_TABLE_NAME = 'universal_news'
+INTRADAY_STREAM_PREFIX = 'intraday_stream'
+TICKER_METADATA_TABLE_NAME = 'tickers'

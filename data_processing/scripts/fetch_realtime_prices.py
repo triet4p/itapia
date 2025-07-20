@@ -8,9 +8,7 @@ from functools import partial
 import yfinance as yf
 
 from itapia_common.dblib.session import get_singleton_rdbms_engine, get_singleton_redis_client
-from itapia_common.dblib.crud.general_update import bulk_insert
-from itapia_common.dblib.crud.metadata import get_ticker_metadata
-from itapia_common.dblib.crud.prices import add_intraday_candle
+from itapia_common.dblib.services import DataMetadataService, DataPricesService
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Realtime Price Processor')
@@ -43,7 +41,7 @@ def _is_market_open_for_ticker(ticker_info: dict) -> bool:
         logger.err(f"Error checking market open status: {e}")
         return False
     
-def _process_single_ticker(ticker_sym: str):
+def _process_single_ticker(ticker_sym: str, prices_service: DataPricesService):
 
     info = yf.Ticker(ticker_sym).fast_info
     
@@ -60,14 +58,14 @@ def _process_single_ticker(ticker_sym: str):
         'volume': info.last_volume,
         'last_update_utc': datetime.now(timezone.utc).isoformat()
     }
-    
-    redis_client = get_singleton_redis_client()
-    
-    add_intraday_candle(redis_client=redis_client, ticker=ticker_sym, candle_data=provisional_candle)
+
+    prices_service.add_intraday_prices(ticker=ticker_sym, candle_data=provisional_candle)
     
     logger.info(f"  - Successfully update {ticker_sym} with last price is {info.last_price}")
     
-def full_pipeline(relax_time: int = 2):
+def full_pipeline(metadata_service: DataMetadataService,
+                  prices_service: DataPricesService,
+                  relax_time: int = 2):
     """Pipeline chính, chạy định kỳ để lấy dữ liệu giá real-time.
 
     Nó lặp qua tất cả các ticker đang hoạt động, kiểm tra xem thị trường của
@@ -84,8 +82,7 @@ def full_pipeline(relax_time: int = 2):
     # 1. Lấy thông tin của tất cả các ticker đang hoạt động từ cache
     # Thao tác này rất nhanh vì dữ liệu đã có trong bộ nhớ
     logger.info("Getting metadata of all tickers ...")
-    engine = get_singleton_rdbms_engine()
-    active_tickers_info = get_ticker_metadata(rdbms_engine=engine)
+    active_tickers_info = metadata_service.metadata_cache
     tickers_to_process = []
     
     # 2. Lọc ra danh sách các ticker cần xử lý ngay bây giờ
@@ -104,7 +101,7 @@ def full_pipeline(relax_time: int = 2):
     # 3. Xử lý các ticker đã lọc
     for ticker in tickers_to_process:
         try:
-            _process_single_ticker(ticker)
+            _process_single_ticker(ticker, prices_service)
         except Exception as e:
             # Bắt lỗi chung để pipeline không bị sập
             logger.err(f'Unknown Error processing ticker {ticker}: {e}')
@@ -122,7 +119,16 @@ def main_orchestrator():
     logger.info("--- REAL-TIME ORCHESTRATOR (SCHEDULE-BASED) HAS BEEN STARTED ---")
     
     logger.info(f"Scheduling for job, run each 15 minute...")
-    partial_job = partial(full_pipeline, relax_time=4)
+    
+    engine = get_singleton_rdbms_engine()
+    redis_client = get_singleton_redis_client()
+    
+    metadata_service = DataMetadataService(engine)
+    prices_service = DataPricesService(engine, redis_client)
+    
+    partial_job = partial(full_pipeline, metadata_service=metadata_service,
+                          prices_service=prices_service,
+                          relax_time=4)
     schedule.every().hour.at(":00").do(partial_job)
     schedule.every().hour.at(":15").do(partial_job)
     schedule.every().hour.at(":30").do(partial_job)

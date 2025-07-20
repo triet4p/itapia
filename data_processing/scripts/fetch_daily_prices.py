@@ -8,9 +8,7 @@ import yfinance as yf
 from utils import FetchException, DEFAULT_RETURN_DATE
 
 from itapia_common.dblib.session import get_singleton_rdbms_engine
-from itapia_common.dblib.crud.general_update import bulk_insert
-from itapia_common.dblib.crud.metadata import get_ticker_metadata
-from itapia_common.dblib.crud.prices import get_last_history_date
+from itapia_common.dblib.services import DataPricesService, DataMetadataService
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger(id='Prices Batch Processor')
@@ -68,7 +66,8 @@ def _handle_missing_data(df: pd.DataFrame,
     
     return filtered_df.copy()
     
-def full_pipeline(table_name: str):
+def full_pipeline(metadata_service: DataMetadataService,
+                  prices_service: DataPricesService):
     """Thực thi pipeline hoàn chỉnh để thu thập dữ liệu giá lịch sử hàng ngày.
 
     Quy trình bao gồm:
@@ -81,13 +80,11 @@ def full_pipeline(table_name: str):
         table_name (str): Tên bảng trong CSDL để lưu dữ liệu (ví dụ: 'daily_prices').
     """
     try:
-        engine = get_singleton_rdbms_engine()
         # 1. Xác định timing
         logger.info('Identify time window to process ...')
-        metadata = get_ticker_metadata(rdbms_engine=engine)
-        tickers = list(metadata.keys())
+        tickers = metadata_service.get_all_tickers()
         
-        last_date = get_last_history_date(engine, table_name, tickers, DEFAULT_RETURN_DATE)
+        last_date = prices_service.get_last_history_date(tickers, DEFAULT_RETURN_DATE)
         start_date = last_date + timedelta(days=1)
             
         now_date = datetime.now(timezone.utc)      
@@ -126,10 +123,8 @@ def full_pipeline(table_name: str):
         logger.info('Loading data into DB ...')
         selected_cols = ['collect_date', 'ticker', 'open', 'high', 'low', 'close', 'volume']
         selected_df = cleaned_df[selected_cols].copy()
-        bulk_insert(engine, table_name, selected_df, 
-                           unique_cols=['collect_date', 'ticker'],
-                           chunk_size=1000,
-                           on_conflict='update')
+        prices_service.add_daily_prices(data=selected_df,
+                                        unique_cols=['collect_date', 'ticker'])
         logger.info(f"Successfully save {len(cleaned_df)} records.")
     except FetchException as e:
         logger.err(f"A fetch exception occured: {e}")
@@ -137,9 +132,9 @@ def full_pipeline(table_name: str):
         logger.err(f"An unknown exception occured: {e}")
     
 if __name__ == '__main__':
-    
-    TABLE_NAME = 'daily_prices'
-    
-    full_pipeline(table_name=TABLE_NAME)
+    engine = get_singleton_rdbms_engine()
+    prices_service = DataPricesService(engine)
+    metadata_service = DataMetadataService(engine)
+    full_pipeline(metadata_service=metadata_service, prices_service=prices_service)
     
     

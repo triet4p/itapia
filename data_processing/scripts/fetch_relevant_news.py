@@ -8,8 +8,7 @@ import yfinance as yf
 from utils import FetchException
 
 from itapia_common.dblib.session import get_singleton_rdbms_engine
-from itapia_common.dblib.crud.general_update import bulk_insert
-from itapia_common.dblib.crud.metadata import get_ticker_metadata
+from itapia_common.dblib.services import DataMetadataService, DataNewsService
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Relevant news Processor')
@@ -87,7 +86,8 @@ def _transform(data: list[dict]):
             continue
     return transformed_data
 
-def full_pipeline(table_name: str,
+def full_pipeline(metadata_service: DataMetadataService,
+                  news_service: DataNewsService,
                   max_news: int = 10,
                   sleep_time: int = 5):
     """Thực thi pipeline hoàn chỉnh để thu thập tin tức liên quan đến các cổ phiếu.
@@ -106,7 +106,7 @@ def full_pipeline(table_name: str,
     
     try:
         engine = get_singleton_rdbms_engine()
-        tickers = list(get_ticker_metadata(rdbms_engine=engine).keys())
+        tickers = metadata_service.get_all_tickers()
         logger.info(f'Successfully get {len(tickers)} to collect news...')
         logger.info(f'Getting news for {len(tickers)} tickers...')
         data = _extract_news_data(tickers, sleep_time, max_news)
@@ -115,13 +115,10 @@ def full_pipeline(table_name: str,
         transformed_data = _transform(data)
         
         logger.info(f'Loading news to DB ...')
-        bulk_insert(
-            engine,
-            table_name, 
+        news_service.add_news(
             transformed_data, 
+            'relevant',
             unique_cols=['news_uuid'],
-            chunk_size=300,
-            on_conflict='nothing'
         )
         
         logger.info(f"Successfully load!")
@@ -132,7 +129,9 @@ def full_pipeline(table_name: str,
 
 if __name__ == '__main__':
     
-    TABLE_NAME = 'relevant_news'
+    engine = get_singleton_rdbms_engine()
+    metadata_service = DataMetadataService(engine)
+    news_service = DataNewsService(engine)
     
-    full_pipeline(table_name=TABLE_NAME, 
+    full_pipeline(metadata_service, news_service, 
                   max_news=15, sleep_time=5)

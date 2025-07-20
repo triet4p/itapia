@@ -9,9 +9,9 @@ from sqlalchemy import text, Engine
 
 from redis.client import Redis
 
-def get_daily_prices(rdbms_session: Session, ticker: str, skip: int = 0, limit: int = 500):
-    query = text("""
-        SELECT * FROM daily_prices 
+def get_daily_prices(rdbms_session: Session, table_name: str, ticker: str, skip: int = 0, limit: int = 500):
+    query = text(f"""
+        SELECT * FROM {table_name} 
         WHERE ticker = :ticker 
         ORDER BY collect_date DESC 
         OFFSET :skip LIMIT :limit
@@ -20,9 +20,9 @@ def get_daily_prices(rdbms_session: Session, ticker: str, skip: int = 0, limit: 
     result = rdbms_session.execute(query, {"ticker": ticker, "skip": skip, "limit": limit})
     return result.mappings().all()
 
-def get_tickers_by_sector(rdbms_session: Session, sector_code: str):
-    query = text("""
-        SELECT ticker_sym FROM tickers
+def get_tickers_by_sector(rdbms_session: Session, table_name: str, sector_code: str):
+    query = text(f"""
+        SELECT ticker_sym FROM {table_name}
         WHERE sector_code = :sector_code AND is_active = TRUE
         ORDER BY ticker_sym;
     """)
@@ -30,10 +30,10 @@ def get_tickers_by_sector(rdbms_session: Session, sector_code: str):
     # .scalars().all() sẽ trả về một list các giá trị từ cột đầu tiên
     return result.scalars().all()
 
-def get_intraday_prices(redis_client: Redis, ticker: str):
+def get_intraday_prices(redis_client: Redis, ticker: str, stream_prefix: str):
     if not redis_client:
         return None
-    redis_key = f'intraday_stream:{ticker}'
+    redis_key = f'{stream_prefix}:{ticker}'
     entries = redis_client.xrange(redis_key)
     data_lst = []
     if entries:
@@ -51,10 +51,10 @@ def get_intraday_prices(redis_client: Redis, ticker: str):
     else:
         return []
 
-def get_latest_intraday_price(redis_client: Redis, ticker: str):
+def get_latest_intraday_price(redis_client: Redis, ticker: str, stream_prefix: str):
     if not redis_client:
         return None
-    redis_key = f'intraday_stream:{ticker}'
+    redis_key = f'{stream_prefix}:{ticker}'
     entries = redis_client.xrevrange(redis_key, count=1)
     if not entries:
         return None
@@ -88,7 +88,8 @@ def get_last_history_date(engine: Engine,
         # Nếu có lỗi (ví dụ bảng chưa tồn tại), coi như chưa có dữ liệu
         return default_return_date
     
-def add_intraday_candle(redis_client: Redis, ticker: str, candle_data: dict, max_entries: int = 300):
+def add_intraday_candle(redis_client: Redis, ticker: str, candle_data: dict,
+                        stream_prefix: str, max_entries: int = 300):
     """Thêm một cây nến intraday vào một Redis Stream tương ứng với ticker.
 
     Sử dụng cấu trúc dữ liệu Stream của Redis để lưu trữ hiệu quả chuỗi
@@ -105,7 +106,7 @@ def add_intraday_candle(redis_client: Redis, ticker: str, candle_data: dict, max
     """
     if not candle_data:
         return
-    stream_key = f"intraday_stream:{ticker}"
+    stream_key = f"{stream_prefix}:{ticker}"
     
     try:
         # Chuyển đổi tất cả giá trị sang string để tương thích với Redis Stream
