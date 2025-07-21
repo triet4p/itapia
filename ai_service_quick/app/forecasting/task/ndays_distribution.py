@@ -54,8 +54,8 @@ class NDaysDistributionTask(ForecastingTask):
         super().__init__(task_id, 'reg', require_cdl_features, require_non_cdl_features)
         self.horizon = horizon
         
-        self.targets = [f'target_{s}_{horizon}d' for s in DISTRIBUTION_FEATURES]
-        self.target_for_selection = f'target_mean_{horizon}d'
+        self.targets = [f'target_{s}_pct_{horizon}d' for s in DISTRIBUTION_FEATURES]
+        self.target_for_selection = f'target_mean_pct_{horizon}d'
         
     def get_metadata(self):
         _super_metadata = super().get_metadata()
@@ -73,7 +73,29 @@ class NDaysDistributionTask(ForecastingTask):
 
         all_targets = []
         for _, group in df.groupby('ticker'):
-            targets = create_distribution_targets(group[base_price_col], self.horizon)
-            all_targets.append(targets)
+            prices = group[base_price_col]
+            
+            # 1. Tính toán các target giá trị tuyệt đối như cũ
+            abs_targets = create_distribution_targets(prices, self.horizon)
+            
+            # 2. BÌNH THƯỜNG HÓA (NORMALIZE)
+            # Lấy giá đóng cửa hiện tại để làm mẫu số
+            current_close = prices
+            
+            # Tạo DataFrame mới để chứa các target đã bình thường hóa
+            norm_targets = pd.DataFrame(index=abs_targets.index)
+            
+            # Bình thường hóa mean, min, max, q25, q75 thành % thay đổi
+            for stat in ['mean', 'min', 'max', 'q25', 'q75']:
+                col_name = f'target_{stat}_{self.horizon}d'
+                norm_targets[f'target_{stat}_pct_{self.horizon}d'] = \
+                    ((abs_targets[col_name] - current_close) / current_close) * 100
+            
+            # Bình thường hóa std thành % so với giá hiện tại
+            col_std = f'target_std_{self.horizon}d'
+            norm_targets[f'target_std_pct_{self.horizon}d'] = \
+                (abs_targets[col_std] / current_close) * 100
+
+            all_targets.append(norm_targets)
         
         return pd.concat(all_targets)
