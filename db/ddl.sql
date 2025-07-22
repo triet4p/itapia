@@ -43,3 +43,23 @@ create table if not exists public.tickers (
 	foreign key (exchange_code) references exchanges(exchange_code),
 	foreign key (sector_code) references sectors(sector_code)
 )
+
+CREATE TABLE IF NOT EXISTS public.universal_news ( 
+    news_uuid varchar(256) PRIMARY KEY,
+    keyword varchar(150) not null,
+    keyword_tsv tsvector not null,
+    title TEXT not null,
+    summary TEXT null,
+    provider varchar(150) null,
+    link TEXT null,
+    publish_time timestamp with time zone null,
+    collect_time timestamp with time zone not null
+);
+
+CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE
+ON universal_news FOR EACH ROW EXECUTE PROCEDURE
+tsvector_update_trigger(keyword_tsv, 'pg_catalog.english', keyword);
+
+CREATE INDEX daily_prices_ticker ON public.daily_prices(ticker);
+CREATE INDEX relevant_news_ticker ON public.relevant_news(ticker);
+CREATE INDEX keyword_tsv_idx ON universal_news USING GIN(keyword_tsv);

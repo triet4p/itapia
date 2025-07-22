@@ -1,1 +1,1 @@
-from ._logger import ITAPIALogger
+from itapia_common.logger._logger import ITAPIALogger

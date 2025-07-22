@@ -1,8 +1,14 @@
+Chắc chắn rồi! Đây là phiên bản tiếng Anh được viết lại hoàn toàn, giữ nguyên 100% nội dung, cấu trúc và tất cả các chi tiết kỹ thuật quan trọng từ file README.md tiếng Việt của bạn.
+
+---
+
 # ITAPIA - Intelligent and Transparent AI-Powered Personal Investment Assistant
 
 ITAPIA (Intelligent and Transparent AI-Powered Personal Investment Assistant) is a graduation thesis project aimed at building an intelligent stock investment support platform. The project is specifically designed for individual investors with limited capital, who prioritize risk management and wish to clearly understand the investment recommendations provided by AI.
 
 Unlike traditional "black box" tools, ITAPIA focuses on **Explainability (XAI)**, **low cost**, and the ability to **learn and co-evolve** with the user.
+
+**Vietnamese version of README**: [README.md](./README.md)
 
 ---
 
@@ -106,7 +112,7 @@ docker-compose up -d realtime_redis_db
 ```
 
 ### 3. Initialize Database Tables
-Use DBeaver or the command line to connect to the database and execute the SQL commands in `db/ddl.sql` to create the necessary tables in PostgreSQL. You will also need to "seed" data for static tables like `exchanges` and `sectors`.
+Use DBeaver or the command line to connect to the database and execute the SQL commands in `db/ddl.sql` to create the necessary tables in PostgreSQL. You will also need to "seed" data for static tables like `exchanges` and `sectors` using the scripts provided in `db/seeds/`.
 
 ### 4. Run Batch Data Collection Scripts
 These scripts will automatically fetch the list of tickers from the database to process.
@@ -115,44 +121,19 @@ These scripts will automatically fetch the list of tickers from the database to 
 # Collect historical price data
 docker-compose run --rm batch-data-processor python scripts/fetch_daily_prices.py
 
-# Collect news data
+# Collect news directly related to a stock
 docker-compose run --rm batch-data-processor python scripts/fetch_relevant_news.py
+
+# Collect news using keywords
+docker-compose run --rm batch-data-processor python scripts/fetch_universal_news.py
 ```
-The scripts will automatically find the most recent date collected and only fetch new data for the 92 configured stocks.
+The scripts will automatically find the most recent date collected and only fetch new data for the 92 configured stocks. For Universal News, you can add or change the keywords to fetch data in the [utils.py](./data_processing/scripts/utils.py) file.
 
 ### 5. Run Real-time Data Collection
 This service will automatically scan and fetch data only for stocks whose markets are currently open.
 ```bash
 docker-compose up -d realtime-data-processor
 ```
-
----
-
-## 🤖 API Gateway Setup
-
-### 1. Build the Image
-```bash
-# Build API Gateway
-docker build -t itapia-api-gateway:latest -f api_gateway/Dockerfile .
-```
-
-### 2. Start the Services
-Ensure the database services are running, then start the application service:
-```bash
-docker-compose up -d api-gateway
-```
-
-### 3. Access API Documentation
-With the services running, you can access:
-- **API Gateway Docs**: http://localhost:8000/docs
-- **API Gateway Base URL**: http://localhost:8000/api/v1
-
-### 4. Key Endpoints
-- **GET /api/v1/metadata/sectors**: Get the list of all sectors.
-- **GET /api/v1/prices/sector/daily/{sector_code}**: Get daily price data for an entire sector.
-- **GET /api/v1/prices/daily/{ticker}**: Get historical price data for a single stock.
-- **GET /api/v1/prices/intraday/last/{ticker}**: Get the latest intraday price for a stock.
-- **GET /api/v1/prices/intraday/history/{ticker}**: Get intraday prices stored for the last 1-2 days.
 
 ---
 
@@ -164,19 +145,19 @@ With the services running, you can access:
 docker build -t itapia-ai-service-quick:latest -f ai_service_quick/Dockerfile .
 ```
 
-### 2. Start the Services
+### 2. Start the Service
 Ensure the database services are running, then start the application service:
 ```bash
 docker-compose up -d ai-service-quick
 ```
 
 ### 3. Access API Documentation
-With the services running, you can access:
+With the service running, you can access:
 - **AI Service Quick Docs**: http://localhost:8001/docs
 - **AI Service Quick Base URL**: http://localhost:8001/api/v1
 
 ### 4. Key Endpoints
-- **GET /api/v1/ai/quick/analysis/full/{ticker}**: Request a complete quick analysis for a stock.
+- **GET /api/v1/quick/{ticker}**: Request a complete quick analysis for a stock. This API is intended to be used by the API Gateway.
 
 ### 5. Training Process on Kaggle
 Due to local machine and Docker resource limitations, the training processes should be executed on platforms with powerful resources like Kaggle or Google Colab.
@@ -189,26 +170,27 @@ The following is a guide for training on Kaggle, which is similar to Colab.
   - 20-days Distribution Regression.
 
 #### 5.1. Data Preparation
-Since we cannot connect directly to the Docker Network from the Internet to fetch data from the API Gateway, we will first retrieve and save it locally, then upload it to Kaggle Datasets.
+Since we cannot connect directly from the Internet to the Docker Network to fetch data from the services, we will first export it locally and then upload it to Kaggle Datasets.
 
 The default temporary storage directory is `/ai-service-quick/local`. You can create it beforehand to avoid unexpected errors.
 
-Next, export the CSV data using the command:
+Next, export the CSV data for a specific sector using the command:
 ```bash
 docker exec -it itapia-ai-service-quick-1 conda run --no-capture-output -n itapia python -m app.orchestrator.orchestrator <SECTOR-CODE>
 ```
-- **Note**: To get the correct sector code, use the API to view the list of sectors.
+- **Note**: To get the correct sector code, you can use the API Gateway to view the list of supported sectors.
 
 #### 5.2. Upload Data to Kaggle Datasets
-Create a new Dataset and upload the files from the temporary directory.
-[Kaggle Datasets](https://www.kaggle.com/datasets)
+Create a new Dataset and upload the files from the temporary local directory.
+[Kagg.le Datasets](https://www.kaggle.com/datasets)
 
 #### 5.3. Create and Run a Notebook on Kaggle
 Create a notebook on Kaggle to run the model training and optimization scripts. A template for the notebook can be found at:
-[Template Training Notebook](https://www.kaggle.com/code/trietp1253201581/itapia-training) or [Local Template Training Notebook](./notebooks/itapia-training.ipynb)
+[Kaggle Template Training Notebook](https://www.kaggle.com/code/trietp1253201581/itapia-training)
+or [Local Template Training Notebook](./notebooks/itapia-training.ipynb)
 
 #### 5.4. Reusing Models
-The source code provides methods to register and load models managed by Kaggle. See [model.py](./ai_service_quick/app/forecasting/model.py) for details.
+The source code provides methods to register and load models managed by Kaggle Models. See [model.py](./ai_service_quick/app/forecasting/model.py) for details.
 
 - **Note**: When you create a `ForecastingModel` for training, the **`Model Slug`** (the access path for the model on Kaggle) will be generated automatically from a template.
     ```python
@@ -225,6 +207,37 @@ The source code provides methods to register and load models managed by Kaggle. 
 
 ---
 
+## 🤖 API Gateway Setup
+
+### 1. Build the Image
+```bash
+# Build API Gateway
+docker build -t itapia-api-gateway:latest -f api_gateway/Dockerfile .
+```
+
+### 2. Start the Service
+Ensure the database services are running, then start the application service:
+```bash
+docker-compose up -d api-gateway
+```
+
+### 3. Access API Documentation
+With the services running, you can access:
+- **API Gateway Docs**: http://localhost:8000/docs
+- **API Gateway Base URL**: http://localhost:8000/api/v1
+
+### 4. Key Endpoints
+- **GET /api/v1/metadata/sectors**: Get the list of all sectors.
+- **GET /api/v1/prices/sector/daily/{sector_code}**: Get daily price data for an entire sector.
+- **GET /api/v1/prices/daily/{ticker}**: Get historical price data for a single stock.
+- **GET /api/v1/prices/intraday/last/{ticker}**: Get the latest intraday price for a stock.
+- **GET /api/v1/prices/intraday/history/{ticker}**: Get intraday prices stored for the last 1-2 days.
+- **GET /api/v1/news/relevant/{ticker}**: Get relevant news for a single stock.
+- **GET /api/v1/news/universal**: Get news by keywords, passed as query parameters.
+- **GET /api/v1/ai/quick/{ticker}**: Get the Quick Check report for a single stock; this request is forwarded to the AI Service Quick.
+
+---
+
 ## 🔧 Project Structure
 
 ```
@@ -234,17 +247,17 @@ itapia/
 │   └── Dockerfile
 ├── ai_service_quick/        # AI Service for Quick Check (FastAPI, CPU)
 │   ├── app/
-│   │   ├── common/
 │   │   ├── core/
 │   │   ├── data_prepare/
-│   │   └── technical/
+│   │   ├── technical/
 │   │   └── forecasting/
 │   └── Dockerfile
 ├── data_processing/         # Data processing scripts (ETL)
 │   ├── scripts/
 │   └── ...
-├── db/                      # Schema and migrations
+├── db/                      # DB Schema (DDL) and seeds
 ├── doc/                     # Project documentation
+├── shared_library/          # Shared library for common code
 ├── docker-compose.yml       # Docker services configuration
 ├── .env                     # (Must be created) Environment variables
 └── README.md

@@ -41,11 +41,12 @@ class APINewsService:
         return RelevantNewsFullPayload(metadata=metadata,
                                        datas=news_points) 
         
-    def get_universal_news(self, skip: int, limit: int):
+    def get_universal_news(self, search_terms: str, skip: int, limit: int):
         """Lấy và đóng gói dữ liệu tin tức cho một ticker."""
         logger.info(f"SERVICE: Preparing {limit} universal news ...")
         
         news_rows = get_universal_news(self.rdbms_session, dbcfg.UNIVERSAL_NEWS_TABLE_NAME,
+                                       search_terms=search_terms,
                                        skip=skip, limit=limit)
         
         news_points = [

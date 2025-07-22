@@ -117,47 +117,21 @@ Các script này sẽ tự động lấy danh sách ticker từ CSDL để xử 
 # Thu thập dữ liệu giá lịch sử
 docker-compose run --rm batch-data-processor python scripts/fetch_daily_prices.py
 
-# Thu thập dữ liệu tin tức
+# Thu thập dữ liệu tin tức liên quan trực tiếp với 1 cổ phiếu
 docker-compose run --rm batch-data-processor python scripts/fetch_relevant_news.py
+
+# Thu thập tin tức bằng keyword
+docker-compose run --rm batch-data-processor python scripts/fetch_universal_news.py
 ```
 Các script sẽ tự động tìm ngày gần nhất đã lấy và chỉ thu thập dữ liệu mới cho 92 cổ phiếu đã được cấu hình.
-
+Với dữ liệu Universal News, bạn có thể thêm hoặc thay đổi các keyword để fetch dữ liệu trong file [utils.py](./data_processing/scripts/utils.py)
 ### 5. Chạy Thu thập Dữ liệu Thời gian thực
 Dịch vụ này sẽ tự động quét và chỉ lấy dữ liệu cho các cổ phiếu có thị trường đang mở cửa.
 ```bash
 docker-compose up -d realtime-data-processor
 ```
-
 ---
-
-## 🤖 Cài đặt API Gateway
-
-### 1. Build các Image
-```bash
-# Build API Gateway
-docker build -t itapia-api-gateway:latest -f api_gateway/Dockerfile .
-```
-
-### 2. Khởi động các Dịch vụ
-Đảm bảo các dịch vụ CSDL đang chạy, sau đó khởi động các service ứng dụng:
-```bash
-docker-compose up -d api-gateway
-```
-
-### 3. Truy cập Tài liệu API
-Khi các dịch vụ đang chạy, bạn có thể truy cập:
-- **Tài liệu API Gateway**: http://localhost:8000/docs
-- **URL cơ sở của API Gateway**: http://localhost:8000/api/v1
-
-### 4. Các Endpoint chính
-- **GET /api/v1/metadata/sectors**: Lấy danh sách tất cả các nhóm ngành.
-- **GET /api/v1/prices/sector/daily/{sector_code}**: Lấy dữ liệu giá hàng ngày cho cả một ngành.
-- **GET /api/v1/prices/daily/{ticker}**: Lấy dữ liệu giá lịch sử cho một cổ phiếu.
-- **GET /api/v1/prices/intraday/last/{ticker}**: Lấy giá mới nhất của một cổ phiếu trong ngày.
-- **GET /api/v1/prices/intraday/history/{ticker}**: Lấy giá intraday lưu trữ trong 1-2 ngày gần nhất.
-
----
-## 🤖 Cài đặt AI Service Quick
+## 🧠 Cài đặt AI Service Quick
 
 ### 1. Build các Image
 ```bash
@@ -177,7 +151,7 @@ Khi các dịch vụ đang chạy, bạn có thể truy cập:
 - **URL cơ sở của AI Service Quick**: http://localhost:8001/api/v1
 
 ### 4. Các Endpoint chính
-- **GET /api/v1/ai/quick/analysis/full/{ticker}**: Yêu cầu một phân tích nhanh hoàn chỉnh cho một cổ phiếu.
+- **GET /api/v1/quick/{ticker}**: Yêu cầu một phân tích nhanh hoàn chỉnh cho một cổ phiếu. API này sẽ được sử dụng bởi API Gateway
 
 ### 5. Quy trình huấn luyện trên Kaggle
 Do giới hạn tài nguyên của máy local và docker, các quy trình huấn luyện nên được thực hiện trên các dịch vụ hỗ trợ mạnh tài nguyên như Kaggle hoặc Google Colab.
@@ -227,6 +201,37 @@ Trong mã nguồn đã cung cấp các phương thức để đăng ký và load
 
 ---
 
+## 🤖 Cài đặt API Gateway
+
+### 1. Build các Image
+```bash
+# Build API Gateway
+docker build -t itapia-api-gateway:latest -f api_gateway/Dockerfile .
+```
+
+### 2. Khởi động các Dịch vụ
+Đảm bảo các dịch vụ CSDL đang chạy, sau đó khởi động các service ứng dụng:
+```bash
+docker-compose up -d api-gateway
+```
+
+### 3. Truy cập Tài liệu API
+Khi các dịch vụ đang chạy, bạn có thể truy cập:
+- **Tài liệu API Gateway**: http://localhost:8000/docs
+- **URL cơ sở của API Gateway**: http://localhost:8000/api/v1
+
+### 4. Các Endpoint 
+- **GET /api/v1/metadata/sectors**: Lấy danh sách tất cả các nhóm ngành.
+- **GET /api/v1/prices/sector/daily/{sector_code}**: Lấy dữ liệu giá hàng ngày cho cả một ngành.
+- **GET /api/v1/prices/daily/{ticker}**: Lấy dữ liệu giá lịch sử cho một cổ phiếu.
+- **GET /api/v1/prices/intraday/last/{ticker}**: Lấy giá mới nhất của một cổ phiếu trong ngày.
+- **GET /api/v1/prices/intraday/history/{ticker}**: Lấy giá intraday lưu trữ trong 1-2 ngày gần nhất.
+- **GET /api/v1/news/relevant/{ticker}**: Lấy tin tức liên quan của 1 cổ phiếu
+- **GET /api/v1/news/universal**: Lấy tin tức theo từ khóa, các từ khóa tìm kiếm truyền vào qua query.
+- **GET /api/v1/ai/quick/{ticker}**: Lấy báo cáo Quick Check cho 1 cổ phiếu, request sẽ được chuyển tiếp lên AI Service Quick.
+
+---
+
 ## 🔧 Cấu trúc Dự án
 
 ```
@@ -247,6 +252,7 @@ itapia/
 │   └── ...
 ├── db/                      # Schema và migrations
 ├── doc/                     # Tài liệu dự án
+├── shared/                  # Shared lib
 ├── docker-compose.yml       # Cấu hình các dịch vụ Docker
 ├── .env                     # (Cần tạo) Biến môi trường
 └── README.md

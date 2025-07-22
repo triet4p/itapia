@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from itapia_common.dblib.dependencies import get_metadata_service, get_news_service, get_prices_service
 
 from itapia_common.dblib.schemas.prices import PriceFullPayload
-from itapia_common.dblib.schemas.news import RelevantNewsFullPayload
+from itapia_common.dblib.schemas.news import RelevantNewsFullPayload, UniversalNewsFullPayload
 from itapia_common.dblib.schemas.metadata import SectorMetadata
 
 from itapia_common.dblib.services import APIMetadataService, APINewsService, APIPricesService
@@ -40,6 +40,12 @@ def get_relevant_news(ticker: str, skip: int = 0, limit: int = 10,
              news_service: APINewsService = Depends(get_news_service)):
     """API endpoint để lấy danh sách các tin tức gần đây cho một mã cổ phiếu."""
     return news_service.get_relevant_news(ticker, skip, limit)
+
+@router.get("/news/universal", response_model=UniversalNewsFullPayload | None, tags=['News'])
+def get_relevant_news(search_terms: str, skip: int = 0, limit: int = 10,
+             news_service: APINewsService = Depends(get_news_service)):
+    """API endpoint để lấy danh sách các tin tức gần đây cho một mã cổ phiếu."""
+    return news_service.get_universal_news(search_terms, skip, limit)
 
 @router.get("/metadata/sectors", response_model=list[SectorMetadata], tags=['Metadata'])
 def get_all_sectors(metadata_service: APIMetadataService = Depends(get_metadata_service)):
