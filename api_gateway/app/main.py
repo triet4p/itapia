@@ -1,8 +1,20 @@
 # app/main.py
 from fastapi import FastAPI
 
-from app.api.v1.endpoints import data_viewer
+from contextlib import asynccontextmanager
+
+from app.api.v1.endpoints import data_viewer, ai_quick
+from app.clients.ai_quick import ai_quick_client
 from app.core.config import GATEWAY_V1_BASE_ROUTE
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Code này chạy khi ứng dụng khởi động
+    # Tái sử dụng client để mở connection pool
+    await ai_quick_client.__aenter__()
+    yield
+    
+    await ai_quick_client.__aexit__()
 
 app = FastAPI(
     title="ITAPIA API Service",
@@ -11,7 +23,8 @@ app = FastAPI(
 )
 
 # Bao gồm router từ file data_viewer
-app.include_router(data_viewer.router, prefix=GATEWAY_V1_BASE_ROUTE, tags=["Data Viewer Service"])
+app.include_router(data_viewer.router, prefix=GATEWAY_V1_BASE_ROUTE)
+app.include_router(ai_quick.router, prefix=GATEWAY_V1_BASE_ROUTE)
 
 @app.get("/", tags=["Root"])
 def read_root():

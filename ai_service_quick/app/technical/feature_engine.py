@@ -4,7 +4,9 @@ import pandas_ta as ta
 import numpy as np
 from typing import Any, Optional, List, Dict
 
-from app.logger import * 
+from itapia_common.logger import ITAPIALogger
+
+logger = ITAPIALogger('Feature Engine')
 
 class _FeatureEngine:
     """Lớp cơ sở trừu tượng cho các Feature Engine.
@@ -62,7 +64,7 @@ class _FeatureEngine:
         Returns:
             pd.DataFrame: DataFrame đã được xử lý NaN.
         """
-        info(f"Feature Engine: Handling NaNs using '{method}' method...")
+        logger.info(f"Handling NaNs using '{method}' method...")
         
         if method == 'forward_fill':
             # ffill() sẽ điền các giá trị NaN bằng giá trị hợp lệ cuối cùng.
@@ -84,16 +86,16 @@ class _FeatureEngine:
         Hàm chung để thêm bất kỳ chỉ báo nào từ pandas-ta.
         Chủ động kiểm tra tham số hợp lệ bằng inspect.signature.
         """
-        info(f"Feature Engine: Adding indicator {indicator_name} to Frame ...")
+        logger.info(f"Adding indicator {indicator_name} to Frame ...")
         if configs is None:
             configs = self.DEFAULT_CONFIG.get(indicator_name)
             if configs is None:
-                warn(f"Warning: No default config for '{indicator_name}'. Skipping.")
+                logger.warn(f"Warning: No default config for '{indicator_name}'. Skipping.")
                 return self
         try:
             indicator_function = getattr(self.df.ta, indicator_name)
         except AttributeError:
-            err(f"Warning: Indicator '{indicator_name}' not found in pandas-ta. Skipping.")
+            logger.err(f"Warning: Indicator '{indicator_name}' not found in pandas-ta. Skipping.")
             return self
 
         # Lấy danh sách các tên tham số hợp lệ từ chữ ký của hàm
@@ -107,7 +109,7 @@ class _FeatureEngine:
             
             if invalid_keys:
                 # Nếu có, in cảnh báo và bỏ qua config này
-                warn(f"Warning: Invalid parameter(s) {invalid_keys} for '{indicator_name}' with config {config}. "
+                logger.warn(f"Warning: Invalid parameter(s) {invalid_keys} for '{indicator_name}' with config {config}. "
                      f"Skipping this specific config.")
                 continue
             
@@ -206,7 +208,7 @@ class DailyFeatureEngine(_FeatureEngine):
 
     # --- GROUP METHODS ---
     def _add_indicator_group(self, group_name: str, indicators: List[str], all_configs: Optional[Dict[str, List[Dict[str, any]]]] = None):
-        info(f"Daily Feature Engine: Adding {group_name} Indicators ---")
+        logger.info(f"Daily Feature Engine: Adding {group_name} Indicators ---")
         for indicator in indicators:
             indicator_config = all_configs.get(indicator) if all_configs else None
             getattr(self, f'add_{indicator}')(indicator_config)
@@ -226,7 +228,7 @@ class DailyFeatureEngine(_FeatureEngine):
 
     # --- CUSTOM & AGGREGATE METHODS ---
     def add_diff_from_sma(self, configs: Optional[List[Dict[str, int]]] = None):
-        info("Daily Feature Engine: Adding Custom: Difference from SMA ...")
+        logger.info("Daily Feature Engine: Adding Custom: Difference from SMA ...")
         if configs is None: configs = [{'sma_length': 50}, {'sma_length': 200}]
         
         for config in configs:
@@ -249,7 +251,7 @@ class DailyFeatureEngine(_FeatureEngine):
         return self
 
     def add_return_d(self, configs: Optional[List[Dict[str, int]]] = None):
-        info("Daily Feature Engine: Adding Custom: N-day Return ...")
+        logger.info("Daily Feature Engine: Adding Custom: N-day Return ...")
         if configs is None: configs = [{'d': 1}, {'d': 5}, {'d': 20}]
         for config in configs:
             d_period = config.get('d')
@@ -258,12 +260,12 @@ class DailyFeatureEngine(_FeatureEngine):
         return self
     
     def add_lag_features(self, configs: Optional[List[Dict[str, any]]] = None):
-        info("Daily Feature Engine: Adding Lag Features ...")
+        logger.info("Daily Feature Engine: Adding Lag Features ...")
         if configs is None:
             configs = self.DEFAULT_CONFIG.get('lag')
 
         if not configs:
-            warn("Warning: No config found for 'lag'. Skipping.")
+            logger.warn("Warning: No config found for 'lag'. Skipping.")
             return self
 
         for config in configs:
@@ -271,12 +273,12 @@ class DailyFeatureEngine(_FeatureEngine):
             lag_periods = config.get('periods')
 
             if not col_to_lag or not lag_periods:
-                warn(f"Warning: Invalid lag config {config}. Missing 'column' or 'periods'. Skipping.")
+                logger.warn(f"Warning: Invalid lag config {config}. Missing 'column' or 'periods'. Skipping.")
                 continue
 
             # --- Logic phòng thủ: Kiểm tra cột có tồn tại không ---
             if col_to_lag not in self.df.columns:
-                warn(f"Error: Column '{col_to_lag}' not found for lagging. "
+                logger.warn(f"Error: Column '{col_to_lag}' not found for lagging. "
                     f"Ensure it is calculated before calling add_lag_features. Skipping config {config}.")
                 continue
 
@@ -292,7 +294,7 @@ class DailyFeatureEngine(_FeatureEngine):
         Tạo các đặc trưng tương tác có ý nghĩa dựa trên kiến thức chuyên môn,
         kết hợp các tín hiệu từ các nhóm khác nhau (trend, momentum, event).
         """
-        info("Daily Feature Engine: Adding Interaction Features ...")
+        logger.info("Daily Feature Engine: Adding Interaction Features ...")
         
         # --- Tương tác 1: Momentum trong bối cảnh Trend ---
         # Yêu cầu: diff_from_sma_200 và RSI_14 phải tồn tại
@@ -301,9 +303,9 @@ class DailyFeatureEngine(_FeatureEngine):
             self.df['RSI_x_trend'] = self.df['RSI_14'] * self.df['trend_direction']
             # Có thể xóa cột trung gian nếu muốn
             self.df.drop(columns=['trend_direction'], inplace=True)
-            info("  - Added: RSI_x_trend")
+            logger.info("  - Added: RSI_x_trend")
         else:
-            warn("  - Skipped RSI_x_trend: Required columns not found.")
+            logger.warn("  - Skipped RSI_x_trend: Required columns not found.")
 
         # --- Tương tác 2: Momentum được chuẩn hóa bởi Biến động ---
         # Yêu cầu: CCI_14_0.015 và ATRr_14 phải tồn tại
@@ -313,9 +315,9 @@ class DailyFeatureEngine(_FeatureEngine):
             atr_col = 'ATRr_14' # Chú ý 'r' trong ATRr (ATR percentage)
             
             self.df['CCI_norm_by_ATR'] = self.df[cci_col] / (self.df[atr_col] + 1e-9)
-            info("  - Added: CCI_norm_by_ATR")
+            logger.info("  - Added: CCI_norm_by_ATR")
         else:
-            warn("  - Skipped CCI_norm_by_ATR: Required columns not found.")
+            logger.warn("  - Skipped CCI_norm_by_ATR: Required columns not found.")
             
         # --- Tương tác 3: Sự kiện Nến trong bối cảnh Trạng thái ---
         # Yêu cầu: CDLHAMMER_3g và RSI_14 phải tồn tại
@@ -324,19 +326,19 @@ class DailyFeatureEngine(_FeatureEngine):
             # Giả sử giá trị của Hammer khi xuất hiện là 100
             self.df['hammer_in_oversold'] = (self.df['CDL_HAMMER'] / 100) * self.df['is_oversold']
             self.df.drop(columns=['is_oversold'], inplace=True)
-            info("  - Added: hammer_in_oversold")
+            logger.info("  - Added: hammer_in_oversold")
         else:
-            warn("  - Skipped hammer_in_oversold: Required columns not found.")
+            logger.warn("  - Skipped hammer_in_oversold: Required columns not found.")
             
         return self
 
     def add_all_candlestick_patterns(self):
-        info("Daily Feature Engine: Adding All Candlestick Patterns ...")
+        logger.info("Daily Feature Engine: Adding All Candlestick Patterns ...")
         self.df.ta.cdl_pattern(name="all", append=True)
         return self
 
     def add_all_features(self, all_configs: Optional[Dict[str, List[Dict[str, any]]]] = None):
-        info("Daily Feature Engine: === Adding All Features ===")
+        logger.info("Daily Feature Engine: === Adding All Features ===")
         (self.add_trend_indicators(all_configs)
              .add_momentum_indicators(all_configs)
              .add_volatility_indicators(all_configs)
@@ -398,7 +400,7 @@ class IntradayFeatureEngine(_FeatureEngine):
         return self
 
     def add_opening_range(self, minutes: int = 30):
-        info(f"Intraday Feature Engine: Adding {minutes}-minute Opening Range...")
+        logger.info(f"Intraday Feature Engine: Adding {minutes}-minute Opening Range...")
         
         # Lấy ngày của mỗi dòng để nhóm
         df_date = self.df.index.date
@@ -437,7 +439,7 @@ class IntradayFeatureEngine(_FeatureEngine):
 
     def add_all_intraday_features(self):
         """Hàm tiện ích để thêm tất cả các chỉ báo intraday tiêu chuẩn."""
-        info("Intraday Feature Engine: Adding all standard intraday features ...")
+        logger.info("Intraday Feature Engine: Adding all standard intraday features ...")
         (self
             .add_intraday_ma()
             .add_intraday_momentum()

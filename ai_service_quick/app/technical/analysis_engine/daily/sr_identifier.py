@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import Dict, Any, List, Tuple
-import numpy as np
+
+from itapia_common.dblib.schemas.reports.technical_analysis.daily import SRIdentifyLevelObj, SRReport
 
 class DailySRIdentifier:
     """
@@ -26,37 +27,34 @@ class DailySRIdentifier:
         
         self.history_window = history_window
         
-    def identify_levels(self) -> Dict[str, List[Dict]]:
+    def identify_levels(self):
         """
         Hàm chính, tổng hợp các mức S/R từ nhiều phương pháp.
         """
         
-        all_levels_with_source = []
+        all_levels_with_source: List[SRIdentifyLevelObj] = []
         all_levels_with_source.extend(self._get_dynamic_levels_from_ma_bb())
         all_levels_with_source.extend(self._get_pivot_point_levels())
         all_levels_with_source.extend(self._get_simple_fibonacci_levels())
         
-        support_objects = []
-        resistance_objects = []
+        support_objects: List[SRIdentifyLevelObj] = []
+        resistance_objects: List[SRIdentifyLevelObj] = []
         
-        for level, source in all_levels_with_source:
-            level_obj = {"level": round(level, 2), "source": source}
-            if level < self.current_price:
-                support_objects.append(level_obj)
+        for sr_level_obj in all_levels_with_source:
+            if sr_level_obj.level < self.current_price:
+                support_objects.append(sr_level_obj)
             else:
-                resistance_objects.append(level_obj)
-                
-        return {
-            "support": sorted(support_objects, key=lambda x: x['level'], reverse=True),
-            "resistance": sorted(resistance_objects, key=lambda x: x['level']),
-            "params": {
-                "history_window": self.history_window
-            }
-        }
+                resistance_objects.append(sr_level_obj)
+        
+        return SRReport(
+            history_window=self.history_window,
+            supports=sorted(support_objects, key=lambda x: x.level, reverse=True),
+            resistances=sorted(resistance_objects, key=lambda x: x.level)
+        )
 
     # --- CÁC HÀM CỦA PHIÊN BẢN 1 ---
     
-    def _get_dynamic_levels_from_ma_bb(self) -> List[Tuple[float, str]]:
+    def _get_dynamic_levels_from_ma_bb(self) -> List[SRIdentifyLevelObj]:
         """
         Lấy các mức S/R động từ các đường MA và Bollinger Bands.
         Đây là các mức thay đổi mỗi ngày.
@@ -70,11 +68,11 @@ class DailySRIdentifier:
         
         for col in dynamic_level_cols:
             if col in self.latest_row and pd.notna(self.latest_row[col]):
-                levels.append((self.latest_row[col], col))
+                levels.append(SRIdentifyLevelObj(level=round(self.latest_row[col], 2), source=col))
         
         return levels
 
-    def _get_pivot_point_levels(self) -> List[Tuple[float, str]]:
+    def _get_pivot_point_levels(self) -> List[SRIdentifyLevelObj]:
         """
         Tính toán các mức Pivot Points cổ điển dựa trên dữ liệu của ngày hôm trước.
         """
@@ -97,11 +95,11 @@ class DailySRIdentifier:
         
         levels = []
         for i in range(len(vals)):
-            levels.append((vals[i], names[i]))
+            levels.append(SRIdentifyLevelObj(level=round(vals[i], 2), source=names[i]))
             
         return levels
 
-    def _get_simple_fibonacci_levels(self) -> List[Tuple[float, float]]:
+    def _get_simple_fibonacci_levels(self) -> List[SRIdentifyLevelObj]:
         """
         Phiên bản 1: Tính các mức Fibonacci Retracement dựa trên
         điểm cao nhất và thấp nhất trong cửa sổ phân tích.
@@ -120,16 +118,18 @@ class DailySRIdentifier:
         levels = []
         # Giả định một xu hướng tăng (tính các mức hỗ trợ)
         for ratio in fib_ratios:
-            levels.append((swing_high - price_range * ratio, f'Fibonacci Ratio {ratio:.4f}'))
+            levels.append(SRIdentifyLevelObj(level=round(swing_high - price_range * ratio, 2), 
+                                             source=f'Fibonacci Ratio {ratio:.4f}'))
             
             # Thêm cả các mức mở rộng (có thể là kháng cự)
-            levels.append((swing_high + price_range * ratio, f'Fibonacci Ratio {-ratio:.4f}'))
+            levels.append(SRIdentifyLevelObj(level=round(swing_high + price_range * ratio, 2), 
+                                             source=f'Fibonacci Ratio {-ratio:.4f}'))
         
         return levels
     
     # --- CÁC HÀM PLACEHOLDER CHO PHIÊN BẢN 2 ---
 
-    def _get_levels_from_extrema_v2(self, recognizer: Any = None) -> List[float]:
+    def _get_levels_from_extrema_v2(self, recognizer: Any = None) -> List[SRIdentifyLevelObj]:
         """
         Phiên bản 2: Sẽ lấy các mức S/R tĩnh từ các đỉnh/đáy lịch sử
         do PatternRecognizer cung cấp.
@@ -157,7 +157,7 @@ class DailySRIdentifier:
         
         return [] # Trả về danh sách rỗng trong v1
         
-    def _get_advanced_fibonacci_levels_v2(self, recognizer: Any = None) -> List[float]:
+    def _get_advanced_fibonacci_levels_v2(self, recognizer: Any = None) -> List[SRIdentifyLevelObj]:
         """
         Phiên bản 2: Sẽ tính Fibonacci dựa trên các đỉnh/đáy quan trọng
         thay vì chỉ dùng min/max.

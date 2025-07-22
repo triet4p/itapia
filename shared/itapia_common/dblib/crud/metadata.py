@@ -2,10 +2,12 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import Engine, text, Connection
 import pandas as pd
+from threading import Lock
 
 class TickerMetadataCache:
     _instance = None
     _cache = None
+    _lock = Lock()
 
     def __new__(cls):
         if cls._instance is None:
@@ -13,7 +15,11 @@ class TickerMetadataCache:
         return cls._instance
 
     def get(self, rdbms_connection: Session | Connection):
-        if self._cache is None:
+        if self._cache is not None:
+            return self._cache
+        with self._lock:
+            if self._cache is not None:
+                return self._cache
             print('Loading metadata into cache')
             query = text("""
                             SELECT 

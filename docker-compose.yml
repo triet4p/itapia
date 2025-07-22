@@ -63,6 +63,7 @@ services:
     depends_on:
       - realtime_redis_db
       - stocks_postgre_db
+      - ai-service-quick
     volumes:
       - ./api_gateway:/api-gateway
     ports:
@@ -77,8 +78,6 @@ services:
     container_name: itapia-ai-service-quick
     env_file:
       - .env
-    depends_on:
-      - api-gateway
     volumes:
       - ./ai_service_quick:/ai-service-quick
     ports:

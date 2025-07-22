@@ -16,3 +16,9 @@ load_dotenv(dotenv_path=env_path)
 
 # Cấu hình API
 GATEWAY_V1_BASE_ROUTE = os.getenv("GATEWAY_V1_BASE_ROUTE", "/api/v1")
+
+# Cấu hình CLient
+AI_SERVICE_QUICK_HOST = os.getenv("AI_QUICK_HOST", 'localhost')
+AI_SERVICE_QUICK_PORT = os.getenv("AI_QUICK_PORT", 8000)
+AI_SERVICE_QUICK_V1_BASE_ROUTE = os.getenv("AI_QUICK_V1_BASE_ROUTE", "/api/v1")
+AI_SERVICE_QUICK_BASE_URL = f'http://{AI_SERVICE_QUICK_HOST}:{AI_SERVICE_QUICK_PORT}{AI_SERVICE_QUICK_V1_BASE_ROUTE}'

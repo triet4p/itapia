@@ -1,0 +1,3 @@
+from itapia_common.dblib.schemas.reports.technical_analysis.daily import DailyAnalysisReport
+from itapia_common.dblib.schemas.reports.technical_analysis.intraday import IntradayAnalysisReport
+from itapia_common.dblib.schemas.reports.technical_analysis._full import TechnicalReport

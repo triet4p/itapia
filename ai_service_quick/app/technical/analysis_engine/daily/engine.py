@@ -6,7 +6,11 @@ from app.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
 from app.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
 from app.technical.analysis_engine.daily.pattern_recognizer import DailyPatternRecognizer
 
-from app.logger import *
+from itapia_common.dblib.schemas.reports.technical_analysis import DailyAnalysisReport
+from itapia_common.dblib.schemas.reports.technical_analysis.daily import KeyIndicators
+from itapia_common.logger import ITAPIALogger
+
+logger = ITAPIALogger('Daily Analysis Engine')
 
 class DailyAnalysisEngine:
     """Facade điều phối các chuyên gia phân tích dữ liệu hàng ngày.
@@ -101,25 +105,25 @@ class DailyAnalysisEngine:
             return history_window, prominence_pct, distance, lookback_period, top_pattenrs
 
         # Nếu không phải manual, luôn lấy từ profile
-        info(f"Using pre-defined parameters for '{analysis_type}' profile.")
+        logger.info(f"Using pre-defined parameters for '{analysis_type}' profile.")
         params = self.PARAMS_BY_PERIOD[analysis_type]
         return params['history_window'], params['prominence_pct'], params['distance'], \
             params['lookback_period'], params['top_patterns']
 
-    def get_analysis_report(self) -> Dict[str, Any]:
+    def get_analysis_report(self):
         """
         Tạo báo cáo tình trạng kỹ thuật tổng hợp bằng cách gọi các chuyên gia.
         """
-        info("Daily Analysis Engine: Generating Full Analysis Report ...")
+        logger.info("Generating Full Analysis Report ...")
         
         # --- GỌI CÁC CHUYÊN GIA ĐỂ LẤY KẾT QUẢ PHÂN TÍCH ---
-        info("Trend Analyzer: Analyzing Trend ...")
+        logger.info("Trend Analyzer: Analyzing Trend ...")
         trend_report = self.trend_analyzer.analyze_trend()
         
-        info("Support Resistance Identifier: Identifing levels ...")
+        logger.info("Support Resistance Identifier: Identifing levels ...")
         sr_report = self.sr_identifier.identify_levels()
         
-        info("Pattern Recoginizer: Finding patterns ...")
+        logger.info("Pattern Recoginizer: Finding patterns ...")
         patterns_report = self.pattern_recognizer.find_patterns() # Thay thế placeholder
 
         # --- NÂNG CẤP TRONG TƯƠNG LAI (v2) ---
@@ -127,15 +131,14 @@ class DailyAnalysisEngine:
         # sr_report_v2 = self.sr_identifier.identify_levels_v2(self.pattern_recognizer)
 
         # --- TỔNG HỢP THÀNH BÁO CÁO CUỐI CÙNG ---
-        report = {
-            "indicators": self._extract_key_indicators(),
-            "trend": trend_report,
-            "support_resistance": sr_report,
-            "patterns": patterns_report,
-        }
-        return report
+        return DailyAnalysisReport(
+            key_indicators=self._extract_key_indicators(),
+            trend_report=trend_report,
+            sr_report=sr_report,
+            pattern_report=patterns_report
+        )
 
-    def _extract_key_indicators(self) -> Dict[str, float]:
+    def _extract_key_indicators(self):
         """
         Trích xuất các giá trị chỉ báo quan trọng để hỗ trợ cả phân tích trung và dài hạn.
         """
@@ -145,7 +148,7 @@ class DailyAnalysisEngine:
             'BBU_20_2.0', 'BBL_20_2.0', 'ATRr_14', 'PSARs_0.02_0.2'
         ]
         
-        info("Daily Analysis Engine: Extracting key indicators for multi-timeframe analysis...")
+        logger.info("Extracting key indicators for multi-timeframe analysis...")
         key_indicators = {}
         for indicator in indicators_to_extract:
             # Chuyển tên cột sang chữ thường để tìm kiếm nhất quán
@@ -159,4 +162,16 @@ class DailyAnalysisEngine:
                 else:
                     key_indicators[indicator] = None
                 
-        return key_indicators
+        return KeyIndicators(
+            sma_20=key_indicators['SMA_20'],
+            sma_50=key_indicators['SMA_50'],
+            sma_200=key_indicators['SMA_200'],
+            rsi_14=key_indicators['RSI_14'],
+            adx_14=key_indicators['ADX_14'],
+            dmp_14=key_indicators['DMP_14'],
+            dmn_14=key_indicators['DMN_14'],
+            bbu_20=key_indicators['BBU_20_2.0'],
+            bbl_20=key_indicators['BBL_20_2.0'],
+            atr_14=key_indicators['ATRr_14'],
+            psar=key_indicators['PSARs_0.02_0.2']
+        )

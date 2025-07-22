@@ -3,6 +3,8 @@ import pandas as pd
 from scipy.signal import find_peaks
 from typing import List, Dict, Callable, Literal, Optional
 
+from itapia_common.dblib.schemas.reports.technical_analysis.daily import PatternObj, PatternReport
+
 # --- DECORATOR VÀ SỔ ĐĂNG KÝ ---
 # Sổ đăng ký sẽ là một dictionary, lưu tên mẫu hình và hàm kiểm tra tương ứng
 # Nó được định nghĩa ở cấp độ module
@@ -18,9 +20,9 @@ def register_pattern(pattern_name: str):
 
 class DailyPatternRecognizer:
     CHART_PATTERN_METADATA = {
-        "Double Top": {"sentiment": "Bearish", "score": 100},
-        "Double Bottom": {"sentiment": "Bullish", "score": 100},
-        "Head and Shoulders": {"sentiment": "Bearish", "score": 100}
+        "Double Top": {"sentiment": "bear", "score": 100},
+        "Double Bottom": {"sentiment": "bull", "score": 100},
+        "Head and Shoulders": {"sentiment": "bear", "score": 100}
         # ...
     }
     
@@ -53,28 +55,28 @@ class DailyPatternRecognizer:
     
     CANDLESTICK_METADATA = {
         # Mẫu hình đảo chiều mạnh (3 nến)
-        "Three Black Crows": {"sentiment": "Bearish", "score": 85},
-        "Three White Soldiers": {"sentiment": "Bullish", "score": 85},
-        "Morning Star": {"sentiment": "Bullish", "score": 80},
-        "Evening Star": {"sentiment": "Bearish", "score": 80},
-        "Abandoned Baby": {"sentiment": "Bullish", "score": 90}, # Rất hiếm nhưng mạnh
+        "Three Black Crows": {"sentiment": "bear", "score": 85},
+        "Three White Soldiers": {"sentiment": "bull", "score": 85},
+        "Morning Star": {"sentiment": "bull", "score": 80},
+        "Evening Star": {"sentiment": "bear", "score": 80},
+        "Abandoned Baby": {"sentiment": "bull", "score": 90}, # Rất hiếm nhưng mạnh
         
         # Mẫu hình nhấn chìm (2 nến)
-        "Engulfing": {"sentiment": "Varies", "score": 75}, # Sentiment phụ thuộc vào giá trị
-        "Harami": {"sentiment": "Varies", "score": 70},
-        "Piercing Pattern": {"sentiment": "Bullish", "score": 70},
+        "Engulfing": {"sentiment": "varies", "score": 75}, # Sentiment phụ thuộc vào giá trị
+        "Harami": {"sentiment": "varies", "score": 70},
+        "Piercing Pattern": {"sentiment": "bull", "score": 70},
 
         # Mẫu hình đơn lẻ
-        "Hammer": {"sentiment": "Bullish", "score": 60},
-        "Hanging Man": {"sentiment": "Bearish", "score": 60},
-        "Inverted Hammer": {"sentiment": "Bullish", "score": 60},
-        "Shooting Star": {"sentiment": "Bearish", "score": 60},
+        "Hammer": {"sentiment": "bull", "score": 60},
+        "Hanging Man": {"sentiment": "bear", "score": 60},
+        "Inverted Hammer": {"sentiment": "bull", "score": 60},
+        "Shooting Star": {"sentiment": "bear", "score": 60},
         
         # Doji (do dự)
-        "Doji": {"sentiment": "Neutral", "score": 30},
-        "Dragonfly Doji": {"sentiment": "Bullish", "score": 40},
-        "Gravestone Doji": {"sentiment": "Bearish", "score": 40},
-        "Long-Legged Doji": {"sentiment": "Neutral", "score": 35},
+        "Doji": {"sentiment": "neutral", "score": 30},
+        "Dragonfly Doji": {"sentiment": "bull", "score": 40},
+        "Gravestone Doji": {"sentiment": "bear", "score": 40},
+        "Long-Legged Doji": {"sentiment": "neutral", "score": 35},
     }
     
     def __init__(self, featured_df: pd.DataFrame, 
@@ -98,22 +100,20 @@ class DailyPatternRecognizer:
         
         self.peaks, self.troughs = self._find_extrema(prominence_pct, distance) 
         
-    def find_patterns(self) -> List[Dict]:
+    def find_patterns(self):
         all_patterns = []
         all_patterns.extend(self._find_candlestick_patterns(self.lookback_period))
         all_patterns.extend(self._find_chart_patterns())
         
         finals = self._filter_and_prioritize(all_patterns)
-        patterns_reports = {}
-        patterns_reports['params'] = {
-            "history_window": self.history_window,
-            "prominence_pct": self.prominence_pct,
-            "distance": self.distance,
-            "lookback_period": self.lookback_period,
-            "top_patterns": self.top_patterns
-        }
-        patterns_reports['patterns'] = finals[:self.top_patterns]
-        return patterns_reports
+        return PatternReport(
+            history_window=self.history_window,
+            prominence_pct=self.prominence_pct,
+            distance=self.distance,
+            lookback_period=self.lookback_period,
+            num_top_patterns=self.top_patterns,
+            top_patterns=finals[:self.top_patterns]
+        )
         
     def _find_extrema(self, prominence_pct: float, distance: int):
         avg_price = np.mean(self.analysis_df['high'])
@@ -134,12 +134,12 @@ class DailyPatternRecognizer:
         
         return peaks_df, troughs_df 
 
-    def _find_candlestick_patterns(self, lookback_period: int) -> List[Dict]:
+    def _find_candlestick_patterns(self, lookback_period: int):
         """
         Quét N ngày cuối cùng và thu thập tất cả các mẫu hình nến bằng
         cách sử dụng bảng ánh xạ tên.
         """
-        collected = []
+        collected: List[PatternObj] = []
         recent_df = self.analysis_df.tail(lookback_period)
         
         for date, row in recent_df.iterrows():
@@ -151,63 +151,67 @@ class DailyPatternRecognizer:
                     
                     metadata = self.CANDLESTICK_METADATA.get(friendly_name, {})
                     
-                    # Xác định sentiment dựa trên giá trị (100 là Bullish, -100 là Bearish)
-                    sentiment = "Bullish" if row_lower_cols[cdl_col_name] > 0 else "Bearish"
+                    # Xác định sentiment dựa trên giá trị (100 là bull, -100 là bear)
+                    sentiment = "bull" if row_lower_cols[cdl_col_name] > 0 else "bear"
                     
-                    # Ghi đè sentiment nếu metadata có định nghĩa khác (ví dụ: Neutral)
-                    if metadata.get("sentiment") != "Varies":
-                        sentiment = metadata.get("sentiment", "Neutral")
+                    # Ghi đè sentiment nếu metadata có định nghĩa khác (ví dụ: neutral)
+                    if metadata.get("sentiment") != "varies":
+                        sentiment = metadata.get("sentiment", "neutral")
 
-                    collected.append({
-                        "pattern_name": friendly_name,
-                        "type": "Candlestick Pattern",
-                        "sentiment": sentiment,
-                        "score": metadata.get("score", 20), # Điểm mặc định thấp
-                        "evidence": {"confirmation_date": date.date().isoformat()}
-                    })
+                    collected.append(PatternObj(
+                        name=friendly_name,
+                        pattern_type='candlestick',
+                        sentiment=sentiment,
+                        score=metadata.get('score', 20),
+                        confirmation_date=date.date().isoformat(),
+                        evidence={}
+                    ))
+        
         return collected
     
-    def _find_chart_patterns(self) -> List[Dict]:
-        found_patterns = []
+    def _find_chart_patterns(self) -> List[PatternObj]:
+        found_patterns: List[PatternObj] = []
         for pattern_name, checker_function in _chart_pattern_registry.items():
             evidence = checker_function(self)
             if evidence is not None:
                 metadata = self.get_pattern_metadata(pattern_name, 'chart')
-                res = {
-                    "pattern_name": pattern_name,
-                    "type": "Chart Pattern",
-                    "sentiment": metadata.get("sentiment", "Unknown"),
-                    "score": metadata.get("score", 30),
-                    "evidence": evidence
-                }
+                res = PatternObj(
+                    name=pattern_name,
+                    pattern_type='chart',
+                    sentiment=metadata.get("sentiment", "neutral"),
+                    score=metadata.get("score", 30),
+                    confirmation_date=self.latest_row.name.date().isoformat(),
+                    evidence=evidence
+                )
                 found_patterns.append(res)
 
         return found_patterns
     
-    def _filter_and_prioritize(self, patterns: List[Dict]) -> List[Dict]:
+    def _filter_and_prioritize(self, patterns: List[PatternObj]) -> List[PatternObj]:
         """
         Lọc bỏ các mẫu hình nhiễu và sắp xếp theo mức độ quan trọng.
         """
         if not patterns:
             return []
+        patterns_as_dicts = [p.model_dump() for p in patterns]
 
         # 1. Loại bỏ các mẫu hình chung chung nếu có mẫu hình cụ thể hơn trong cùng một ngày
-        df = pd.DataFrame(patterns)
+        df = pd.DataFrame(patterns_as_dicts)
         
         # Ví dụ: Nếu ngày X có cả 'Doji' và 'Dragonfly Doji', chúng ta muốn bỏ 'Doji'
         # Tạo một cột để xác định ngày của bằng chứng
-        df['evidence_date'] = pd.to_datetime(df['evidence'].apply(lambda x: x['confirmation_date']))
+        df['confirmation_date_dt'] = pd.to_datetime(df['confirmation_date'])
         
         # Danh sách các mẫu hình chung chung cần loại bỏ nếu có "con" của nó
         generic_patterns = {"Doji"}
         specific_patterns = {"Dragonfly Doji", "Gravestone Doji"}
         
         indices_to_drop = []
-        for date, group in df.groupby('evidence_date'):
-            names_in_group = set(group['pattern_name'])
+        for date, group in df.groupby('confirmation_date_dt'):
+            names_in_group = set(group['name'])
             if names_in_group.intersection(generic_patterns) and names_in_group.intersection(specific_patterns):
                 # Tìm index của các mẫu hình chung chung trong ngày này để xóa
-                indices = group[group['pattern_name'].isin(generic_patterns)].index
+                indices = group[group['name'].isin(generic_patterns)].index
                 indices_to_drop.extend(indices)
                 
         df.drop(indices_to_drop, inplace=True)
@@ -215,10 +219,12 @@ class DailyPatternRecognizer:
         # 2. Sắp xếp kết quả cuối cùng
         # Ưu tiên 1: Điểm số (Score) cao hơn
         # Ưu tiên 2: Ngày gần đây hơn
-        df = df.sort_values(by=['score', 'evidence_date'], ascending=[False, False])
+        df = df.sort_values(by=['score', 'confirmation_date_dt'], ascending=[False, False])
+        #df['confirmation_date'] = df['confirmation_date'].dt.isoformat()
         
         # Chuyển lại thành list of dicts
-        return df.to_dict('records')
+        records = df.to_dict('records')
+        return [PatternObj.model_validate(record) for record in records]
     
     def get_pattern_metadata(self, pattern_name: str,
                              pattern_type: Literal['chart', 'candlestick']) -> Dict:
@@ -251,7 +257,6 @@ class DailyPatternRecognizer:
                 "peak2_price": p2.price,
                 "neckline_date": neckline.index_in_df.date().isoformat(),
                 "neckline_price": neckline.price,
-                "confirmation_date": self.latest_row.name.date().isoformat(),
                 "params": {
                     "tolerance": tolerance
                 }
@@ -282,7 +287,6 @@ class DailyPatternRecognizer:
                 "trough2_price": t2.price,
                 "neckline_date": neckline.index_in_df.date().isoformat(),
                 "neckline_price": neckline.price,
-                "confirmation_date": self.latest_row.name.date().isoformat(),
                 "params": {
                     "tolerance": tolerance
                 }
@@ -324,7 +328,6 @@ class DailyPatternRecognizer:
                 "trough2_date": t2.index_in_df.date().isoformat(),
                 "trough2_price": t2.price,
                 "neckline_level": neckline_level,
-                "confirmation_date": self.latest_row.name.date().isoformat(),
                 "params": {
                     "tolerance": tolerance
                 }

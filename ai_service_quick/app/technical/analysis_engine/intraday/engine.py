@@ -5,7 +5,10 @@ from app.technical.analysis_engine.intraday.status_analyzer import IntradayStatu
 from app.technical.analysis_engine.intraday.level_identifier import IntradayLevelIdentifier
 from app.technical.analysis_engine.intraday.momentum_analyzer import IntradayMomentumAnalyzer
 
-from app.logger import *
+from itapia_common.dblib.schemas.reports.technical_analysis import IntradayAnalysisReport
+from itapia_common.logger import ITAPIALogger
+
+logger = ITAPIALogger('Intraday Analysis Engine')
 
 class IntradayAnalysisEngine:
     """
@@ -26,24 +29,23 @@ class IntradayAnalysisEngine:
         self.level_identifier = IntradayLevelIdentifier(self.df)
         self.momentum_analyzer = IntradayMomentumAnalyzer(self.df)
 
-    def get_analysis_report(self) -> Dict[str, Any]:
+    def get_analysis_report(self):
         """
         Tạo báo cáo phân tích intraday tổng hợp.
         """
-        info("Intraday Analysis Engine: Generating Intraday Report ---")
+        logger.info("Generating Intraday Report ---")
         
-        info("Status Analyzer: Analyzing current status ...")
+        logger.info("Status Analyzer: Analyzing current status ...")
         current_status = self.status_analyzer.analyze_current_status()
         
-        info("Level Identifier: Identifing key levels ...")
+        logger.info("Level Identifier: Identifing key levels ...")
         key_levels = self.level_identifier.identify_key_levels()
         
-        info("Momentum Analyzer: Analyzing momentum and volume ...")
+        logger.info("Momentum Analyzer: Analyzing momentum and volume ...")
         momentum = self.momentum_analyzer.analyze_momentum_and_volume()
         
-        report = {
-            "current_status": current_status,
-            "key_levels": key_levels,
-            "momentum": momentum
-        }
-        return report
+        return IntradayAnalysisReport(
+            current_status_report=current_status,
+            key_levels=key_levels,
+            momentum_report=momentum
+        )

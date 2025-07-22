@@ -1,7 +1,8 @@
 import pandas as pd
 from typing import List, Dict, Any
 
-from app.logger import *
+from itapia_common.logger import ITAPIALogger
+logger = ITAPIALogger('Data Transformation')
 
 def transform_single_ticker_response(json_res: Dict[str, Any]) -> pd.DataFrame:
     """
@@ -18,14 +19,14 @@ def transform_single_ticker_response(json_res: Dict[str, Any]) -> pd.DataFrame:
         ValueError: Nếu response thiếu các key cần thiết.
     """
     # --- BƯỚC 1: VALIDATE VÀ TRÍCH XUẤT DỮ LIỆU ---
-    info("Data Transformer: Transforming single ticker repsonse ...")
+    logger.info("Transforming single ticker repsonse ...")
     metadata = json_res.get('metadata')
     if not metadata:
         raise ValueError("Response is missing 'metadata' key.")
     
     data_points = json_res.get('datas')
     if not data_points:
-        warn(f"Data Transformer: Empty data points for ticker {metadata.get('ticker')}. Returning empty DataFrame.")
+        logger.warn(f"Empty data points for ticker {metadata.get('ticker')}. Returning empty DataFrame.")
         return pd.DataFrame()
 
     # --- BƯỚC 2: CHUYỂN ĐỔI LIST DICT THÀNH DATAFRAME ---
@@ -61,7 +62,7 @@ def transform_multi_ticker_responses(json_list: List[Dict[str, Any]]) -> pd.Data
     """
     all_dfs = []
     
-    info(f"Data Transformer Transforming data for {len(json_list)} tickers...")
+    logger.info(f"Transforming data for {len(json_list)} tickers...")
     
     for json_res in json_list:
         try:
@@ -69,7 +70,7 @@ def transform_multi_ticker_responses(json_list: List[Dict[str, Any]]) -> pd.Data
             # Lấy metadata
             metadata = json_res.get('metadata')
             if not metadata or not metadata.get('ticker'):
-                warn("Data Transformer: Found a response with missing metadata or ticker. Skipping.")
+                logger.warn("Found a response with missing metadata or ticker. Skipping.")
                 continue
             
             # Chuyển đổi dữ liệu chuỗi thời gian
@@ -81,11 +82,11 @@ def transform_multi_ticker_responses(json_list: List[Dict[str, Any]]) -> pd.Data
                 all_dfs.append(single_df)
 
         except ValueError as e:
-            err(f"Data Transformer: Could not process a response. Error: {e}. Skipping.")
+            logger.err(f"Could not process a response. Error: {e}. Skipping.")
             continue
 
     if not all_dfs:
-        warn("Data Transformer: No valid data found to concatenate.")
+        logger.warn("No valid data found to concatenate.")
         return pd.DataFrame()
 
     # Nối tất cả các DataFrame nhỏ lại thành một DataFrame lớn

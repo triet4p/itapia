@@ -1,6 +1,9 @@
 import pandas as pd
 from typing import Dict
 
+from itapia_common.dblib.schemas.reports.technical_analysis.daily import MidTermTrendReport, \
+    LongTermTrendReport, OverallStrengthTrendReport, TrendReport
+
 class DailyTrendAnalyzer:
     def __init__(self, feature_df: pd.DataFrame):
         if feature_df.empty:
@@ -9,33 +12,45 @@ class DailyTrendAnalyzer:
         self.df = feature_df
         self.latest_row = self.df.iloc[-1]
         
-    def _analyze_ma_trend(self, short_ma_col: str, long_ma_col: str) -> str:
+    def _analyze_ma_trend(self, short_ma_col: str, long_ma_col: str):
         if short_ma_col not in self.latest_row or long_ma_col not in self.latest_row:
-            return "Undefined"
+            return "undefined"
         
         if self.latest_row[short_ma_col] > self.latest_row[long_ma_col]:
-            return "Uptrend"
+            return "uptrend"
         else:
-            return "Downtrend"
+            return "downtrend"
         
-    def _get_adx_strength(self, adx_col: str) -> Dict:
+    def _get_adx_strength(self, adx_col: str):
         if adx_col not in self.latest_row:
-            return {"strength": "Undefined"}
+            return OverallStrengthTrendReport(
+                strength='undefined',
+                value=0
+            )
         
         adx_val = self.latest_row[adx_col]
         if adx_val > 25:
-            return {"strength": "Strong", "value": adx_val}
+            return OverallStrengthTrendReport(
+                strength='strong', 
+                value=adx_val
+            )
         elif adx_val >= 20:
-            return {"strength": "Moderate", "value": adx_val}
+            return OverallStrengthTrendReport(
+                strength='moderate', 
+                value=adx_val
+            )
         else:
-            return {"strength": "Weak", "value": adx_val}
+            return OverallStrengthTrendReport(
+                strength='weak', 
+                value=adx_val
+            )
         
-    def _get_adx_direction(self, dmp_col: str, dmn_col: str) -> str:
+    def _get_adx_direction(self, dmp_col: str, dmn_col: str):
         if dmp_col not in self.latest_row or dmn_col not in self.latest_row: 
-            return "Undefined"
-        return "Up" if self.latest_row[dmp_col] > self.latest_row[dmn_col] else "Down"
+            return "undefined"
+        return "uptrend" if self.latest_row[dmp_col] > self.latest_row[dmn_col] else "downtrend"
     
-    def _get_medium_term_view(self) -> Dict[str, any]:
+    def _get_mid_term_view(self):
         # Cặp MA phù hợp cho trung hạn 20/50
         short_ma = 'SMA_20'
         long_ma = 'SMA_50'
@@ -49,20 +64,24 @@ class DailyTrendAnalyzer:
         }
         
         # Kiểm tra vị trí giá so với MA trung hạn
-        status = "Undefined"
+        ma_status = "undefined"
         if 'close' in self.latest_row and 'SMA_50' in self.latest_row:
             if self.latest_row['close'] > self.latest_row['SMA_50']:
-                status = "Constructive" # Tích cực
+                ma_status = "positive" # Tích cực
             else:
-                status = "Under Pressure" # Chịu áp lực
+                ma_status = "negative" # Chịu áp lực
         
         # Phân tích ADX để xem hướng đi hiện tại
         adx_direction = self._get_adx_direction('DMP_14', 'DMN_14')
 
-        return {"direction": trend_direction, "status": status, 
-                "adx_direction": adx_direction, 'evidence': evidence}
+        return MidTermTrendReport(
+            ma_direction=trend_direction,
+            ma_status=ma_status,
+            adx_direction=adx_direction,
+            evidence=evidence
+        )
     
-    def _get_long_term_view(self) -> Dict[str, any]:
+    def _get_long_term_view(self):
         """Phân tích xu hướng dài hạn (vài tháng đến một năm)."""
         # Cặp MA kinh điển 50/200
         short_ma = 'SMA_50'
@@ -80,11 +99,15 @@ class DailyTrendAnalyzer:
         status = "Undefined"
         if 'close' in self.latest_row and 'SMA_200' in self.latest_row:
             if self.latest_row['close'] > self.latest_row['SMA_200']:
-                status = "Above key moving average"
+                status = "positive"
             else:
-                status = "Below key moving average"
+                status = "negative"
 
-        return {"direction": trend_direction, "status": status, 'evidence': evidence}
+        return LongTermTrendReport(
+            ma_direction=trend_direction,
+            ma_status=status,
+            evidence=evidence
+        )
     
     def analyze_trend(self):
         """
@@ -92,7 +115,7 @@ class DailyTrendAnalyzer:
         """
         # Phân tích từng khung thời gian một cách độc lập
         long_term_analysis = self._get_long_term_view()
-        medium_term_analysis = self._get_medium_term_view()
+        mid_term_analysis = self._get_mid_term_view()
         
         # Sức mạnh xu hướng tổng thể được đo bằng ADX(14) tiêu chuẩn
         adx_strength = self._get_adx_strength('ADX_14')
@@ -102,10 +125,10 @@ class DailyTrendAnalyzer:
         # vì đó là mục tiêu chính của dự án.
         # Tuy nhiên, báo cáo vẫn chứa đầy đủ thông tin dài hạn.
         
-        return {
-            "primary_focus": "Medium-Term", # Chỉ rõ trọng tâm phân tích
-            "long_term": long_term_analysis,
-            "medium_term": medium_term_analysis,
-            "overall_strength": adx_strength # Sức mạnh chung của xu hướng hiện tại
-        }
+        return TrendReport(
+            primary_focus='mid-term',
+            midterm_report=mid_term_analysis,
+            longterm_report=long_term_analysis,
+            overall_strength=adx_strength
+        )
         

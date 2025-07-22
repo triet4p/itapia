@@ -3,7 +3,6 @@ pandas-ta
 numpy==1.26.4
 pytest
 python-dotenv
-requests
 scipy
 fastapi
 uvicorn[standard]
@@ -11,6 +10,3 @@ scikit-learn>=1.4.0
 kaggle
 kagglehub
 lightgbm
-sqlalchemy
-psycopg2-binary
-pydantic

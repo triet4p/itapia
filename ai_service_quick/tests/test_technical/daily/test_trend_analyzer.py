@@ -33,7 +33,7 @@ def test_medium_term_downtrend_under_pressure():
     })
     df = pd.DataFrame([latest_row], index=[pd.to_datetime("2025-01-01")])
     analyzer = DailyTrendAnalyzer(df)
-    report = analyzer._get_medium_term_view()
+    report = analyzer._get_mid_term_view()
 
     assert report['direction'] == "Downtrend"
     assert "Under Pressure" in report['status']

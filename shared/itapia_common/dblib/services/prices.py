@@ -27,7 +27,7 @@ class APIPricesService:
         self.redis_client = redis_client
         self.metadata_service = metadata_service
         
-    def get_daily_prices(self, ticker: str, skip: int, limit: int):
+    def get_daily_prices(self, ticker: str, skip: int, limit: int) -> PriceFullPayload:
         """Lấy và đóng gói dữ liệu giá lịch sử hàng ngày cho một ticker."""
         logger.info(f"SERVICE: Preparing daily prices for ticker {ticker}")
         metadata = self.metadata_service.get_validate_ticker_info(ticker, 'daily')

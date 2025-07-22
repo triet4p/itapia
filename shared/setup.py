@@ -2,7 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='itapia_common',
-    version='0.1.1',
+    version='0.2.1',
     packages=find_packages(),
-    description='The common lib to connect db and get logger of ITAPIA'
+    description='The common lib to connect db and get logger of ITAPIA',
+    install_requires=['numpy==1.26.4','pandas', 'sqlalchemy', 'psycopg2-binary', 
+                      'python-dotenv', 'redis', 'pydantic', 'fastapi']
 )

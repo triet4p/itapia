@@ -1,8 +1,4 @@
+numpy==1.26.4
 pandas
 yfinance
-sqlalchemy
-psycopg2-binary
-python-dotenv
-redis
 schedule
-pydantic
