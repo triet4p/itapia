@@ -257,7 +257,7 @@ itapia/
 │   └── ...
 ├── db/                      # DB Schema (DDL) and seeds
 ├── doc/                     # Project documentation
-├── shared_library/          # Shared library for common code
+├── shared/          # Shared library for common code
 ├── docker-compose.yml       # Docker services configuration
 ├── .env                     # (Must be created) Environment variables
 └── README.md

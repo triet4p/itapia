@@ -125,6 +125,7 @@ docker-compose run --rm batch-data-processor python scripts/fetch_universal_news
 ```
 Các script sẽ tự động tìm ngày gần nhất đã lấy và chỉ thu thập dữ liệu mới cho 92 cổ phiếu đã được cấu hình.
 Với dữ liệu Universal News, bạn có thể thêm hoặc thay đổi các keyword để fetch dữ liệu trong file [utils.py](./data_processing/scripts/utils.py)
+
 ### 5. Chạy Thu thập Dữ liệu Thời gian thực
 Dịch vụ này sẽ tự động quét và chỉ lấy dữ liệu cho các cổ phiếu có thị trường đang mở cửa.
 ```bash
