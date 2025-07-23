@@ -11,7 +11,10 @@ from app.forecasting.task import ForecastingTask
 from app.forecasting.model import ForecastingModel
 from .feature_selection import get_ensemble_feature_ranks, get_ranked_features, select_k_plus_l_features
 from .data_split import get_walk_forward_splits, train_test_split
-from app.logger import info, warn
+
+from itapia_common.logger import ITAPIALogger
+
+logger = ITAPIALogger('TrainingOrchestrator')
 
 class TrainingOrchestrator:
     def __init__(self, df: pd.DataFrame):
@@ -39,7 +42,7 @@ class TrainingOrchestrator:
         """
         Đăng ký một cặp Model và Task. Đây là điểm khởi đầu chính.
         """
-        info(f"Registering Model '{model.name}' for Task '{task.task_id}'")
+        logger.info(f"Registering Model '{model.name}' for Task '{task.task_id}'")
         model.assign_task(task)
         self.models_to_train[self._create_id_for_orchestrate(model, task)] = model
 
@@ -47,9 +50,9 @@ class TrainingOrchestrator:
         """
         Tạo target cho tất cả các task đã đăng ký và tạo ra một DataFrame hoàn chỉnh.
         """
-        info("--- STEP 1: Preparing targets for all registered tasks ---")
+        logger.info("--- STEP 1: Preparing targets for all registered tasks ---")
         if not self.models_to_train:
-            warn("No models/tasks registered. Nothing to do.")
+            logger.warn("No models/tasks registered. Nothing to do.")
             return
 
         all_targets_list = []
@@ -65,14 +68,14 @@ class TrainingOrchestrator:
         """
         Chạy lựa chọn đặc trưng cho tất cả các cặp (Model, Task) đã đăng ký.
         """
-        info("--- STEP 2: Running feature selection for all tasks ---")
+        logger.info("--- STEP 2: Running feature selection for all tasks ---")
         feature_cols = [c for c in self.raw_df.columns if c != 'ticker']
 
         for id, model in self.models_to_train.items():
-            info(f"- Selecting features for task: {id}")
+            logger.info(f"- Selecting features for task: {id}")
             task = model.task
             if task.task_id in self.feature_selected_tasks:
-                info('- This task is runned feature selection')
+                logger.info('- This task is runned feature selection')
                 continue
             
             target_col = task.target_for_selection
@@ -92,7 +95,7 @@ class TrainingOrchestrator:
 
     def split_data(self, train_test_split_date: datetime, test_last_date: datetime = datetime.now()):
         """Chia dữ liệu đã có target thành tập train và test."""
-        info("--- STEP 3: Splitting data into train and test sets ---")
+        logger.info("--- STEP 3: Splitting data into train and test sets ---")
         if self.df_with_targets is None:
             raise RuntimeError("Targets must be prepared before splitting data. Run `prepare_all_targets()` first.")
         self._train_df, self._test_df = train_test_split(self.df_with_targets, train_test_split_date, test_last_date)
@@ -101,13 +104,13 @@ class TrainingOrchestrator:
     def run_walk_forward_validation(self, validation_months: int,
                                     max_train_months: int|None = None):
         """Chạy Walk-Forward Validation cho tất cả các model."""
-        info("--- STEP 4: Running Walk-Forward Validation ---")
+        logger.info("--- STEP 4: Running Walk-Forward Validation ---")
         if self._train_df is None:
             raise RuntimeError("Data must be split before running validation. Run `split_data()` first.")
 
         for id, model in self.models_to_train.items():
             task = model.task
-            info(f"- Validating model for task: {id}")
+            logger.info(f"- Validating model for task: {id}")
 
             evaluation_results = []
             generator = get_walk_forward_splits(self._train_df, validation_months, 
@@ -141,13 +144,13 @@ class TrainingOrchestrator:
 
     def run_final_training_and_registration(self, kaggle_username: str):
         """Huấn luyện model cuối cùng trên toàn bộ tập train và đăng ký lên Kaggle."""
-        info("--- STEP 5: Final Training and Registration ---")
+        logger.info("--- STEP 5: Final Training and Registration ---")
         if self._train_df is None:
             raise RuntimeError("Data must be split before final training. Run `split_data()` first.")
 
         for task_id, model in self.models_to_train.items():
             task = model.task
-            info(f"- Finalizing model for task: {task_id}")
+            logger.info(f"- Finalizing model for task: {task_id}")
             
             X_final_train = self._train_df[task.selected_features]
             y_final_train_df = self._train_df[task.targets]

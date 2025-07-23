@@ -200,7 +200,7 @@ class TripleBarrierTask(ForecastingTask):
                  sl_pct: float = 0.03,
                  require_cdl_features: int = 7,
                  require_non_cdl_features: int = 45):
-        super().__init__(task_id, 'clf', require_cdl_features, require_non_cdl_features)
+        super().__init__(task_id, 'clf', 'category', require_cdl_features, require_non_cdl_features)
         self.horizon = horizon
         self.tp_pct = tp_pct
         self.sl_pct = sl_pct

@@ -24,6 +24,16 @@ class APIMetadataService:
         ticker_info['data_type'] = data_type
         return TickerMetadata(**ticker_info)
     
+    def get_sector_code_of(self, ticker: str) -> str:
+        logger.info(f"SERVICE: Get sector code of a ticker")
+        ticker_info = self.metadata_cache.get(ticker.upper())
+        if not ticker_info:
+            raise ValueError(f"Ticker '{ticker}' not found.")
+        sector_code = ticker_info.get('sector_code')
+        if sector_code is None:
+            raise ValueError(f"Missing sector for ticker {ticker}")
+        return sector_code
+    
     def get_all_sectors(self) -> List[SectorMetadata]:
         """Lấy danh sách tất cả các nhóm ngành được hỗ trợ."""
         logger.info("SERVICE: Preparing all sectors...")

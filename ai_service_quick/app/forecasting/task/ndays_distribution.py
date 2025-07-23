@@ -51,7 +51,7 @@ class NDaysDistributionTask(ForecastingTask):
                  horizon: int = 5,
                  require_cdl_features: int = 7,
                  require_non_cdl_features: int = 45):
-        super().__init__(task_id, 'reg', require_cdl_features, require_non_cdl_features)
+        super().__init__(task_id, 'reg', 'percent', require_cdl_features, require_non_cdl_features)
         self.horizon = horizon
         
         self.targets = [f'target_{s}_pct_{horizon}d' for s in DISTRIBUTION_FEATURES]

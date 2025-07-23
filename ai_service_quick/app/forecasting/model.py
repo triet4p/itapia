@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
-from app.forecasting.task import ForecastingTask
+from app.forecasting.task import ForecastingTask, ForecastingTaskFactory, AvailableTaskTemplate
 from app.forecasting.post_processing import PostProcessor
 import app.core.config as cfg
 
@@ -41,7 +41,9 @@ class ForecastingModel(ABC):
     def set_trained_kernel_model(self, trained_kernel_model):
         self.kernel_model_template = trained_kernel_model
         
-    def get_model_slug(self):
+    def get_model_slug(self, task_id: str = None):
+        if task_id is not None:
+            return cfg.MODEL_SLUG_TEMPLATE.format(id=f"{self.name}-{task_id.lower().replace('_','-')}")
         return cfg.MODEL_SLUG_TEMPLATE.format(id=f"{self.name}-{self.task.task_id.lower().replace('_','-')}")
     
     def get_metadata(self):
@@ -133,6 +135,8 @@ class ForecastingModel(ABC):
     def load_model_from_kaggle(
         self,
         kaggle_username: str,
+        task_template: AvailableTaskTemplate,
+        task_id: str,
         version: int = None
     ):
         """
@@ -144,7 +148,7 @@ class ForecastingModel(ABC):
             version (int, optional): Số phiên bản cụ thể cần tải. Nếu None, tải phiên bản mới nhất.
         """
         # Xây dựng các thông tin cần thiết từ chính object
-        model_slug = self.get_model_slug()
+        model_slug = self.get_model_slug(task_id)
         framework = self.framework
         variation = self.variation
         
@@ -206,20 +210,20 @@ class ForecastingModel(ABC):
                 
                 if task_metadata:
                     # Ra lệnh cho đối tượng task tự khôi phục trạng thái
-                    self.task.load_metadata(task_metadata)
+                    self.task = ForecastingTaskFactory.create_task(task_template, task_id, task_metadata)
                 else:
                     print("Warning: 'task' key not found in metadata.json. Task state not restored.")
             else:
                 print("Warning: metadata.json not found. Task state not restored.")
 
-            print(f"[{self.name}] Model loading complete.")
+            print(f"[{self.name}] Model loading complete with task {self.task.task_id}.")
 
         except Exception as e:
             print(f"[{self.name}] An error occurred while loading model from Kaggle Hub: {e}")
             raise
         finally:
             print(f"[{self.name}] Cleaning up temporary artifact directory...")
-            shutil.rmtree(model_cache_path)
+            #shutil.rmtree(model_cache_path)
         
     @abstractmethod
     def clone_unfitted_kernel_model(self):

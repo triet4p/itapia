@@ -1,7 +1,10 @@
+from typing import List
 import shap
 import pandas as pd
 from sklearn.multioutput import MultiOutputRegressor
 from app.forecasting.model import ForecastingModel
+
+from itapia_common.dblib.schemas.reports.forecasting import TopFeature, BaseSHAPExplaination, SHAPExplaination
 
 from abc import ABC, abstractmethod
 
@@ -13,11 +16,11 @@ class SHAPExplainer(ABC):
         self.task = model.task
     
     @abstractmethod
-    def explain_prediction(self, X_instance: pd.DataFrame) -> dict:
+    def explain_prediction(self, X_instance: pd.DataFrame) -> List[SHAPExplaination]:
         pass
     
     def _format_shap_explanation(self, shap_values_array, X_instance: pd.DataFrame, top_n=5,
-                                 base_value: int = 0) -> dict:
+                                 base_value: int = 0) -> BaseSHAPExplaination:
         """Hàm tiện ích để định dạng output của SHAP."""
         feature_names = X_instance.columns
         feature_values = X_instance.iloc[0].values
@@ -34,19 +37,19 @@ class SHAPExplainer(ABC):
         top_features = shap_df.sort_values(by='abs_shap', ascending=False).head(top_n)
         prediction_outcome = base_value + shap_df['shap_value'].sum()
         # Tạo output có cấu trúc
-        explanation = {
-            "base_value": round(base_value, 4), # Cần explainer.expected_value, sẽ thêm sau
-            "prediction_outcome": round(prediction_outcome, 4), # Tổng các ảnh hưởng
-            "top_features": [
-                {
-                    "feature": row['feature'],
-                    "value": round(row['value'], 4) if isinstance(row['value'], (int, float)) else str(row['value']),
-                    "contribution": round(row['shap_value'], 4),
-                    "effect": "positive" if row['shap_value'] > 0 else "negative"
-                }
+        explanation = BaseSHAPExplaination(
+            base_value=round(base_value, 4),
+            prediction_outcome=round(prediction_outcome, 4),
+            top_features=[
+                TopFeature(
+                    feature=row['feature'],
+                    value=round(row['value'], 4),
+                    contribution=round(row['shap_value'], 4),
+                    effect="positive" if row['shap_value'] > 0 else "negative"
+                )
                 for _, row in top_features.iterrows()
             ]
-        }
+        )
         return explanation
     
 class TreeSHAPExplainer(SHAPExplainer):
@@ -61,7 +64,7 @@ class TreeSHAPExplainer(SHAPExplainer):
         self.explainer = shap.TreeExplainer(self.model.kernel_model)
         self.class_map = {label: i for i, label in enumerate(self.model.kernel_model.classes_)}
         
-    def explain_prediction(self, X_instance: pd.DataFrame) -> dict:
+    def explain_prediction(self, X_instance: pd.DataFrame) -> List[SHAPExplaination]:
         shap_values_3d = self.explainer.shap_values(X_instance)
         prediction = self.model.predict(X_instance)[0]
         
@@ -69,11 +72,18 @@ class TreeSHAPExplainer(SHAPExplainer):
         shap_values_for_prediction = shap_values_3d[0, :, predicted_class_index]
         base_value_for_prediction = self.explainer.expected_value[predicted_class_index]
         
-        return self._format_shap_explanation(
+        explaination = self._format_shap_explanation(
             shap_values_for_prediction, X_instance,
             base_value=base_value_for_prediction,
             top_n=8
         )
+        
+        short_target_name = '_'.join(self.task.targets[0].split('_')[1:])
+        
+        return [SHAPExplaination(
+            for_target=short_target_name,
+            explaination=explaination
+        )]
         
 class MultiOutputTreeSHAPExplainer(SHAPExplainer):
     """
@@ -92,14 +102,13 @@ class MultiOutputTreeSHAPExplainer(SHAPExplainer):
             target_name: shap.TreeExplainer(estimator)
             for target_name, estimator in zip(self.task.targets, self.model.kernel_model.estimators_)
         }
-        print(f"Initialized {len(self.explainers)} individual explainers for each output.")
 
-    def explain_prediction(self, X_instance: pd.DataFrame) -> dict:
+    def explain_prediction(self, X_instance: pd.DataFrame) -> List[SHAPExplaination]:
         """
         Tạo giải thích cho TẤT CẢ các mục tiêu đầu ra và trả về một dictionary
         chứa các giải thích riêng biệt.
         """
-        full_explanation = {}
+        full_explanation = []
 
         # Lặp qua từng explainer đã được tạo cho mỗi mục tiêu
         for target_name, explainer in self.explainers.items():
@@ -117,7 +126,10 @@ class MultiOutputTreeSHAPExplainer(SHAPExplainer):
             
             # Lấy tên ngắn gọn của target (ví dụ: 'mean_5d' từ 'target_mean_5d')
             short_target_name = '_'.join(target_name.split('_')[1:])
-            full_explanation[short_target_name] = explanation
+            full_explanation.append(SHAPExplaination(
+                for_target=short_target_name,
+                explaination=explanation
+            ))
             
         return full_explanation
         

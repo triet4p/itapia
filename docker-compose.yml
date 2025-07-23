@@ -80,6 +80,9 @@ services:
       - .env
     volumes:
       - ./ai_service_quick:/ai-service-quick
+    depends_on:
+      - realtime_redis_db
+      - stocks_postgre_db
     ports:
       - "8001:8000"
     networks:

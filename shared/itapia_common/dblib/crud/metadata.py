@@ -30,6 +30,7 @@ class TickerMetadataCache:
                                 e.timezone,
                                 e.open_time,
                                 e.close_time,
+                                s.sector_code,
                                 s.sector_name
                             FROM 
                                 tickers t

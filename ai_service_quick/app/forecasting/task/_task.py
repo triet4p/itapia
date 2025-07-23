@@ -9,6 +9,7 @@ import app.core.config as cfg
 
 class ForecastingTask(ABC):
     def __init__(self, task_id: str, task_type: Literal['clf', 'reg'],
+                 target_units: Literal['percent', 'category'],
                  require_cdl_features: int = 7,
                  require_non_cdl_features: int = 45):
         self.task_id = task_id
@@ -21,11 +22,14 @@ class ForecastingTask(ABC):
         
         self.target_for_selection: str = ""
         
+        self.target_units: Literal['percent', 'category'] = target_units
+        
     def get_metadata(self) -> Dict:
         return {
             "task_id": self.task_id,
             "task_type": self.task_type,
             "targets": self.targets,
+            "target_units": self.target_units,
             "target_for_selection": self.target_for_selection,
             "features": {
                 "num_selected": len(self.selected_features),

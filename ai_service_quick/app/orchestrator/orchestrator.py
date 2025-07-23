@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from app.technical.orchestrator import TechnicalOrchestrator
 from app.data_prepare.orchestrator import DataPrepareOrchestrator
+from app.forecasting.orchestrator import ForecastingOrchestrator
 
 from itapia_common.dblib.schemas.reports import QuickCheckReport, ErrorResponse
 from itapia_common.dblib.services import APIMetadataService, APINewsService, APIPricesService
@@ -39,6 +40,7 @@ class AIServiceQuickOrchestrator:
         # Khởi tạo các "Trưởng phòng"
         self.data_preparer = DataPrepareOrchestrator(metadata_service, prices_service, news_service)
         self.tech_analyzer = TechnicalOrchestrator()
+        self.forecaster = ForecastingOrchestrator(metadata_service)
         
     def get_full_analysis_report(self, ticker: str, 
                                  daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
@@ -70,7 +72,9 @@ class AIServiceQuickOrchestrator:
         # --- BƯỚC 3 (TƯƠNG LAI): GỌI CÁC PHÒNG BAN KHÁC ---
         # forecast_report = self.forecaster.get_forecast(...)
         # news_report = self.news_analyzer.get_sentiment(...)
-        forecast_report = {"status": "Forecasting module pending."}
+        X = self.tech_analyzer.get_daily_features(daily_df)
+        X_instance = X.iloc[-1:]
+        forecast_report = self.forecaster.generate_report(X_instance, ticker)
         news_report = {"status": "News module pending."}
 
         generate_time = datetime.now(tz=timezone.utc)
@@ -90,6 +94,15 @@ class AIServiceQuickOrchestrator:
         cleaned_report_dict = clean_json_outliers(final_report.model_dump())
         
         return QuickCheckReport.model_validate(cleaned_report_dict)
+    
+    async def preload_all_caches(self):
+        """
+        Kích hoạt quy trình làm nóng cache cho tất cả các module cần thiết.
+        """
+        logger.info("--- CEO: Starting pre-warming process for all sub-modules ---")
+        # Gọi đến hàm preload của "trưởng phòng" forecasting
+        await self.forecaster.preload_caches_for_all_sectors()
+        logger.info("--- CEO: Pre-warming complete ---")
     
     def prepare_training_data_for_sector(self, sector_code: str) -> pd.DataFrame:
         """
