@@ -1,4 +1,5 @@
 import asyncio
+import time
 import pandas as pd
 from datetime import datetime, timezone
 from typing import Dict, List
@@ -15,13 +16,13 @@ from itapia_common.dblib.schemas.reports.forecasting import (
     ForecastingReport, SingleTaskForecastReport
 )
 
+from itapia_common.dblib.cache.memory import SimpleInMemoryCache, AsyncInMemoryCache
+
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Forecasting Orchestrator')
 
 # Cache tạm thời
-_MODEL_CACHE: Dict[str, ForecastingModel] = {}
-_EXPLAINER_CACHE: Dict[str, SHAPExplainer] = {}
 
 class ForecastingOrchestrator:
     """
@@ -29,8 +30,10 @@ class ForecastingOrchestrator:
     """
     def __init__(self, metadata_service: APIMetadataService):
         self.metadata_service = metadata_service
+        self.model_cache = AsyncInMemoryCache()
+        self.explainer_cache = AsyncInMemoryCache()
 
-    def _get_or_load_model(self, model_template: ForecastingModel, 
+    async def _get_or_load_model(self, model_template: ForecastingModel, 
                           task_template: AvailableTaskTemplate, 
                           task_id: str) -> ForecastingModel:
         """
@@ -39,25 +42,21 @@ class ForecastingOrchestrator:
         """
         model_slug = model_template.get_model_slug(task_id=task_id)
 
-        if model_slug in _MODEL_CACHE:
-            logger.info(f"CACHE HIT: Found model for task '{task_id}' in memory.")
-            return _MODEL_CACHE[model_slug]
-        
-        logger.info(f"CACHE MISS: Loading model for task '{task_id}' from Kaggle...")
-        
-        # Hàm load sẽ tự tạo Task từ metadata và gán vào model_template
-        model_template.load_model_from_kaggle(
-            kaggle_username=cfg.KAGGLE_USERNAME,
-            task_template=task_template,
-            task_id=task_id
-        )
-        
-        _MODEL_CACHE[model_slug] = model_template
-        logger.info(f"Model for task '{task_id}' has been cached.")
-        
-        return model_template
+        async def model_factory():
+            logger.info(f"CACHE MISS: Loading model for task '{task_id}'...")
+            
+            # Chạy hàm blocking trong executor
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, 
+                model_template.load_model_from_kaggle, # Hàm blocking
+                cfg.KAGGLE_USERNAME, task_template, task_id # Các tham số
+            )
+            return model_template
+
+        return await self.model_cache.get_or_set_with_lock(model_slug, model_factory)
     
-    def _get_or_create_explainer(self, model_wrapper: ForecastingModel) -> SHAPExplainer:
+    async def _get_or_create_explainer(self, model_wrapper: ForecastingModel) -> SHAPExplainer:
         """
         Lấy explainer từ cache. Nếu không có, tạo mới và cache lại.
         """
@@ -65,21 +64,57 @@ class ForecastingOrchestrator:
         # Sử dụng task_id làm key vì explainer phụ thuộc vào loại task
         explainer_key = task.task_id
 
-        if explainer_key in _EXPLAINER_CACHE:
-            logger.info(f"CACHE HIT: Found explainer for task '{task.task_id}' in memory.")
-            return _EXPLAINER_CACHE[explainer_key]
-
-        logger.info(f"CACHE MISS: Creating new explainer for task '{task.task_id}'...")
-        if task.task_type == 'clf':
+        async def explainer_factory():
+            # Tạo explainer là CPU-bound, có thể chạy trong executor
+            logger.info('CACHE MISS for Explainer')
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(None, self._create_explainer_sync, model_wrapper)
+        
+        return await self.explainer_cache.get_or_set_with_lock(explainer_key, explainer_factory)
+    
+    def _create_explainer_sync(self, model_wrapper: ForecastingModel):
+        if model_wrapper.task.task_type == 'clf':
             explainer = TreeSHAPExplainer(model_wrapper)
         else: # reg
             explainer = MultiOutputTreeSHAPExplainer(model_wrapper)
-        
-        _EXPLAINER_CACHE[explainer_key] = explainer
-        logger.info(f"Explainer for task '{task.task_id}' has been cached.")
-        
-        return explainer
+        return explainer    
+    
+    # --- PHIÊN BẢN SYNC (WRAPPER) ---
+    # --- PHIÊN BẢN SYNC (WRAPPER) - ĐÃ CẬP NHẬT ---
+    def _get_or_load_model_sync(self, model_template: ForecastingModel, 
+                               task_template: AvailableTaskTemplate, 
+                               task_id: str) -> ForecastingModel:
+        """
+        Wrapper đồng bộ cho hàm async. Sử dụng event loop đang chạy.
+        """
+        try:
+            # Lấy event loop đang hoạt động
+            loop = asyncio.get_running_loop()
+        except RuntimeError:  # 'RuntimeError: There is no current event loop...'
+            # Nếu không có loop nào (ví dụ: chạy trong một script sync thuần túy)
+            # thì tạo một loop mới
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
+        # Chạy coroutine trên loop đã có và chờ kết quả
+        return loop.run_until_complete(
+            self._get_or_load_model(model_template, task_template, task_id)
+        )
+
+    def _get_or_create_explainer_sync(self, model_wrapper: ForecastingModel) -> SHAPExplainer:
+        """
+        Wrapper đồng bộ cho hàm async. Sử dụng event loop đang chạy.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        return loop.run_until_complete(
+            self._get_or_create_explainer(model_wrapper)
+        )
+        
     def generate_report(self, latest_enriched_data: pd.DataFrame, ticker: str) -> ForecastingReport:
         """
         Hàm chính: Nhận vào 1 dòng dữ liệu và ticker, trả về một báo cáo Pydantic.
@@ -104,7 +139,7 @@ class ForecastingOrchestrator:
             logger.info(f"- Processing task: {task_id}")
             
             # 3a. Lấy/Tải model. Model trả về sẽ chứa task đã được "hồi sinh"
-            model_wrapper = self._get_or_load_model(model_template, task_template, task_id)
+            model_wrapper = self._get_or_load_model_sync(model_template, task_template, task_id)
             task = model_wrapper.task # Lấy ra task đã được khôi phục
             
             # 3b. Chuẩn bị dữ liệu đầu vào với các features đã được load
@@ -114,7 +149,7 @@ class ForecastingOrchestrator:
             prediction_array = model_wrapper.predict(X_instance)
             
             # 3d. Chạy Giải thích
-            explainer = self._get_or_create_explainer(model_wrapper)
+            explainer = self._get_or_create_explainer_sync(model_wrapper)
             
             explanations = explainer.explain_prediction(X_instance)
             
@@ -152,8 +187,8 @@ class ForecastingOrchestrator:
         logger.info("--- FORECASTING: Starting pre-warming process for all models & explainers ---")
         try:
             # 1. Lấy danh sách tất cả các sector từ DB
-            #all_sectors = [x.sector_code for x in self.metadata_service.get_all_sectors()]
-            all_sectors = ['TECH']
+            all_sectors = [x.sector_code for x in self.metadata_service.get_all_sectors()]
+            #all_sectors = ['TECH']
             logger.info(f"Found {len(all_sectors)} sectors to pre-warm: {all_sectors}")
 
             # 2. Lặp qua từng sector để tải model và tạo explainer
@@ -167,13 +202,13 @@ class ForecastingOrchestrator:
                         task_id = cfg.TASK_ID_SECTOR_TEMPLATE.format(problem=problem_id, sector=sector_code)
                         
                         # Tải model (sẽ được cache nếu chưa có)
-                        model_wrapper = self._get_or_load_model(model_template, task_template, task_id)
+                        model_wrapper = await self._get_or_load_model(model_template, task_template, task_id)
                         
                         # Tạo explainer (sẽ được cache nếu chưa có)
-                        self._get_or_create_explainer(model_wrapper)
+                        await self._get_or_create_explainer(model_wrapper)
                         
                         # Thêm một chút delay để không quá tải và nhường CPU
-                        await asyncio.sleep(0.1) 
+                        time.sleep(1)
                 except Exception as e:
                     logger.err(f"  - ERROR pre-warming for sector {sector_code}: {e}")
                     
@@ -191,17 +226,17 @@ class ForecastingOrchestrator:
         # Trả về cấu hình các cặp (Model Template, Task Template, Problem ID)
         return [
             (
-                ScikitLearnForecastingModel(name=cfg.LGBM_MODEL_BASE_NAME, kernel_model_template=None),
+                ScikitLearnForecastingModel(name=cfg.LGBM_MODEL_BASE_NAME, variation=cfg.MODEL_VARIATION),
                 AvailableTaskTemplate.TRIPLE_BARRIER_TASK,
                 cfg.TRIPLE_BARRIER_PROBLEM_ID
             ),
             (
-                ScikitLearnForecastingModel(name=cfg.MULTIOUTPUT_LGBM_MODEL_BASE_NAME, kernel_model_template=None),
+                ScikitLearnForecastingModel(name=cfg.MULTIOUTPUT_LGBM_MODEL_BASE_NAME, variation=cfg.MODEL_VARIATION),
                 AvailableTaskTemplate.NDAYS_DISTRIBUTION_TASK,
                 cfg.REG_5D_DIS_PROBLEM_ID
             ),
             (
-                ScikitLearnForecastingModel(name=cfg.MULTIOUTPUT_LGBM_MODEL_BASE_NAME, kernel_model_template=None),
+                ScikitLearnForecastingModel(name=cfg.MULTIOUTPUT_LGBM_MODEL_BASE_NAME, variation=cfg.MODEL_VARIATION),
                 AvailableTaskTemplate.NDAYS_DISTRIBUTION_TASK,
                 cfg.REG_20D_DIS_PROBLEM_ID
             ),
