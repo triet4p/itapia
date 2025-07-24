@@ -63,7 +63,8 @@ class ForecastingModel(ABC):
     def register_model_to_kaggle(
         self,
         kaggle_username: str,
-        version_notes: str = ""
+        version_notes: str = "",
+        include_snapshots: bool = False
     ):
         """
         Đóng gói và tải các artifacts lên Kaggle Models sử dụng thư viện kagglehub.
@@ -94,7 +95,7 @@ class ForecastingModel(ABC):
             with open(os.path.join(artifact_dir, cfg.MODEL_METADATA_FILE), "w") as f:
                 json.dump(self.get_metadata(), f, indent=4)
                 
-            if self.snapshot_models:
+            if self.snapshot_models and include_snapshots:
                 snapshot_dir = os.path.join(artifact_dir, "snapshots")
                 os.makedirs(snapshot_dir, exist_ok=True)
                 print("  - Saving model snapshots from folds...")
