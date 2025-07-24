@@ -206,6 +206,9 @@ class ForecastingModel(ABC):
                 with open(metadata_path, "r") as f:
                     full_metadata = json.load(f)
                 
+                # Load metrics
+                self.metrics = full_metadata.get("metrics", [])
+                
                 # Trích xuất phần metadata của task
                 task_metadata = full_metadata.get('task')
                 
