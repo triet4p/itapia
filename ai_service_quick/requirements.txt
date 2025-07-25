@@ -11,3 +11,5 @@ kaggle
 kagglehub
 lightgbm
 shap
+transformers
+torch

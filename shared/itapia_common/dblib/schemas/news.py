@@ -22,6 +22,7 @@ class RelevantNewsFullPayload(BaseModel):
     
 class UniversalNewsPoint(RelevantNewsPoint):
     keyword: str
+    title_hash: str
     class Config:
         from_attributes = True
         

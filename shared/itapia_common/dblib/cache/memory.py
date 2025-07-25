@@ -78,10 +78,12 @@ class SingletonInMemoryCache:
             return new_data
         
     def clean_cache(self, cache_key: str|None = None):
-        if cache_key is not None:
-            self._cache[cache_key].clear()
-            return
-        self._cache.clear()
+        with self._cache_lock:
+            if cache_key:
+                if cache_key in self._cache:
+                    del self._cache[cache_key]
+            else:
+                self._cache.clear()
         
 class AsyncInMemoryCache:
     """

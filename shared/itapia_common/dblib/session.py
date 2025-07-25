@@ -19,7 +19,7 @@ def get_singleton_rdbms_engine() -> Engine:
         _SINGLETON_RDBMS_ENGINE = create_engine(cfg.DATABASE_URL, pool_pre_ping=True)
     return _SINGLETON_RDBMS_ENGINE
 
-def get_singleton_redis_client():
+def get_singleton_redis_client() -> Redis:
     global _SINGLETON_REDIS_CLIENT
     if _SINGLETON_REDIS_CLIENT is None:
         try:

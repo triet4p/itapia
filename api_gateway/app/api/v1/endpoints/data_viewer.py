@@ -42,7 +42,7 @@ def get_relevant_news(ticker: str, skip: int = 0, limit: int = 10,
     return news_service.get_relevant_news(ticker, skip, limit)
 
 @router.get("/news/universal", response_model=UniversalNewsFullPayload | None, tags=['News'])
-def get_relevant_news(search_terms: str, skip: int = 0, limit: int = 10,
+def get_universal_news(search_terms: str, skip: int = 0, limit: int = 10,
              news_service: APINewsService = Depends(get_news_service)):
     """API endpoint để lấy danh sách các tin tức gần đây cho một mã cổ phiếu."""
     return news_service.get_universal_news(search_terms, skip, limit)

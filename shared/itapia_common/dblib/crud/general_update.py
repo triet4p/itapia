@@ -60,14 +60,15 @@ def bulk_insert(engine: Engine, table_name: str,
                 unique_cols: list[str],
                 chunk_size: int = 1000,
                 on_conflict: Literal['nothing', 'update'] = 'nothing'):
-    """Ghi hàng loạt bản ghi vào một bảng động với xử lý xung đột (UPSERT).
+    """
+    Ghi hàng loạt bản ghi vào một bảng động với xử lý xung đột (UPSERT).
 
     Hàm này được tối ưu hóa để ghi dữ liệu vào các bảng có dữ liệu thay đổi
-    thường xuyên như 'daily_prices' hoặc 'relevant_news'. Nó thực hiện
-    việc ghi theo từng khối (chunk) và trong một transaction duy nhất để
+    thường xuyên. Nó thực hiện việc ghi theo từng khối (chunk) và trong một transaction duy nhất để
     đảm bảo tính toàn vẹn dữ liệu.
 
     Args:
+        engine (Engine): Một Engine để kết nối CSDL.
         table_name (str): Tên của bảng cần ghi dữ liệu. Phải là một trong
             các bảng động được phép.
         data (list[dict] | pd.DataFrame): Dữ liệu cần ghi, dưới dạng list

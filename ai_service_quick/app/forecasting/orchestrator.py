@@ -1,4 +1,5 @@
 import asyncio
+from functools import partial
 import time
 import pandas as pd
 from datetime import datetime, timezone
@@ -9,8 +10,6 @@ from app.forecasting.model import ForecastingModel, ScikitLearnForecastingModel
 from app.forecasting.explainer import TreeSHAPExplainer, MultiOutputTreeSHAPExplainer, SHAPExplainer
 
 import app.core.config as cfg
-
-from itapia_common.dblib.services import APIMetadataService
 
 from itapia_common.dblib.schemas.reports.forecasting import (
     ForecastingReport, SingleTaskForecastReport
@@ -28,8 +27,7 @@ class ForecastingOrchestrator:
     """
     Điều phối quy trình dự báo và giải thích cho một cổ phiếu duy nhất.
     """
-    def __init__(self, metadata_service: APIMetadataService):
-        self.metadata_service = metadata_service
+    def __init__(self):
         self.model_cache = AsyncInMemoryCache()
         self.explainer_cache = AsyncInMemoryCache()
 
@@ -115,105 +113,131 @@ class ForecastingOrchestrator:
             self._get_or_create_explainer(model_wrapper)
         )
         
-    def generate_report(self, latest_enriched_data: pd.DataFrame, ticker: str) -> ForecastingReport:
+    async def _process_single_task(self, model_template: ForecastingModel, 
+                                   task_template: AvailableTaskTemplate, 
+                                   problem_id: str,
+                                   sector_code: str,
+                                   latest_enriched_data: pd.DataFrame) -> SingleTaskForecastReport:
         """
-        Hàm chính: Nhận vào 1 dòng dữ liệu và ticker, trả về một báo cáo Pydantic.
+        Worker coroutine: Xử lý một task dự báo duy nhất một cách hoàn toàn bất đồng bộ.
+        """
+        task_id = cfg.TASK_ID_SECTOR_TEMPLATE.format(problem=problem_id, sector=sector_code)
+        
+        # 1. Lấy model và explainer (đã là async, rất tốt)
+        model_wrapper = await self._get_or_load_model(model_template, task_template, task_id)
+        explainer = await self._get_or_create_explainer(model_wrapper)
+        
+        task = model_wrapper.task
+        X_instance = latest_enriched_data[task.selected_features]
+        
+        loop = asyncio.get_running_loop()
+
+        # 2. Chạy các tác vụ CPU-bound song song trong executor
+        #    (Vì predict và explain thường độc lập, chúng có thể chạy cùng lúc)
+        logger.info(f"  - Running predict & explain for task: {task_id}")
+        
+        # Sử dụng functools.partial để gói các hàm có tham số
+        predict_func = partial(model_wrapper.predict, X_instance)
+        explain_func = partial(explainer.explain_prediction, X_instance)
+
+        prediction_array, explanations = await asyncio.gather(
+            loop.run_in_executor(None, predict_func),
+            loop.run_in_executor(None, explain_func)
+        )
+        
+        # 3. Đóng gói kết quả (chạy rất nhanh)
+        task_report = SingleTaskForecastReport(
+            task_name=task.task_id,
+            task_metadata=task.get_metadata(),
+            prediction=prediction_array.flatten().tolist(),
+            units=task.target_units,
+            evidence=explanations
+        )
+        logger.info(f"  - Completed task: {task_id}")
+        return task_report
+        
+    async def generate_report(self, latest_enriched_data: pd.DataFrame, ticker: str, sector: str):
+        """
+        Hàm chính (phiên bản async): Tạo báo cáo dự báo đầy đủ bằng cách
+        chạy song song các task phân tích khác nhau.
         """
         if not isinstance(latest_enriched_data, pd.DataFrame) or len(latest_enriched_data) != 1:
             raise ValueError("Input must be a DataFrame with a single row.")
 
-        # --- BƯỚC 1: Thu thập thông tin bối cảnh ---
-        sector_code = self.metadata_service.get_sector_code_of(ticker)
-        logger.info(f"--- Generating Forecast Report for Ticker: {ticker} (Sector: {sector_code}) ---")
+        logger.info(f"--- Generating ASYNC Forecast Report for Ticker: {ticker} (Sector: {sector}) ---")
 
-        # --- BƯỚC 2: Định nghĩa các "Công thức" Model và Task ---
-
-        # 2c. Định nghĩa các Task Template
-        tasks_to_run_config = self._get_tasks_config_for_sector(sector_code)
+        tasks_to_run_config = self._get_tasks_config_for_sector(sector)
         
-        task_reports_list: List[SingleTaskForecastReport] = []
-
-        # --- BƯỚC 3: Lặp qua từng task ---
-        for model_template, task_template, problem_id in tasks_to_run_config:
-            task_id = cfg.TASK_ID_SECTOR_TEMPLATE.format(problem=problem_id, sector=sector_code)
-            logger.info(f"- Processing task: {task_id}")
-            
-            # 3a. Lấy/Tải model. Model trả về sẽ chứa task đã được "hồi sinh"
-            model_wrapper = self._get_or_load_model_sync(model_template, task_template, task_id)
-            task = model_wrapper.task # Lấy ra task đã được khôi phục
-            
-            # 3b. Chuẩn bị dữ liệu đầu vào với các features đã được load
-            X_instance = latest_enriched_data[task.selected_features]
-            
-            # 3c. Chạy Dự báo (đã bao gồm post-processing nếu có)
-            prediction_array = model_wrapper.predict(X_instance)
-            
-            # 3d. Chạy Giải thích
-            explainer = self._get_or_create_explainer_sync(model_wrapper)
-            
-            explanations = explainer.explain_prediction(X_instance)
-            
-            # 3e. Đóng gói kết quả vào đối tượng Pydantic
-            task_report = SingleTaskForecastReport(
-                task_name=task.task_id,
-                task_metadata=task.get_metadata(),
-                prediction=prediction_array.flatten().tolist(),
-                units=task.target_units,
-                evidence=explanations # Pydantic sẽ tự validate
+        # 1. Tạo một danh sách các "công việc" (coroutines) cần chạy
+        coroutines_to_run = [
+            self._process_single_task(
+                model_template, 
+                task_template, 
+                problem_id,
+                sector,
+                latest_enriched_data
             )
-            task_reports_list.append(task_report)
-            logger.info(f'- Processed task: {task_id}')
-            
-        # --- BƯỚC 4: Tạo báo cáo cuối cùng ---
-        generated_time = datetime.now(timezone.utc)
+            for model_template, task_template, problem_id in tasks_to_run_config
+        ]
+
+        # 2. Sử dụng asyncio.gather để chạy tất cả các công việc song song
+        logger.info(f"Dispatching {len(coroutines_to_run)} forecast tasks to run in parallel...")
+        task_reports_list = await asyncio.gather(*coroutines_to_run)
+        
+        # 3. Tạo báo cáo cuối cùng từ kết quả đã thu thập
         final_report = ForecastingReport(
             ticker=ticker.upper(),
-            sector=sector_code,
-            generated_at=generated_time.isoformat(),
-            generated_timestamp=int(generated_time.timestamp()),
+            sector=sector,
             forecasts=task_reports_list
+            # Bạn có thể thêm timestamp ở đây nếu muốn
         )
         
-        logger.info('Generated report')
-        
+        logger.info(f"--- Completed ASYNC Forecast Report for Ticker: {ticker} ---")
         return final_report
     
-    async def preload_caches_for_all_sectors(self):
-        """
-        Tải trước tất cả các model và tạo các explainer cho TẤT CẢ các sector
-        để làm nóng cache in-memory.
-        Hàm này được thiết kế để chạy ở chế độ nền khi ứng dụng khởi động.
-        """
-        logger.info("--- FORECASTING: Starting pre-warming process for all models & explainers ---")
+    async def _preload_for_single_sector(self, sector_code: str):
+        """Worker: Thực hiện toàn bộ quy trình preload cho một sector duy nhất."""
+        logger.info(f"  - Pre-warming for sector: {sector_code}")
         try:
-            # 1. Lấy danh sách tất cả các sector từ DB
-            all_sectors = [x.sector_code for x in self.metadata_service.get_all_sectors()]
-            #all_sectors = ['TECH']
-            logger.info(f"Found {len(all_sectors)} sectors to pre-warm: {all_sectors}")
-
-            # 2. Lặp qua từng sector để tải model và tạo explainer
-            for sector_code in all_sectors:
-                logger.info(f"  - Pre-warming for sector: {sector_code}")
-                try:
-                    # Lấy lại "công thức" model/task từ hàm generate_report để đảm bảo nhất quán
-                    tasks_to_run_config = self._get_tasks_config_for_sector(sector_code)
-                    
-                    for model_template, task_template, problem_id in tasks_to_run_config:
-                        task_id = cfg.TASK_ID_SECTOR_TEMPLATE.format(problem=problem_id, sector=sector_code)
-                        
-                        # Tải model (sẽ được cache nếu chưa có)
-                        model_wrapper = await self._get_or_load_model(model_template, task_template, task_id)
-                        
-                        # Tạo explainer (sẽ được cache nếu chưa có)
-                        await self._get_or_create_explainer(model_wrapper)
-                        
-                        # Thêm một chút delay để không quá tải và nhường CPU
-                        time.sleep(1)
-                except Exception as e:
-                    logger.err(f"  - ERROR pre-warming for sector {sector_code}: {e}")
-                    
+            tasks_to_run_config = self._get_tasks_config_for_sector(sector_code)
+            
+            for model_template, task_template, problem_id in tasks_to_run_config:
+                task_id = cfg.TASK_ID_SECTOR_TEMPLATE.format(problem=problem_id, sector=sector_code)
+                
+                # 1. Tải model (tuần tự)
+                model_wrapper = await self._get_or_load_model(model_template, task_template, task_id)
+                
+                # 2. Tạo explainer (tuần tự, sau khi có model)
+                await self._get_or_create_explainer(model_wrapper)
+                
+                # SỬA LỖI QUAN TRỌNG: Dùng asyncio.sleep
+                # Nhường CPU cho các coroutine khác, ví dụ một sector khác đang tải model
+                await asyncio.sleep(0.5) # Có thể giảm thời gian sleep
+                
         except Exception as e:
-            logger.err(f"A critical error occurred during the pre-warming process: {e}")
+            # Ghi log lỗi cho sector cụ thể này mà không làm dừng toàn bộ quá trình
+            logger.err(f"  - ERROR pre-warming for sector {sector_code}: {e}")
+    
+    async def preload_caches_for_all_sectors(self, sectors: List[str]):
+        """
+        Tải trước TẤT CẢ các model và explainer bằng cách chạy song song
+        quy trình của từng sector.
+        """
+        logger.info("--- FORECASTING: Starting PARALLEL pre-warming process for all models & explainers ---")
+        
+        if not sectors:
+            logger.warn("No sectors provided for pre-warming.")
+            return
+
+        logger.info(f"Found {len(sectors)} sectors to pre-warm: {sectors}")
+
+        # 1. Tạo một danh sách các "công việc" (coroutines) cần thực hiện
+        # Mỗi công việc là một lần gọi đến worker cho một sector
+        tasks = [self._preload_for_single_sector(sector_code) for sector_code in sectors]
+
+        # 2. Sử dụng asyncio.gather để chạy tất cả các công việc song song
+        # gather sẽ chờ cho đến khi tất cả các tác vụ trong danh sách hoàn thành.
+        await asyncio.gather(*tasks)
         
         logger.info("--- FORECASTING: Pre-warming process complete ---")
     

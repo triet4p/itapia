@@ -11,6 +11,9 @@ from itapia_common.logger import ITAPIALogger
 logger = ITAPIALogger('Metadata Service of DB')
 
 class APIMetadataService:
+    """
+    Lớp Service tập trung cho các truy vấn liên quan tới Metadata qua API
+    """
     def __init__(self, rdbms_session: Session):
         self.rdbms_session = rdbms_session
         self.metadata_cache = get_ticker_metadata(rdbms_connection=rdbms_session)

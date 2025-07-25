@@ -32,6 +32,4 @@ class SingleTaskForecastReport(BaseModel):
 class ForecastingReport(BaseModel):
     ticker: str = Field(..., description="Ticker symbol for forecasting")
     sector: str = Field(..., description="Sector of ticker")
-    generated_at: str = Field(..., description="Time generated in ISO Format")
-    generated_timestamp: int = Field(..., description="Time generated in timestamp")
     forecasts: List[SingleTaskForecastReport] = Field(..., description="List of forecasting each single task")

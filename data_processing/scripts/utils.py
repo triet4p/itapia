@@ -37,6 +37,18 @@ UNIVERSAL_KEYWORDS_EN = [
     "pharmaceutical industry FDA",
 ]
 
+UNIVERSAL_TOPIC_EN = [
+    'WORLD',
+    'NATION',
+    'BUSINESS',
+    'TECHNOLOGY',
+    'HEALTH',
+    'POLITICS',
+    'FINANCE',
+    'ENERGY',
+    'ECONOMY'
+]
+
 # Tiếng Việt (cho thị trường Việt Nam)
 UNIVERSAL_KEYWORDS_VI = [
     # Vĩ mô & Chính sách

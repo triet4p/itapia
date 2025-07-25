@@ -1,12 +1,17 @@
+import asyncio
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Literal, Union
 import numpy as np
 import pandas as pd
 from app.technical.orchestrator import TechnicalOrchestrator
 from app.data_prepare.orchestrator import DataPrepareOrchestrator
 from app.forecasting.orchestrator import ForecastingOrchestrator
+from app.news.orchestrator import NewsOrchestrator
 
 from itapia_common.dblib.schemas.reports import QuickCheckReport, ErrorResponse
+from itapia_common.dblib.schemas.reports.forecasting import ForecastingReport
+from itapia_common.dblib.schemas.reports.news import NewsAnalysisReport
+from itapia_common.dblib.schemas.reports.technical_analysis import TechnicalReport
 from itapia_common.dblib.services import APIMetadataService, APINewsService, APIPricesService
 from itapia_common.logger import ITAPIALogger
 
@@ -30,7 +35,7 @@ def clean_json_outliers(obj) -> dict:
 
 class AIServiceQuickOrchestrator:
     """
-    Super Orchestrator ("CEO") cho toàn bộ quy trình Quick Check.
+    Super Orchestrator ("CEO") cho toàn bộ quy trình Quick Check (phiên bản Async).
     Nó điều phối các orchestrator của từng module lớn để thực hiện các
     quy trình nghiệp vụ hoàn chỉnh.
     """
@@ -40,69 +45,171 @@ class AIServiceQuickOrchestrator:
         # Khởi tạo các "Trưởng phòng"
         self.data_preparer = DataPrepareOrchestrator(metadata_service, prices_service, news_service)
         self.tech_analyzer = TechnicalOrchestrator()
-        self.forecaster = ForecastingOrchestrator(metadata_service)
-        
-    def get_full_analysis_report(self, ticker: str, 
-                                 daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
-                                 required_type: Literal['daily', 'intraday', 'all']='all'):
+        self.forecaster = ForecastingOrchestrator()
+        self.news_analyzer = NewsOrchestrator()
+        self.is_active = False
+
+    # === HÀM TIỆN ÍCH CHO TỪNG MODULE (ASYNC HELPERS) ===
+
+    def _prepare_and_run_technical_analysis(self, daily_df: pd.DataFrame, intraday_df: pd.DataFrame, 
+                                            daily_analysis_type: str, required_type: str) -> TechnicalReport:
         """
-        QUY TRÌNH 1: Tạo báo cáo phân tích A-Z cho một ticker duy nhất.
-        Bao gồm lấy dữ liệu, tạo features, và phân tích.
+        Giai đoạn Phân tích Kỹ thuật (đồng bộ vì các tác vụ rất nhanh).
         """
-        logger.info(f"--- CEO: Initiating full analysis for ticker '{ticker}' ---")
+        logger.info("CEO -> TechAnalyzer: Performing technical analysis...")
+        # Đây là tác vụ nhanh, có thể chạy đồng bộ.
+        return self.tech_analyzer.get_full_analysis(
+            daily_df, 
+            intraday_df,
+            required_type=required_type,
+            daily_analysis_type=daily_analysis_type
+        )
+
+    async def _prepare_and_run_forecasting(self, ticker: str, daily_df: pd.DataFrame) -> ForecastingReport:
+        """
+        Giai đoạn Dự báo (bất đồng bộ).
+        """
+        logger.info("CEO -> Forecaster: Preparing data and running forecast...")
+        # 1. Chuẩn bị dữ liệu đầu vào (nhanh, đồng bộ)
+        sector = self.data_preparer.get_sector_code_of(ticker)
+        features_df = self.tech_analyzer.get_daily_features(daily_df)
+        latest_features = features_df.iloc[-1:]
+
+        # 2. Gọi hàm generate_report (nặng, bất đồng bộ)
+        return await self.forecaster.generate_report(latest_features, ticker, sector)
+
+    async def _prepare_and_run_news_analysis(self, ticker: str) -> NewsAnalysisReport:
+        """
+        Giai đoạn Phân tích Tin tức (bất đồng bộ).
+        """
+        logger.info("CEO -> NewsAnalyzer: Preparing data and running news analysis...")
+        # 1. Chuẩn bị dữ liệu đầu vào (nhanh, đồng bộ)
+        news_texts = self.data_preparer.get_all_news_text_for_ticker(ticker)
+
+        # 2. Gọi hàm generate_report (nặng, bất đồng bộ)
+        return await self.news_analyzer.generate_report(ticker, news_texts)
+
+    # === HÀM CHÍNH ĐIỀU PHỐI (QUY TRÌNH 1) ===
+
+    async def get_full_analysis_report(self, ticker: str, 
+                                       daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
+                                       required_type: Literal['daily', 'intraday', 'all']='all'
+                                      ) -> Union[QuickCheckReport, ErrorResponse]:
+        """
+        Tạo báo cáo phân tích A-Z cho một ticker, chạy các module nặng song song.
+        """
+        if not self.is_active:
+            return ErrorResponse(error='Service is not ready! Check after 5-10 minutes', code=503)
         
-        # --- BƯỚC 1: LẤY DỮ LIỆU THÔ ---
-        # Ra lệnh cho "Trưởng phòng Chuẩn bị Dữ liệu"
-        logger.info("CEO -> DataPreparer: Fetching daily and intraday data...")
+        if not self.data_preparer.is_exist(ticker):
+            return ErrorResponse(error=f'Not found ticker {ticker}', code=404)
+        
+        logger.info(f"--- CEO (ASYNC): Initiating full analysis for ticker '{ticker}' ---")
+        
+        # --- BƯỚC 1: LẤY DỮ LIỆU THÔ (ĐỒNG BỘ) ---
+        logger.info("CEO -> DataPreparer: Fetching price data...")
         daily_df = self.data_preparer.get_daily_ohlcv_for_ticker(ticker)
         intraday_df = self.data_preparer.get_intraday_ohlcv_for_ticker(ticker)
 
-        if daily_df.empty and intraday_df.empty:
-            logger.err(f"No data available for ticker {ticker}.")
-            return ErrorResponse(error=f"No data available for ticker {ticker}.")
+        if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
+            logger.err(f"No daily data available for ticker {ticker}.")
+            return ErrorResponse(error=f"No daily data available for ticker {ticker}.", code=404)
 
-        # --- BƯỚC 2: THỰC HIỆN PHÂN TÍCH KỸ THUẬT ---
-        # Ra lệnh cho "Trưởng phòng Kỹ thuật"
-        logger.info("CEO -> TechAnalyzer: Performing analyses...")
-        technical_analysis_report = self.tech_analyzer.get_full_analysis(daily_df, 
-                                                                         intraday_df,
-                                                                         required_type=required_type,
-                                                                         daily_analysis_type=daily_analysis_type)
+        # --- BƯỚC 2: CHẠY TẤT CẢ CÁC MODULE SONG SONG ---
+        logger.info("CEO: Dispatching all analysis modules to run in parallel...")
         
-        # --- BƯỚC 3 (TƯƠNG LAI): GỌI CÁC PHÒNG BAN KHÁC ---
-        # forecast_report = self.forecaster.get_forecast(...)
-        # news_report = self.news_analyzer.get_sentiment(...)
-        X = self.tech_analyzer.get_daily_features(daily_df)
-        X_instance = X.iloc[-1:]
-        forecast_report = self.forecaster.generate_report(X_instance, ticker)
-        news_report = {"status": "News module pending."}
+        # Chạy Phân tích Kỹ thuật (tác vụ nhanh) trong executor để không block
+        # Mặc dù nhanh, đưa vào executor là cách làm an toàn nhất để đảm bảo non-blocking.
+        loop = asyncio.get_running_loop()
+        technical_task = loop.run_in_executor(
+            None, self._prepare_and_run_technical_analysis, 
+            daily_df, intraday_df, daily_analysis_type, required_type
+        )
 
+        # Tạo các task cho các module nặng
+        forecasting_task = self._prepare_and_run_forecasting(ticker, daily_df)
+        news_task = self._prepare_and_run_news_analysis(ticker)
+
+        # Sử dụng gather để chờ tất cả hoàn thành
+        results = await asyncio.gather(
+            technical_task, 
+            forecasting_task, 
+            news_task,
+            return_exceptions=True # Rất quan trọng để xử lý lỗi
+        )
+
+        # --- BƯỚC 3: KIỂM TRA LỖI VÀ TỔNG HỢP KẾT QUẢ ---
+        
+        # Giải nén kết quả
+        technical_report, forecasting_report, news_report = results
+
+        # Kiểm tra xem có module nào bị lỗi không
+        if isinstance(technical_report, Exception):
+            logger.err(f"Technical analysis failed for {ticker}: {technical_report}")
+            return ErrorResponse(error=f"Technical analysis module failed.", code=500)
+        if isinstance(forecasting_report, Exception):
+            logger.err(f"Forecasting failed for {ticker}: {forecasting_report}")
+            return ErrorResponse(error=f"Forecasting module failed.", code=500)
+        if isinstance(news_report, Exception):
+            logger.err(f"News analysis failed for {ticker}: {news_report}")
+            return ErrorResponse(error=f"News analysis module failed.", code=500)
+
+        # --- BƯỚC 4: TẠO BÁO CÁO CUỐI CÙNG ---
         generate_time = datetime.now(tz=timezone.utc)
-
-        # --- BƯỚC 4: TỔNG HỢP KẾT QUẢ ---
         final_report = QuickCheckReport(
             ticker=ticker.upper(),
             generated_at_utc=generate_time.isoformat(),
             generated_timestamp=int(generate_time.timestamp()),
-            technical_report=technical_analysis_report,
-            forecasting_report=forecast_report,
+            technical_report=technical_report,
+            forecasting_report=forecasting_report,
             news_report=news_report
         )
         
-        logger.info(f"--- CEO: Full analysis for '{ticker}' complete. ---")
+        logger.info(f"--- CEO (ASYNC): Full analysis for '{ticker}' complete. ---")
         
+        # Dọn dẹp các giá trị NaN/inf trước khi trả về
         cleaned_report_dict = clean_json_outliers(final_report.model_dump())
-        
         return QuickCheckReport.model_validate(cleaned_report_dict)
     
     async def preload_all_caches(self):
         """
-        Kích hoạt quy trình làm nóng cache cho tất cả các module cần thiết.
+        Kích hoạt song song quy trình làm nóng cache cho TẤT CẢ các sub-module.
         """
-        logger.info("--- CEO: Starting pre-warming process for all sub-modules ---")
-        # Gọi đến hàm preload của "trưởng phòng" forecasting
-        await self.forecaster.preload_caches_for_all_sectors()
-        logger.info("--- CEO: Pre-warming complete ---")
+        logger.info("--- CEO: Starting PARALLEL pre-warming for all sub-modules ---")
+        
+        # Chuẩn bị các tham số cần thiết
+        sectors = self.data_preparer.get_all_sectors_code()
+        
+        # 1. Tạo một danh sách các "công việc lớn" cần thực hiện
+        # Mỗi công việc là một lần gọi đến hàm preload của một "trưởng phòng"
+        tasks = [
+            self.forecaster.preload_caches_for_all_sectors(sectors),
+            self.news_analyzer.preload_caches()
+            # Trong tương lai có thể thêm các module khác ở đây
+            # self.another_module.preload()
+        ]
+
+        # 2. Sử dụng asyncio.gather để chạy tất cả các công việc song song và CHỜ chúng
+        # SỬA LỖI QUAN TRỌNG: Thêm `await` ở phía trước
+        # Dùng return_exceptions=True để một module lỗi không làm sập toàn bộ quá trình
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # (Tùy chọn nhưng khuyến khích) Kiểm tra kết quả để ghi log nếu có lỗi
+        module_names = ["News Analysis"]
+        has_errors = False
+        for result, name in zip(results, module_names):
+            if isinstance(result, Exception):
+                logger.err(f"  - Pre-warming FAILED for module '{name}': {result}")
+                has_errors = True
+            else:
+                logger.info(f"  - Pre-warming complete for module '{name}'.")
+
+        # 3. Chỉ sau khi TẤT CẢ đã hoàn thành, mới đặt trạng thái là active
+        if not has_errors:
+            self.is_active = True
+            logger.info("--- CEO: All modules pre-warmed successfully. Service is now active. ---")
+        else:
+            logger.warn("--- CEO: Pre-warming process completed with errors. Service might not be fully functional. ---")
     
     def prepare_training_data_for_sector(self, sector_code: str) -> pd.DataFrame:
         """

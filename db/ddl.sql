@@ -53,8 +53,12 @@ CREATE TABLE IF NOT EXISTS public.universal_news (
     provider varchar(150) null,
     link TEXT null,
     publish_time timestamp with time zone null,
-    collect_time timestamp with time zone not null
+    collect_time timestamp with time zone not null,
+    title_hash varchar(100) NOT NULL;
+    news_prior int NOT NULL;
 );
+
+ALTER TABLE public.universal_news ADD CONSTRAINT universal_news_unique UNIQUE (title_hash);
 
 CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE
 ON universal_news FOR EACH ROW EXECUTE PROCEDURE
