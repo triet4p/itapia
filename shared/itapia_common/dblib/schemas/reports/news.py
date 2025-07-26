@@ -7,31 +7,28 @@ class SentimentAnalysisReport(BaseModel):
     
     class Config:
         from_attributes = True
+        
+class NERElement(BaseModel):
+    entity_group: str = Field(..., description='Name of entity group')
+    word: str = Field(..., description='word recognized')
+    class Config:
+        from_attributes = True
     
 class NERReport(BaseModel):
-    text: str = Field(..., description='Key entity text')
-    ner_type: str = Field(..., description='Type of key entity')
-    
+    entities: List[NERElement] = Field(..., description='List of entity')
     class Config:
         from_attributes = True
-    
+        
 class ImpactAssessmentReport(BaseModel):
-    level: Literal['low', 'moderate', 'high'] = Field(..., description='Level of impact')
-    score: int|float = Field(..., description='Score of impact')
-    
-    class Config:
-        from_attributes = True
-    
-class WordHighlightElement(BaseModel):
-    word: str = Field(..., description='Word highlighted')
-    weight: str = Field(..., description='Weight of contribution to sentence')
+    level: Literal['low', 'moderate', 'high', 'unknown'] = Field(..., description='Level of impact')
+    words: List[str] = Field(..., default_factory=list, description='List of evidence impact words')
     
     class Config:
         from_attributes = True
         
 class KeywordHighlightingReport(BaseModel):
-    positive_keywords: List[WordHighlightElement] = Field(..., description='List of positive keyword highlighted')
-    negative_keywords: List[WordHighlightElement] = Field(..., description='List of negative keyword highlighted')
+    positive_keywords: List[str] = Field(..., description='List of positive keyword highlighted')
+    negative_keywords: List[str] = Field(..., description='List of negative keyword highlighted')
     
     class Config:
         from_attributes = True

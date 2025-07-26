@@ -210,7 +210,7 @@ class AIServiceQuickOrchestrator:
             logger.info("--- CEO: All modules pre-warmed successfully. Service is now active. ---")
         else:
             logger.warn("--- CEO: Pre-warming process completed with errors. Service might not be fully functional. ---")
-    
+            
     def prepare_training_data_for_sector(self, sector_code: str) -> pd.DataFrame:
         """
         QUY TRÌNH 2: Chuẩn bị một DataFrame lớn, sẵn sàng để huấn luyện,

@@ -11,7 +11,7 @@ RUN conda create -n itapia python=3.11 -y
 # --- BƯỚC 2: KÍCH HOẠT MÔI TRƯỜNG MỚI VÀ CÀI ĐẶT THƯ VIỆN ---
 # Sử dụng 'conda run' để thực thi các lệnh bên trong môi trường 'itapia'
 # 2.1. Cài đặt TA-Lib trước tiên
-RUN conda run -n itapia conda install -c conda-forge -y ta-lib
+RUN conda run -n itapia conda install -c conda-forge -y ta-lib "spacy>=3.5,<3.7"
 
 # 2.2. Cài đặt các gói còn lại bằng pip
 COPY ./ai_service_quick/requirements.txt /ai-service-quick/requirements.txt

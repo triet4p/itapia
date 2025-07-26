@@ -80,6 +80,8 @@ services:
       - .env
     volumes:
       - ./ai_service_quick:/ai-service-quick
+      - ai_service_quick_kaggle_cache:/root/.cache/kagglehub
+      - ai_service_quick_hgf_cache:/root/.cache/huggingface
     depends_on:
       - realtime_redis_db
       - stocks_postgre_db
@@ -91,6 +93,8 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  ai_service_quick_kaggle_cache:
+  ai_service_quick_hgf_cache:
 
 networks:
   itapia-network:

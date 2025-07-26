@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime, timezone
 from typing import Dict, List
 
+from app.core.exceptions import PreloadCacheError
 from app.forecasting.task import AvailableTaskTemplate
 from app.forecasting.model import ForecastingModel, ScikitLearnForecastingModel
 from app.forecasting.explainer import TreeSHAPExplainer, MultiOutputTreeSHAPExplainer, SHAPExplainer
@@ -217,6 +218,8 @@ class ForecastingOrchestrator:
         except Exception as e:
             # Ghi log lỗi cho sector cụ thể này mà không làm dừng toàn bộ quá trình
             logger.err(f"  - ERROR pre-warming for sector {sector_code}: {e}")
+            raise PreloadCacheError('Forecasting Orchestrator',
+                                    ['Model', 'Explainer'])
     
     async def preload_caches_for_all_sectors(self, sectors: List[str]):
         """

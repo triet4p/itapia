@@ -5,7 +5,7 @@ from itapia_common.dblib.schemas.reports.news import SentimentAnalysisReport
 
 class SentimentAnalysisModel:
     def __init__(self, model_name: str):
-        self.pipe = pipeline("text-classification", model=model_name, device='cpu')
+        self.pipe = pipeline("sentiment-analysis", model=model_name, device='cpu')
         
     def analysis_sentiment(self, texts: List[str]) -> List[SentimentAnalysisReport]:
         analysis_dicts = self.pipe(texts, truncation=True, padding=True)
