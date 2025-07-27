@@ -3,7 +3,7 @@ import pandas as pd
 from scipy.signal import find_peaks
 from typing import List, Dict, Callable, Literal, Optional
 
-from itapia_common.dblib.schemas.reports.technical_analysis.daily import PatternObj, PatternReport
+from itapia_common.dblib.schemas.reports.technical.daily import PatternObj, PatternReport
 
 # --- DECORATOR VÀ SỔ ĐĂNG KÝ ---
 # Sổ đăng ký sẽ là một dictionary, lưu tên mẫu hình và hàm kiểm tra tương ứng

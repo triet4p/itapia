@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Any
-from itapia_common.dblib.schemas.reports.technical_analysis import TechnicalReport
+from itapia_common.dblib.schemas.reports.technical import TechnicalReport
 from itapia_common.dblib.schemas.reports.forecasting import ForecastingReport
 from itapia_common.dblib.schemas.reports.news import NewsAnalysisReport
 

@@ -1,7 +1,6 @@
 import pandas as pd
-from typing import Dict
 
-from itapia_common.dblib.schemas.reports.technical_analysis.daily import MidTermTrendReport, \
+from itapia_common.dblib.schemas.reports.technical.daily import MidTermTrendReport, \
     LongTermTrendReport, OverallStrengthTrendReport, TrendReport
 
 class DailyTrendAnalyzer:

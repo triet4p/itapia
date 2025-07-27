@@ -1,13 +1,13 @@
 import pandas as pd
 
-from typing import Any, Dict, Literal, Optional
+from typing import Literal, Optional
 
 from app.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
 from app.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
 from app.technical.analysis_engine.daily.pattern_recognizer import DailyPatternRecognizer
 
-from itapia_common.dblib.schemas.reports.technical_analysis import DailyAnalysisReport
-from itapia_common.dblib.schemas.reports.technical_analysis.daily import KeyIndicators
+from itapia_common.dblib.schemas.reports.technical import DailyAnalysisReport
+from itapia_common.dblib.schemas.reports.technical.daily import KeyIndicators
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Daily Analysis Engine')

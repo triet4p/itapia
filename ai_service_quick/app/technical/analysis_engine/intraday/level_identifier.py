@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Dict
 
-from itapia_common.dblib.schemas.reports.technical_analysis.intraday import KeyLevelsReport
+from itapia_common.dblib.schemas.reports.technical.intraday import KeyLevelsReport
 
 class IntradayLevelIdentifier:
     def __init__(self, feature_df: pd.DataFrame):

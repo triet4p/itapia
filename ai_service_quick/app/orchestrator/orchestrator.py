@@ -11,7 +11,7 @@ from app.news.orchestrator import NewsOrchestrator
 from itapia_common.dblib.schemas.reports import QuickCheckReport, ErrorResponse
 from itapia_common.dblib.schemas.reports.forecasting import ForecastingReport
 from itapia_common.dblib.schemas.reports.news import NewsAnalysisReport
-from itapia_common.dblib.schemas.reports.technical_analysis import TechnicalReport
+from itapia_common.dblib.schemas.reports.technical import TechnicalReport
 from itapia_common.dblib.services import APIMetadataService, APINewsService, APIPricesService
 from itapia_common.logger import ITAPIALogger
 

@@ -45,5 +45,8 @@ class ITAPIALogger:
         
     def err(self, msg: str):
         self._logger.error(msg)
+        
+    def debug(self, msg: str):
+        self._logger.debug(msg)
     
     
