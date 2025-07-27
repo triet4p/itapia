@@ -7,6 +7,7 @@ from app.technical.orchestrator import TechnicalOrchestrator
 from app.data_prepare.orchestrator import DataPrepareOrchestrator
 from app.forecasting.orchestrator import ForecastingOrchestrator
 from app.news.orchestrator import NewsOrchestrator
+from app.explainer.reports.orchestrator import ReportsExplainerOrchestrator, ExplainReportType
 
 from itapia_common.dblib.schemas.reports import QuickCheckReport, ErrorResponse
 from itapia_common.dblib.schemas.reports.forecasting import ForecastingReport
@@ -47,6 +48,7 @@ class AIServiceQuickOrchestrator:
         self.tech_analyzer = TechnicalOrchestrator()
         self.forecaster = ForecastingOrchestrator()
         self.news_analyzer = NewsOrchestrator()
+        self.reports_explainer = ReportsExplainerOrchestrator()
         self.is_active = False
 
     # === HÀM TIỆN ÍCH CHO TỪNG MODULE (ASYNC HELPERS) ===
@@ -170,6 +172,35 @@ class AIServiceQuickOrchestrator:
         # Dọn dẹp các giá trị NaN/inf trước khi trả về
         cleaned_report_dict = clean_json_outliers(final_report.model_dump())
         return QuickCheckReport.model_validate(cleaned_report_dict)
+    
+    async def get_full_explanation_report(
+        self, 
+        ticker: str, 
+        daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
+        required_type: Literal['daily', 'intraday', 'all']='all',
+        explain_type: ExplainReportType = 'all'
+    ) -> Union[str, ErrorResponse]:
+        """
+        Tái sử dụng báo cáo JSON đầy đủ và tạo ra một bản tóm tắt plain-text.
+        """
+        logger.info(f"--- CEO: Initiating PLAIN-TEXT explanation for '{ticker}' ---")
+        
+        # BƯỚC 1: Gọi hàm chính để lấy dữ liệu có cấu trúc
+        json_report = await self.get_full_analysis_report(
+            ticker, daily_analysis_type, required_type
+        )
+
+        # Nếu bước đầu tiên có lỗi, trả về lỗi đó
+        if isinstance(json_report, ErrorResponse):
+            return json_report
+
+        # BƯỚC 2: Gọi đến Explainer Orchestrator để "dịch" báo cáo
+        explanation_text = self.reports_explainer.explain(
+            report=json_report, 
+            report_type=explain_type
+        )
+        
+        return explanation_text
     
     async def preload_all_caches(self):
         """

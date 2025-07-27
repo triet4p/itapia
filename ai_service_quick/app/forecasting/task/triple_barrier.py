@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from app.forecasting.task import ForecastingTask
+from itapia_common.dblib.schemas.reports.forecasting import TripleBarrierTaskMetadata
 
 def get_triple_barrier_labels(prices: pd.Series, h: int, tp_pct: float, sl_pct: float) -> pd.Series:
     """
@@ -215,6 +216,15 @@ class TripleBarrierTask(ForecastingTask):
         _super_metadata['sl_pct'] = self.sl_pct
         
         return _super_metadata
+    
+    def get_metadata_for_plain(self) -> TripleBarrierTaskMetadata:
+        return TripleBarrierTaskMetadata(
+            targets=self.targets,
+            units=self.target_units,
+            horizon=self.horizon,
+            tp_pct=self.tp_pct,
+            sl_pct=self.sl_pct
+        )
     
     def load_metadata(self, task_meta):
         super().load_metadata(task_meta)

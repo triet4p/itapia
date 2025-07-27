@@ -149,7 +149,7 @@ class ForecastingOrchestrator:
         # 3. Đóng gói kết quả (chạy rất nhanh)
         task_report = SingleTaskForecastReport(
             task_name=task.task_id,
-            task_metadata=task.get_metadata(),
+            task_metadata=task.get_metadata_for_plain(),
             prediction=prediction_array.flatten().tolist(),
             units=task.target_units,
             evidence=explanations

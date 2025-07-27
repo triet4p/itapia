@@ -5,6 +5,8 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from typing import Literal, Dict, List
 
+from itapia_common.dblib.schemas.reports.forecasting import _BaseTaskMetadata
+
 import app.core.config as cfg
 
 class ForecastingTask(ABC):
@@ -38,6 +40,9 @@ class ForecastingTask(ABC):
                 'details': self.selected_features
             }
         }
+        
+    def get_metadata_for_plain(self) -> _BaseTaskMetadata:
+        pass
         
     def load_metadata(self, task_meta: dict):
         """

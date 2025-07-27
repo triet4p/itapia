@@ -4,6 +4,8 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 from app.forecasting.task import ForecastingTask
 
+from itapia_common.dblib.schemas.reports.forecasting import NDaysDistributionTaskMetadata
+
 DISTRIBUTION_FEATURES = ['mean', 'std', 'min', 'max', 'q25', 'q75']
 
 def create_distribution_targets(prices: pd.Series, horizon: int) -> pd.DataFrame:
@@ -62,6 +64,13 @@ class NDaysDistributionTask(ForecastingTask):
         _super_metadata['horizon'] = self.horizon
         
         return _super_metadata
+    
+    def get_metadata_for_plain(self) -> NDaysDistributionTaskMetadata:
+        return NDaysDistributionTaskMetadata(
+            targets=self.targets,
+            units=self.target_units,
+            horizon=self.horizon
+        )
     
     def load_metadata(self, task_meta):
         super().load_metadata(task_meta)

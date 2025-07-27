@@ -1,0 +1,1 @@
+from app.explainer.reports.technical._full import TechnicalAnalysisExplainer
