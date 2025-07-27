@@ -92,6 +92,64 @@ class AIServiceQuickOrchestrator:
         return await self.news_analyzer.generate_report(ticker, news_texts)
 
     # === HÀM CHÍNH ĐIỀU PHỐI (QUY TRÌNH 1) ===
+    
+    async def get_technical_report(self, ticker: str,
+                                   daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
+                                   required_type: Literal['daily', 'intraday', 'all']='all'
+                                   ) -> Union[TechnicalReport, ErrorResponse]:
+        if not self.is_active:
+            return ErrorResponse(error='Service is not ready! Check after 5-10 minutes', code=503)
+        
+        if not self.data_preparer.is_exist(ticker):
+            return ErrorResponse(error=f'Not found ticker {ticker}', code=404)
+        
+        logger.info(f"--- CEO (ASYNC): Initiating TECHNICAL-ONLY analysis for '{ticker}' ---")
+        
+        # --- BƯỚC 1: LẤY DỮ LIỆU THÔ (ĐỒNG BỘ) ---
+        logger.info("CEO -> DataPreparer: Fetching price data...")
+        daily_df = self.data_preparer.get_daily_ohlcv_for_ticker(ticker)
+        intraday_df = self.data_preparer.get_intraday_ohlcv_for_ticker(ticker)
+
+        if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
+            logger.err(f"No daily data available for ticker {ticker}.")
+            return ErrorResponse(error=f"No daily data available for ticker {ticker}.", code=404)
+        
+        loop = asyncio.get_running_loop()
+        report = await loop.run_in_executor(
+            None, self._prepare_and_run_technical_analysis, 
+            daily_df, intraday_df, daily_analysis_type, required_type
+        )
+        return report
+    
+    async def get_forecasting_report(self, ticker: str) -> Union[ForecastingReport, ErrorResponse]:
+        if not self.is_active:
+            return ErrorResponse(error='Service is not ready! Check after 5-10 minutes', code=503)
+        
+        if not self.data_preparer.is_exist(ticker):
+            return ErrorResponse(error=f'Not found ticker {ticker}', code=404)
+        
+        logger.info(f"--- CEO (ASYNC): Initiating FORECASTING-ONLY analysis for '{ticker}' ---")
+        
+        # --- BƯỚC 1: LẤY DỮ LIỆU THÔ (ĐỒNG BỘ) ---
+        logger.info("CEO -> DataPreparer: Fetching price data...")
+        daily_df = self.data_preparer.get_daily_ohlcv_for_ticker(ticker)
+
+        if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
+            logger.err(f"No daily data available for ticker {ticker}.")
+            return ErrorResponse(error=f"No daily data available for ticker {ticker}.", code=404)
+        
+        return await self._prepare_and_run_forecasting(ticker, daily_df)
+    
+    async def get_news_report(self, ticker: str) -> Union[NewsAnalysisReport, ErrorResponse]:
+        if not self.is_active:
+            return ErrorResponse(error='Service is not ready! Check after 5-10 minutes', code=503)
+        
+        if not self.data_preparer.is_exist(ticker):
+            return ErrorResponse(error=f'Not found ticker {ticker}', code=404)
+        
+        logger.info(f"--- CEO: Initiating NEWS-ONLY analysis for '{ticker}' ---")
+        
+        return await self._prepare_and_run_news_analysis(ticker)
 
     async def get_full_analysis_report(self, ticker: str, 
                                        daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',

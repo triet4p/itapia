@@ -8,10 +8,13 @@ from app.orchestrator import AIServiceQuickOrchestrator
 from app.dependencies import get_ceo_orchestrator
 
 from itapia_common.dblib.schemas.reports import ErrorResponse, QuickCheckReport
+from itapia_common.dblib.schemas.reports.technical import TechnicalReport
+from itapia_common.dblib.schemas.reports.forecasting import ForecastingReport
+from itapia_common.dblib.schemas.reports.news import NewsAnalysisReport
 
 router = APIRouter()
 
-@router.get("/quick/analysis/{ticker}", 
+@router.get("/quick/analysis/full/{ticker}", 
             response_model=Union[QuickCheckReport, ErrorResponse],
             responses={
                 404: {"description": "Ticker or its data not found"},
@@ -19,7 +22,7 @@ router = APIRouter()
                 503: {"description": "Service is not ready, still pre-warming caches"}
             }
 )
-async def get_quick_analysis(ticker: str, 
+async def get_full_quick_analysis(ticker: str, 
                        orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
                        daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
                        required_type: Literal['daily', 'intraday', 'all']='all'):
@@ -31,7 +34,7 @@ async def get_quick_analysis(ticker: str,
 
 # ENDPOINT 2: Trả về Plain Text (endpoint mới)
 @router.get(
-    "/quick/analysis/{ticker}/explaination", 
+    "/quick/analysis/explaination/{ticker}", 
     # response_class=PlainTextResponse đảm bảo header Content-Type là text/plain
     response_class=PlainTextResponse,
     responses={
@@ -56,3 +59,53 @@ async def get_quick_analysis_explanation(
 
     # `result` bây giờ là một chuỗi string
     return result
+
+@router.get("/quick/analysis/technical/{ticker}", 
+            response_model=Union[TechnicalReport, ErrorResponse],
+            responses={
+                404: {"description": "Ticker or its data not found"},
+                500: {"description": "Internal analysis module failed"},
+                503: {"description": "Service is not ready, still pre-warming caches"}
+            }
+)
+async def get_technical_quick_analysis(ticker: str, 
+                       orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
+                       daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
+                       required_type: Literal['daily', 'intraday', 'all']='all'):
+    report = await orchestrator.get_technical_report(ticker, daily_analysis_type, required_type)
+    if isinstance(report, ErrorResponse):
+        raise HTTPException(status_code=report.code, detail=report.error)
+    
+    return report
+
+@router.get("/quick/analysis/forecasting/{ticker}", 
+            response_model=Union[ForecastingReport, ErrorResponse],
+            responses={
+                404: {"description": "Ticker or its data not found"},
+                500: {"description": "Internal analysis module failed"},
+                503: {"description": "Service is not ready, still pre-warming caches"}
+            }
+)
+async def get_forecasting_quick_analysis(ticker: str, 
+                       orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator)):
+    report = await orchestrator.get_forecasting_report(ticker)
+    if isinstance(report, ErrorResponse):
+        raise HTTPException(status_code=report.code, detail=report.error)
+    
+    return report
+
+@router.get("/quick/analysis/news/{ticker}", 
+            response_model=Union[NewsAnalysisReport, ErrorResponse],
+            responses={
+                404: {"description": "Ticker or its data not found"},
+                500: {"description": "Internal analysis module failed"},
+                503: {"description": "Service is not ready, still pre-warming caches"}
+            }
+)
+async def get_news_quick_analysis(ticker: str, 
+                       orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator)):
+    report = await orchestrator.get_news_report(ticker)
+    if isinstance(report, ErrorResponse):
+        raise HTTPException(status_code=report.code, detail=report.error)
+    
+    return report
