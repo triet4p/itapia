@@ -5,7 +5,7 @@ import pandas as pd
 
 import yfinance as yf
 
-from utils import FetchException, DEFAULT_RETURN_DATE
+from .utils import FetchException, DEFAULT_RETURN_DATE
 
 from itapia_common.dblib.session import get_singleton_rdbms_engine
 from itapia_common.dblib.services import DataPricesService, DataMetadataService

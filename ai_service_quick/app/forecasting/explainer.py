@@ -2,7 +2,7 @@ from typing import List
 import shap
 import pandas as pd
 from sklearn.multioutput import MultiOutputRegressor
-from app.forecasting.model import ForecastingModel
+from .model import ForecastingModel
 
 from itapia_common.dblib.schemas.reports.forecasting import TopFeature, BaseSHAPExplaination, SHAPExplaination
 

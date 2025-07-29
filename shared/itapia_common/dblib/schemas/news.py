@@ -3,7 +3,7 @@
 from typing import List
 from pydantic import BaseModel, Field
 
-from itapia_common.dblib.schemas.metadata import TickerMetadata
+from .metadata import TickerMetadata
 
 class RelevantNewsPoint(BaseModel):
     news_uuid: str

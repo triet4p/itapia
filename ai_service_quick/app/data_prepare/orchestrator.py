@@ -1,4 +1,4 @@
-from app.data_prepare.data_transform import *
+from .data_transform import *
 
 import app.core.config as cfg
 

@@ -4,8 +4,8 @@ from typing import List, Dict, Any
 from itapia_common.dblib.schemas.reports.technical import TechnicalReport
 
 # Import các explainer chuyên biệt mà chúng ta đã xây dựng
-from app.explainer.reports.technical.daily import DailyAnalysisExplainer
-from app.explainer.reports.technical.intraday import IntradayAnalysisExplainer
+from .daily import DailyAnalysisExplainer
+from .intraday import IntradayAnalysisExplainer
 
 class TechnicalAnalysisExplainer:
     """

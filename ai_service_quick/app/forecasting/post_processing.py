@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
-from app.forecasting.task.ndays_distribution import NDaysDistributionTask, DISTRIBUTION_FEATURES
+from .task.ndays_distribution import NDaysDistributionTask, DISTRIBUTION_FEATURES
 
 class PostProcessor(ABC):
         

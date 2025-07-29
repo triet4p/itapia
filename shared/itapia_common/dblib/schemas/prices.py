@@ -3,7 +3,7 @@
 from pydantic import BaseModel, Field
 from typing import List
 
-from itapia_common.dblib.schemas.metadata import TickerMetadata
+from .metadata import TickerMetadata
 
 class PriceDataPoint(BaseModel):
     open: float|None = None

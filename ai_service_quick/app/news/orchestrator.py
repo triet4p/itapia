@@ -8,12 +8,12 @@ import app.core.config as cfg
 
 from app.core.exceptions import PreloadCacheError
 
-from app.news.sentiment_analysis import SentimentAnalysisModel
-from app.news.ner import TransformerNERModel, SpacyNERModel
-from app.news.impact_assessment import WordBasedImpactAssessmentModel
-from app.news.keyword_highlight import WordBasedKeywordHighlightingModel
+from .sentiment_analysis import SentimentAnalysisModel
+from .ner import TransformerNERModel, SpacyNERModel
+from .impact_assessment import WordBasedImpactAssessmentModel
+from .keyword_highlight import WordBasedKeywordHighlightingModel
 
-from app.news.utils import preprocess_news_texts, load_dictionary
+from .utils import preprocess_news_texts, load_dictionary
 
 from itapia_common.dblib.schemas.reports.news import (
     NewsAnalysisReport, SingleNewsAnalysisReport

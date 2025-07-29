@@ -8,7 +8,7 @@ import redis
 from redis.client import Redis
 import redis.exceptions
 
-import itapia_common.dblib.db_config as cfg
+import db_config as cfg
 
 _SINGLETON_RDBMS_ENGINE = None
 _SINGLETON_REDIS_CLIENT = None

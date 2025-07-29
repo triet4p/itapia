@@ -8,7 +8,7 @@ from itapia_common.dblib.crud.general_update import bulk_insert
 from itapia_common.dblib.schemas.news import RelevantNewsFullPayload, RelevantNewsPoint,\
     UniversalNewsFullPayload, UniversalNewsPoint
 
-from itapia_common.dblib.services import APIMetadataService
+from .metadata import APIMetadataService
 
 import itapia_common.dblib.db_config as dbcfg
 

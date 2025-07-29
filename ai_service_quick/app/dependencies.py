@@ -1,5 +1,5 @@
 from fastapi import Request
-from app.orchestrator import AIServiceQuickOrchestrator
+from .orchestrator import AIServiceQuickOrchestrator
 
 def get_ceo_orchestrator(request: Request) -> AIServiceQuickOrchestrator:
     """

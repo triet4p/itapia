@@ -8,7 +8,7 @@ from urllib.parse import urlparse, urlunparse
 import uuid
 from gnews import GNews
 
-from utils import FetchException, UNIVERSAL_KEYWORDS_EN, UNIVERSAL_TOPIC_EN
+from .utils import FetchException, UNIVERSAL_KEYWORDS_EN, UNIVERSAL_TOPIC_EN
 
 from itapia_common.dblib.session import get_singleton_rdbms_engine
 from itapia_common.dblib.services import DataNewsService

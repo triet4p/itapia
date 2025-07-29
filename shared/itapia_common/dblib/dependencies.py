@@ -3,8 +3,8 @@ Module này cung cấp các Dependency để FastAPI sử dụng,
 giúp việc quản lý các kết nối và service tới CSDL trở nên sạch hơn.
 """
 
-from itapia_common.dblib.services import APIMetadataService, APINewsService, APIPricesService
-from itapia_common.dblib.session import get_rdbms_session, get_redis_connection
+from .services import APIMetadataService, APINewsService, APIPricesService
+from .session import get_rdbms_session, get_redis_connection
 
 from sqlalchemy.orm import Session
 from redis.client import Redis

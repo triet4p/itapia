@@ -2,9 +2,10 @@ from typing import Literal, Union
 
 # Import schema báo cáo cấp cao nhất và các explainer của từng module
 from itapia_common.dblib.schemas.reports import QuickCheckReport
-from app.explainer.reports.technical import TechnicalAnalysisExplainer
-from app.explainer.reports.news import NewsAnalysisExplainer
-from app.explainer.reports.forecasting import ForecastingExplainer
+
+from .technical import TechnicalAnalysisExplainer
+from .news import NewsAnalysisExplainer
+from .forecasting import ForecastingExplainer
 
 # Định nghĩa kiểu cho các loại báo cáo có thể yêu cầu
 ExplainReportType = Literal['technical', 'news', 'forecasting', 'all']

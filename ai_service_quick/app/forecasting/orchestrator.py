@@ -6,9 +6,10 @@ from datetime import datetime, timezone
 from typing import Dict, List
 
 from app.core.exceptions import PreloadCacheError
-from app.forecasting.task import AvailableTaskTemplate
-from app.forecasting.model import ForecastingModel, ScikitLearnForecastingModel
-from app.forecasting.explainer import TreeSHAPExplainer, MultiOutputTreeSHAPExplainer, SHAPExplainer
+
+from .task import AvailableTaskTemplate
+from .model import ForecastingModel, ScikitLearnForecastingModel
+from .explainer import TreeSHAPExplainer, MultiOutputTreeSHAPExplainer, SHAPExplainer
 
 import app.core.config as cfg
 

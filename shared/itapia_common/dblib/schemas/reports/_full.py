@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Any
-from itapia_common.dblib.schemas.reports.technical import TechnicalReport
-from itapia_common.dblib.schemas.reports.forecasting import ForecastingReport
-from itapia_common.dblib.schemas.reports.news import NewsAnalysisReport
+from .technical import TechnicalReport
+from .forecasting import ForecastingReport
+from .news import NewsAnalysisReport
 
 class QuickCheckReport(BaseModel):
     ticker: str = Field(..., description='Symbol of ticker')

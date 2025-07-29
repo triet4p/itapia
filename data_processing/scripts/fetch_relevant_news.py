@@ -5,7 +5,7 @@ import uuid
 
 import yfinance as yf
 
-from utils import FetchException
+from .utils import FetchException
 
 from itapia_common.dblib.session import get_singleton_rdbms_engine
 from itapia_common.dblib.services import DataMetadataService, DataNewsService

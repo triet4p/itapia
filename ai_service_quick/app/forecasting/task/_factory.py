@@ -1,6 +1,6 @@
-from app.forecasting.task import ForecastingTask
-from app.forecasting.task.triple_barrier import TripleBarrierTask
-from app.forecasting.task.ndays_distribution import NDaysDistributionTask
+from ._task import ForecastingTask
+from .triple_barrier import TripleBarrierTask
+from .ndays_distribution import NDaysDistributionTask
 
 from typing import Dict
 from enum import Enum

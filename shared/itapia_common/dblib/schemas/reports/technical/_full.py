@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 
-from itapia_common.dblib.schemas.reports.technical import DailyAnalysisReport
-from itapia_common.dblib.schemas.reports.technical import IntradayAnalysisReport
+from .daily import DailyAnalysisReport
+from .intraday import IntradayAnalysisReport
 
 class TechnicalReport(BaseModel):
     report_type: Literal['daily', 'intraday', 'all'] = Field(default='all', description='Decide which analysis type will be chosen')

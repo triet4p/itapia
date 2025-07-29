@@ -12,7 +12,7 @@ from itapia_common.dblib.crud.prices import get_daily_prices, get_intraday_price
 from itapia_common.dblib.crud.general_update import bulk_insert
 from itapia_common.dblib.schemas.prices import PriceDataPoint, PriceFullPayload
 
-from itapia_common.dblib.services import APIMetadataService
+from .metadata import APIMetadataService
 
 import itapia_common.dblib.db_config as dbcfg
 

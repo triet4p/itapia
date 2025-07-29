@@ -10,8 +10,8 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
-from app.forecasting.task import ForecastingTask, ForecastingTaskFactory, AvailableTaskTemplate
-from app.forecasting.post_processing import PostProcessor
+from .task import ForecastingTask, ForecastingTaskFactory, AvailableTaskTemplate
+from .post_processing import PostProcessor
 import app.core.config as cfg
 
 class ForecastingModel(ABC):
