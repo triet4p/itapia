@@ -1,11 +1,8 @@
-import math
-import copy
-from typing import NamedTuple, Callable, Dict, List, Any, Type
+import inspect
+from typing import NamedTuple, Dict, List, Any, Set, Type
 
-from ._nodes import _TreeNode, ConstantNode, VarNode, CategoricalVarNode, NumericalVarNode,\
-    OperatorNode, FunctionalOperatorNode, BranchOperatorNode
+from ._nodes import _TreeNode, NODE_TYPE
 from .semantic_typing import SemanticType
-from itapia_common.dblib.schemas.reports.technical.daily import TrendReport
 
 class NodeSpec(NamedTuple):
     node_class: Type[_TreeNode]
@@ -13,8 +10,12 @@ class NodeSpec(NamedTuple):
     params: Dict[str, Any]
     return_type: SemanticType
     args_type: List[SemanticType] = None
+    node_type: NODE_TYPE
     
 _NODE_REGISTRY: Dict[str, NodeSpec] = {}
+_CONST_NODES_ID: Set[str] = set()
+_VAR_NODES_ID: Set[str] = set()
+_OPR_NODES_ID: Set[str] = set()
     
 def register_node_by_spec(node_id: str, spec: NodeSpec):
     """Đăng ký một bản thiết kế node mới."""
@@ -22,12 +23,15 @@ def register_node_by_spec(node_id: str, spec: NodeSpec):
     if node_id in _NODE_REGISTRY:
         raise ValueError(f"Node có tên '{node_id}' đã được đăng ký.")
     _NODE_REGISTRY[node_id] = spec
+    
+    if spec.node_type == 'constant':
+        _CONST_NODES_ID.add(node_id)
+    elif spec.node_type == 'variable':
+        _VAR_NODES_ID.add(node_id)
+    elif spec.node_type == 'operator':
+        _OPR_NODES_ID.add(node_id)
 
 # --- HÀM "NHÀ MÁY" (FACTORY FUNCTION) ---
-
-# itapia_common/rules/registry.py
-
-import inspect # <<< IMPORT MỚI
 # ... các import khác ...
 
 def create_node(node_id: str, **kwargs) -> _TreeNode:
@@ -78,3 +82,19 @@ def create_node(node_id: str, **kwargs) -> _TreeNode:
             f"Lỗi khi khởi tạo node '{node_id}' với lớp '{spec.node_class.__name__}'. "
             f"Tham số cuối cùng: {final_params}. Lỗi gốc: {e}"
         ) from e
+        
+def get_all_const_nodes() -> Set[str]:
+    return _CONST_NODES_ID
+
+def get_all_var_nodes() -> Set[str]:
+    return _VAR_NODES_ID
+
+def get_all_opr_nodes() -> Set[str]:
+    return _OPR_NODES_ID
+
+def get_nodes_by_type(node_type: NODE_TYPE, semantic_type: SemanticType) -> List[str]:
+    return [
+        node_id for node_id, spec in _NODE_REGISTRY.items()
+        if spec.node_type == node_type and spec.return_type == semantic_type
+    ]
+    

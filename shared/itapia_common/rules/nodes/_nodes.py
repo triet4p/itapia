@@ -39,8 +39,10 @@ def denormalize(encoded_value: int|float,
     scaled_value = (encoded_value - target_min) / target_span
     return source_min + (scaled_value * source_span)
 
+NODE_TYPE = Literal['constant', 'variable', 'operator']
+
 class _TreeNode(ABC):
-    def __init__(self, node_id: str, node_type: Literal['constant', 'variable', 'operator'],
+    def __init__(self, node_id: str, node_type: NODE_TYPE,
                  description: str, return_type: SemanticType):
         self.node_id = node_id
         self.node_type = node_type
@@ -92,29 +94,33 @@ class VarNode(_TreeNode):
         
     def _get_raw_value_from_report(self, report: QuickCheckReport) -> Any:
         """
-        Hàm nội bộ để lấy giá trị thô từ report bằng cách duyệt theo path.
-        Ví dụ path: "technical.daily.key_indicators.rsi_14"
+        Hàm nội bộ để lấy giá trị thô, hỗ trợ cả thuộc tính object, key của dict, và chỉ số của list.
         """
         try:
             keys = self.path.split('.')
             value = report
             for key in keys:
-                # Nếu là dict, truy cập bằng key
-                if isinstance(value, dict):
-                    value = value.get(key)
-                # Nếu là object, truy cập bằng attribute
-                else:
-                    value = getattr(value, key)
-                    
                 if value is None:
-                    break
+                    # Nếu một mắt xích trung gian là None, dừng lại và trả về None
+                    return None
+
+                if key.isdigit() or (key.startswith('-') and key[1:].isdigit()):
+                    # Xử lý trường hợp là chỉ số của danh sách (ví dụ: '0', '-1')
+                    index = int(key)
+                    if isinstance(value, list) and -len(value) <= index < len(value):
+                        value = value[index]
+                    else:
+                        # Index không hợp lệ hoặc value không phải là list
+                        return None
+                elif isinstance(value, dict):
+                    # Xử lý trường hợp là key của dictionary
+                    value = value.get(key)
+                else:
+                    # Xử lý trường hợp là thuộc tính của object
+                    value = getattr(value, key)
             
-            # Nếu giá trị là None sau khi duyệt, coi như không tìm thấy
-            if value is None:
-                return None 
             return value
-        except (AttributeError, KeyError, TypeError):
-            # Nếu có lỗi xảy ra trên đường đi (path sai, object là None), trả về None
+        except (AttributeError, KeyError, TypeError, IndexError):
             raise NotFoundVarPathError(self.path)
 
     def evaluate(self, report: QuickCheckReport) -> float:
@@ -224,7 +230,7 @@ class OperatorNode(_TreeNode):
         self.num_child = num_child
         self.children = children
         
-        if num_child != len(args_type):
+        if num_child is not None and num_child != len(args_type):
             raise ValueError('Lenght of Args type must equal num child')
         
         self.args_type = args_type

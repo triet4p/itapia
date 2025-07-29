@@ -25,7 +25,6 @@ class Rule:
                  rule_id: str | None = None,
                  name: str = "Untitled Rule",
                  description: str = "",
-                 purpose: str = "GENERAL",
                  is_active: bool = True,
                  version: float = 1.0,
                  created_at: datetime | None = None,
@@ -51,12 +50,15 @@ class Rule:
         self.name = name
         self.description = description
         self.root = root
-        self.purpose = purpose
         self.is_active = is_active
         self.version = version
         # Luôn sử dụng timezone-aware datetimes
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
+        
+    @property
+    def purpose(self):
+        return self.root.return_type
 
     def __repr__(self) -> str:
         return f"Rule(rule_id='{self.rule_id}', name='{self.name}', version={self.version}, is_active={self.is_active})"

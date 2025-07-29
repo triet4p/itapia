@@ -24,5 +24,10 @@ class SemanticType(Enum):
     SENTIMENT = auto()          # Điểm số cảm tính
     FORECAST_PROB = auto()      # Xác suất dự báo
     
+    # Kiểu ngữ nghĩa quyết định
+    DECISION_SIGNAL = auto()
+    RISK_LEVEL = auto()
+    OPPORTUNITY_RATING = auto()
+    
     # Kiểu đặc biệt
     ANY = auto()                # Có thể là bất kỳ kiểu nào (dùng cho các toán tử linh hoạt)

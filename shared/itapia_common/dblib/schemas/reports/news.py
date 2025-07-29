@@ -33,12 +33,22 @@ class KeywordHighlightingReport(BaseModel):
     class Config:
         from_attributes = True
         
+class SummaryReport(BaseModel):
+    num_positive_sentiment: int
+    num_negative_sentiment: int
+    num_high_impact: int
+    num_moderate_impact: int
+    num_low_impact: int
+    avg_of_positive_keyword_found: float
+    avg_of_negative_keyword_found: float
+    avg_of_ner_found: float
+        
 class SingleNewsAnalysisReport(BaseModel):
     text: str = Field(..., description='Text to analysis')
     sentiment_analysis: SentimentAnalysisReport = Field(..., description='Sentiment Analysis Report')
-    ner: NERReport|None = Field(..., description='NER Report')
-    impact_assessment: ImpactAssessmentReport|None = Field(..., description='Impact Assessment Report')
-    keyword_highlighting_evidence: KeywordHighlightingReport|None = Field(..., description='Keyword Highlighting Evidence')
+    ner: NERReport = Field(..., description='NER Report')
+    impact_assessment: ImpactAssessmentReport = Field(..., description='Impact Assessment Report')
+    keyword_highlighting_evidence: KeywordHighlightingReport = Field(..., description='Keyword Highlighting Evidence')
     
     class Config:
         from_attributes = True
@@ -46,3 +56,4 @@ class SingleNewsAnalysisReport(BaseModel):
 class NewsAnalysisReport(BaseModel):
     ticker: str
     reports: List[SingleNewsAnalysisReport]
+    summary: SummaryReport
