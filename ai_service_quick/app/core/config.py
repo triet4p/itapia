@@ -35,6 +35,7 @@ NEWS_IMPACT_ASSESSMENT_MODEL = 'custom-word-based-impact-assessment'
 NEWS_IMPACT_DICTIONARY_PATH = '/ai-service-quick/app/news/dictionaries/impact_{level}.csv'
 NEWS_KEYWORD_HIGHLIGHT_MODEL = 'custom-word-based-keyword-highlight'
 NEWS_KEYWORD_HIGHLIGHT_PATH = '/ai-service-quick/app/news/dictionaries/keyword_{direction}.csv'
+NEWS_RESULT_SUMMARY_MODEL = 'custom-result-summarizer'
 
 NEWS_COUNT_RELEVANT = 10
 NEWS_COUNT_CONTEXTUAL = 4

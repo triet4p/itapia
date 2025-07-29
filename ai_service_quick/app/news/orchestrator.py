@@ -12,6 +12,7 @@ from .sentiment_analysis import SentimentAnalysisModel
 from .ner import TransformerNERModel, SpacyNERModel
 from .impact_assessment import WordBasedImpactAssessmentModel
 from .keyword_highlight import WordBasedKeywordHighlightingModel
+from .summary import ResultSummarizer
 
 from .utils import preprocess_news_texts, load_dictionary
 
@@ -69,6 +70,9 @@ def _create_keyword_highlighting_model_sync() -> WordBasedKeywordHighlightingMod
         positive_dictionary=positive_dictionary,
         negative_dictionary=negative_dictionary
     )
+    
+def _create_summary_model_sync() -> ResultSummarizer:
+    return ResultSummarizer()
 
 
 class NewsOrchestrator:
@@ -92,6 +96,11 @@ class NewsOrchestrator:
             'key': cfg.NEWS_KEYWORD_HIGHLIGHT_MODEL,
             'func': _create_keyword_highlighting_model_sync,
             'params': {}
+        },
+        'summary': {
+            'key': cfg.NEWS_RESULT_SUMMARY_MODEL,
+            'func': _create_summary_model_sync,
+            'params': {}
         }
     }
     
@@ -108,6 +117,8 @@ class NewsOrchestrator:
         ner_model: SpacyNERModel = await self._get_or_load_element('ner')
         impact_model: WordBasedImpactAssessmentModel = await self._get_or_load_element('impact-assessment')
         keyword_model: WordBasedKeywordHighlightingModel = await self._get_or_load_element('keyword-highlight')
+        summary_model: ResultSummarizer = await self._get_or_load_element('summary')
+    
         # Other ... 
         
         logger.info(f"Running sentiment analysis for {len(texts)} news items...")
@@ -132,12 +143,15 @@ class NewsOrchestrator:
                 keyword_highlighting_evidence=keyword_reports[i]
             ))
             
+        summary = summary_model.summary(single_reports)
+            
         return NewsAnalysisReport(
             ticker=ticker,
-            reports=single_reports
+            reports=single_reports,
+            summary=summary
         )
         
-    async def _get_or_load_element(self, element_type: Literal['sentiment', 'ner', 'impact-assessment', 'keyword-highlight']):
+    async def _get_or_load_element(self, element_type: Literal['sentiment', 'ner', 'impact-assessment', 'keyword-highlight', 'summary']):
         """
         Lấy model từ cache. Nếu không có, tải về từ Hugging Face và cache lại.
         Hàm này sẽ tự động "hồi sinh" Task từ metadata đã lưu.
@@ -158,17 +172,6 @@ class NewsOrchestrator:
             )
             
         return await self.model_cache.get_or_set_with_lock(key, model_factory)
-    
-    def _get_or_load_element_sync(self, element_type: Literal['sentiment', 'ner', 'impact-assessment', 'keyword-highlight']):
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-        return loop.run_until_complete(
-            self._get_or_load_element(element_type)
-        )
     
     async def preload_caches(self):
         logger.info("--- NEWS: Starting pre-warming process for all models ---")
