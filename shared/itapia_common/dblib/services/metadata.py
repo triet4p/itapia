@@ -4,7 +4,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from itapia_common.dblib.crud.metadata import get_ticker_metadata, get_all_sectors
-from itapia_common.dblib.schemas.metadata import TickerMetadata, SectorMetadata
+from itapia_common.schemas.entities.metadata import TickerMetadata, SectorMetadata
 
 from itapia_common.logger import ITAPIALogger
 

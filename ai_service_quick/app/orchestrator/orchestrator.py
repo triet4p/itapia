@@ -9,10 +9,12 @@ from app.forecasting.orchestrator import ForecastingOrchestrator
 from app.news.orchestrator import NewsOrchestrator
 from app.explainer.reports.orchestrator import ReportsExplainerOrchestrator, ExplainReportType
 
-from itapia_common.dblib.schemas.reports import QuickCheckReport, ErrorResponse
-from itapia_common.dblib.schemas.reports.forecasting import ForecastingReport
-from itapia_common.dblib.schemas.reports.news import NewsAnalysisReport
-from itapia_common.dblib.schemas.reports.technical import TechnicalReport
+from app.core.exceptions import PreloadCacheError, NoDataError, NotReadyServiceError, MissingReportError
+
+from itapia_common.schemas.entities.reports import QuickCheckReport
+from itapia_common.schemas.entities.reports.forecasting import ForecastingReport
+from itapia_common.schemas.entities.reports.news import NewsAnalysisReport
+from itapia_common.schemas.entities.reports.technical import TechnicalReport
 from itapia_common.dblib.services import APIMetadataService, APINewsService, APIPricesService
 from itapia_common.logger import ITAPIALogger
 
@@ -90,18 +92,23 @@ class AIServiceQuickOrchestrator:
 
         # 2. Gọi hàm generate_report (nặng, bất đồng bộ)
         return await self.news_analyzer.generate_report(ticker, news_texts)
+    
+    def check_service_health(self):
+        if not self.is_active:
+            raise NotReadyServiceError('Service is not ready! Check after 5-10 minutes')
+        
+    def check_data_avaiable(self, ticker: str):
+        if not self.data_preparer.is_exist(ticker):
+            raise NoDataError(f'Not found ticker {ticker}')
 
     # === HÀM CHÍNH ĐIỀU PHỐI (QUY TRÌNH 1) ===
     
     async def get_technical_report(self, ticker: str,
                                    daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
                                    required_type: Literal['daily', 'intraday', 'all']='all'
-                                   ) -> Union[TechnicalReport, ErrorResponse]:
-        if not self.is_active:
-            return ErrorResponse(error='Service is not ready! Check after 5-10 minutes', code=503)
-        
-        if not self.data_preparer.is_exist(ticker):
-            return ErrorResponse(error=f'Not found ticker {ticker}', code=404)
+                                   ) -> TechnicalReport:
+        self.check_service_health()
+        self.check_data_avaiable(ticker)
         
         logger.info(f"--- CEO (ASYNC): Initiating TECHNICAL-ONLY analysis for '{ticker}' ---")
         
@@ -112,7 +119,7 @@ class AIServiceQuickOrchestrator:
 
         if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
             logger.err(f"No daily data available for ticker {ticker}.")
-            return ErrorResponse(error=f"No daily data available for ticker {ticker}.", code=404)
+            raise NoDataError(f"No daily data available for ticker {ticker}.")
         
         loop = asyncio.get_running_loop()
         report = await loop.run_in_executor(
@@ -121,12 +128,9 @@ class AIServiceQuickOrchestrator:
         )
         return report
     
-    async def get_forecasting_report(self, ticker: str) -> Union[ForecastingReport, ErrorResponse]:
-        if not self.is_active:
-            return ErrorResponse(error='Service is not ready! Check after 5-10 minutes', code=503)
-        
-        if not self.data_preparer.is_exist(ticker):
-            return ErrorResponse(error=f'Not found ticker {ticker}', code=404)
+    async def get_forecasting_report(self, ticker: str) -> ForecastingReport:
+        self.check_service_health()
+        self.check_data_avaiable(ticker)
         
         logger.info(f"--- CEO (ASYNC): Initiating FORECASTING-ONLY analysis for '{ticker}' ---")
         
@@ -136,16 +140,13 @@ class AIServiceQuickOrchestrator:
 
         if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
             logger.err(f"No daily data available for ticker {ticker}.")
-            return ErrorResponse(error=f"No daily data available for ticker {ticker}.", code=404)
+            raise NoDataError(f"No daily data available for ticker {ticker}.")
         
         return await self._prepare_and_run_forecasting(ticker, daily_df)
     
-    async def get_news_report(self, ticker: str) -> Union[NewsAnalysisReport, ErrorResponse]:
-        if not self.is_active:
-            return ErrorResponse(error='Service is not ready! Check after 5-10 minutes', code=503)
-        
-        if not self.data_preparer.is_exist(ticker):
-            return ErrorResponse(error=f'Not found ticker {ticker}', code=404)
+    async def get_news_report(self, ticker: str) -> NewsAnalysisReport:
+        self.check_service_health()
+        self.check_data_avaiable(ticker)
         
         logger.info(f"--- CEO: Initiating NEWS-ONLY analysis for '{ticker}' ---")
         
@@ -154,15 +155,12 @@ class AIServiceQuickOrchestrator:
     async def get_full_analysis_report(self, ticker: str, 
                                        daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
                                        required_type: Literal['daily', 'intraday', 'all']='all'
-                                      ) -> Union[QuickCheckReport, ErrorResponse]:
+                                      ) -> QuickCheckReport:
         """
         Tạo báo cáo phân tích A-Z cho một ticker, chạy các module nặng song song.
         """
-        if not self.is_active:
-            return ErrorResponse(error='Service is not ready! Check after 5-10 minutes', code=503)
-        
-        if not self.data_preparer.is_exist(ticker):
-            return ErrorResponse(error=f'Not found ticker {ticker}', code=404)
+        self.check_service_health()
+        self.check_data_avaiable(ticker)
         
         logger.info(f"--- CEO (ASYNC): Initiating full analysis for ticker '{ticker}' ---")
         
@@ -173,7 +171,7 @@ class AIServiceQuickOrchestrator:
 
         if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
             logger.err(f"No daily data available for ticker {ticker}.")
-            return ErrorResponse(error=f"No daily data available for ticker {ticker}.", code=404)
+            raise NoDataError(f"No daily data available for ticker {ticker}.")
 
         # --- BƯỚC 2: CHẠY TẤT CẢ CÁC MODULE SONG SONG ---
         logger.info("CEO: Dispatching all analysis modules to run in parallel...")
@@ -206,13 +204,13 @@ class AIServiceQuickOrchestrator:
         # Kiểm tra xem có module nào bị lỗi không
         if isinstance(technical_report, Exception):
             logger.err(f"Technical analysis failed for {ticker}: {technical_report}")
-            return ErrorResponse(error=f"Technical analysis module failed.", code=500)
+            raise MissingReportError(f"Technical analysis module failed.")
         if isinstance(forecasting_report, Exception):
             logger.err(f"Forecasting failed for {ticker}: {forecasting_report}")
-            return ErrorResponse(error=f"Forecasting module failed.", code=500)
+            raise MissingReportError(f"Forecasting module failed.")
         if isinstance(news_report, Exception):
             logger.err(f"News analysis failed for {ticker}: {news_report}")
-            return ErrorResponse(error=f"News analysis module failed.", code=500)
+            raise MissingReportError(f"News analysis module failed.")
 
         # --- BƯỚC 4: TẠO BÁO CÁO CUỐI CÙNG ---
         generate_time = datetime.now(tz=timezone.utc)
@@ -237,7 +235,7 @@ class AIServiceQuickOrchestrator:
         daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
         required_type: Literal['daily', 'intraday', 'all']='all',
         explain_type: ExplainReportType = 'all'
-    ) -> Union[str, ErrorResponse]:
+    ) -> str:
         """
         Tái sử dụng báo cáo JSON đầy đủ và tạo ra một bản tóm tắt plain-text.
         """
@@ -247,10 +245,6 @@ class AIServiceQuickOrchestrator:
         json_report = await self.get_full_analysis_report(
             ticker, daily_analysis_type, required_type
         )
-
-        # Nếu bước đầu tiên có lỗi, trả về lỗi đó
-        if isinstance(json_report, ErrorResponse):
-            return json_report
 
         # BƯỚC 2: Gọi đến Explainer Orchestrator để "dịch" báo cáo
         explanation_text = self.reports_explainer.explain(

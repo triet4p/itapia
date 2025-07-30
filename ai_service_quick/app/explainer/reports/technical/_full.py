@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 
 # Import schema cấp cao nhất
-from itapia_common.dblib.schemas.reports.technical import TechnicalReport
+from itapia_common.schemas.entities.reports.technical import TechnicalReport
 
 # Import các explainer chuyên biệt mà chúng ta đã xây dựng
 from .daily import DailyAnalysisExplainer

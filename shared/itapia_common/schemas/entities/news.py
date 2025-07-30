@@ -16,7 +16,7 @@ class RelevantNewsPoint(BaseModel):
     class Config:
         from_attributes = True
     
-class RelevantNewsFullPayload(BaseModel):
+class RelevantNews(BaseModel):
     metadata: TickerMetadata = Field(..., description='metadata of a ticker')
     datas: List[RelevantNewsPoint] = Field(..., description='news')
     
@@ -26,5 +26,5 @@ class UniversalNewsPoint(RelevantNewsPoint):
     class Config:
         from_attributes = True
         
-class UniversalNewsFullPayload(BaseModel):
+class UniversalNews(BaseModel):
     datas: List[UniversalNewsPoint] = Field(..., description='universal news')

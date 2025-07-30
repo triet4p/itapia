@@ -6,10 +6,10 @@ Tệp này định nghĩa và đăng ký tất cả các OperatorNode dựng s�
 
 import math
 
-from .registry import register_node_by_spec, NodeSpec
-from ._nodes import FunctionalOperatorNode, BranchOperatorNode
-from .semantic_typing import SemanticType
-from . import names as nms
+from itapia_common.rules.nodes.registry import register_node_by_spec, NodeSpec
+from itapia_common.rules.nodes import FunctionalOperatorNode, BranchOperatorNode
+from itapia_common.schemas.enums import SemanticType
+from itapia_common.rules.nodes import names as nms
 
 # ===================================================================
 # == A. Các hàm Phụ trợ (Helper Functions)

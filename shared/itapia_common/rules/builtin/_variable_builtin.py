@@ -5,10 +5,10 @@ Tệp này định nghĩa và đăng ký tất cả các VarNode dựng sẵn tr
 Các biến này trích xuất dữ liệu trực tiếp từ QuickCheckReport.
 """
 
-from .registry import register_node_by_spec, NodeSpec
-from ._nodes import NumericalVarNode, CategoricalVarNode
-from .semantic_typing import SemanticType
-from . import names as nms
+from itapia_common.rules.nodes.registry import register_node_by_spec, NodeSpec
+from itapia_common.rules.nodes import NumericalVarNode, CategoricalVarNode
+from itapia_common.schemas.enums import SemanticType
+from itapia_common.rules.nodes import names as nms
 
 # ===================================================================
 # == A. BIẾN TỪ BÁO CÁO PHÂN TÍCH KỸ THUẬT - KHUNG NGÀY (DAILY)

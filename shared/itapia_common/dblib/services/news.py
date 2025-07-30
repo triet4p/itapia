@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from itapia_common.dblib.crud.news import get_relevant_news, get_universal_news
 from itapia_common.dblib.crud.general_update import bulk_insert
-from itapia_common.dblib.schemas.news import RelevantNewsFullPayload, RelevantNewsPoint,\
-    UniversalNewsFullPayload, UniversalNewsPoint
+from itapia_common.schemas.entities.news import RelevantNews, RelevantNewsPoint,\
+    UniversalNews, UniversalNewsPoint
 
 from .metadata import APIMetadataService
 
@@ -22,7 +22,7 @@ class APINewsService:
         self.rdbms_session = rdbms_session
         self.metadata_service = metadata_service
         
-    def get_relevant_news(self, ticker: str, skip: int, limit: int):
+    def get_relevant_news(self, ticker: str, skip: int, limit: int) -> RelevantNews:
         """Lấy và đóng gói dữ liệu tin tức cho một ticker."""
         logger.info(f"SERVICE: Preparing news data for ticker {ticker}")
         metadata = self.metadata_service.get_validate_ticker_info(ticker, data_type='news')
@@ -38,10 +38,10 @@ class APINewsService:
             ) for row in news_rows
         ]
         
-        return RelevantNewsFullPayload(metadata=metadata,
+        return RelevantNews(metadata=metadata,
                                        datas=news_points) 
         
-    def get_universal_news(self, search_terms: str, skip: int, limit: int):
+    def get_universal_news(self, search_terms: str, skip: int, limit: int) -> UniversalNews:
         """Lấy và đóng gói dữ liệu tin tức cho một ticker."""
         logger.info(f"SERVICE: Preparing {limit} universal news ...")
         
@@ -57,7 +57,7 @@ class APINewsService:
             ) for row in news_rows
         ]
         
-        return UniversalNewsFullPayload(datas=news_points) 
+        return UniversalNews(datas=news_points) 
     
 class DataNewsService:
     def __init__(self, engine: Engine):

@@ -4,18 +4,18 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse
 
 from app.orchestrator import AIServiceQuickOrchestrator
-
+from app.core.exceptions import PreloadCacheError, NoDataError, MissingReportError, NotReadyServiceError
 from app.dependencies import get_ceo_orchestrator
 
-from itapia_common.dblib.schemas.reports import ErrorResponse, QuickCheckReport
-from itapia_common.dblib.schemas.reports.technical import TechnicalReport
-from itapia_common.dblib.schemas.reports.forecasting import ForecastingReport
-from itapia_common.dblib.schemas.reports.news import NewsAnalysisReport
+from itapia_common.schemas.api.reports import QuickCheckReportResponse
+from itapia_common.schemas.api.reports.technical import TechnicalReportResponse
+from itapia_common.schemas.api.reports.forecasting import ForecastingReportResponse
+from itapia_common.schemas.api.reports.news import NewsReportResponse
 
 router = APIRouter()
 
 @router.get("/quick/analysis/full/{ticker}", 
-            response_model=Union[QuickCheckReport, ErrorResponse],
+            response_model=QuickCheckReportResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},
                 500: {"description": "Internal analysis module failed"},
@@ -26,11 +26,15 @@ async def get_full_quick_analysis(ticker: str,
                        orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
                        daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
                        required_type: Literal['daily', 'intraday', 'all']='all'):
-    report = await orchestrator.get_full_analysis_report(ticker, daily_analysis_type, required_type)
-    if isinstance(report, ErrorResponse):
-        raise HTTPException(status_code=report.code, detail=report.error)
-    
-    return report
+    try:
+        report = await orchestrator.get_full_analysis_report(ticker, daily_analysis_type, required_type)
+        return QuickCheckReportResponse.model_validate(report.model_dump())
+    except NoDataError as e1:
+        raise HTTPException(status_code=404, detail=e1.msg)
+    except MissingReportError as e2:
+        raise HTTPException(status_code=500, detail=e2.msg)
+    except NotReadyServiceError as e3:
+        raise HTTPException(status_code=503, detail=e3.msg)
 
 # ENDPOINT 2: Trả về Plain Text (endpoint mới)
 @router.get(
@@ -50,18 +54,18 @@ async def get_quick_analysis_explanation(
     required_type: Literal['daily', 'intraday', 'all'] = 'all',
     explain_type: Literal['technical', 'news', 'forecasting', 'all'] = 'all'
 ):
-    result = await orchestrator.get_full_explanation_report(
-        ticker, daily_analysis_type, required_type, explain_type
-    )
-
-    if isinstance(result, ErrorResponse):
-        raise HTTPException(status_code=result.code, detail=result.error)
-
-    # `result` bây giờ là một chuỗi string
-    return result
+    try:
+        report = await orchestrator.get_full_explanation_report(ticker, daily_analysis_type, required_type, explain_type)
+        return report
+    except NoDataError as e1:
+        raise HTTPException(status_code=404, detail=e1.msg)
+    except MissingReportError as e2:
+        raise HTTPException(status_code=500, detail=e2.msg)
+    except NotReadyServiceError as e3:
+        raise HTTPException(status_code=503, detail=e3.msg)
 
 @router.get("/quick/analysis/technical/{ticker}", 
-            response_model=Union[TechnicalReport, ErrorResponse],
+            response_model=TechnicalReportResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},
                 500: {"description": "Internal analysis module failed"},
@@ -72,14 +76,18 @@ async def get_technical_quick_analysis(ticker: str,
                        orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
                        daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
                        required_type: Literal['daily', 'intraday', 'all']='all'):
-    report = await orchestrator.get_technical_report(ticker, daily_analysis_type, required_type)
-    if isinstance(report, ErrorResponse):
-        raise HTTPException(status_code=report.code, detail=report.error)
-    
-    return report
+    try:
+        report = await orchestrator.get_technical_report(ticker, daily_analysis_type, required_type)
+        return TechnicalReportResponse.model_validate(report.model_dump())
+    except NoDataError as e1:
+        raise HTTPException(status_code=404, detail=e1.msg)
+    except MissingReportError as e2:
+        raise HTTPException(status_code=500, detail=e2.msg)
+    except NotReadyServiceError as e3:
+        raise HTTPException(status_code=503, detail=e3.msg)
 
 @router.get("/quick/analysis/forecasting/{ticker}", 
-            response_model=Union[ForecastingReport, ErrorResponse],
+            response_model=ForecastingReportResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},
                 500: {"description": "Internal analysis module failed"},
@@ -88,14 +96,18 @@ async def get_technical_quick_analysis(ticker: str,
 )
 async def get_forecasting_quick_analysis(ticker: str, 
                        orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator)):
-    report = await orchestrator.get_forecasting_report(ticker)
-    if isinstance(report, ErrorResponse):
-        raise HTTPException(status_code=report.code, detail=report.error)
-    
-    return report
+    try:
+        report = await orchestrator.get_forecasting_report(ticker)
+        return ForecastingReportResponse.model_validate(report.model_dump())
+    except NoDataError as e1:
+        raise HTTPException(status_code=404, detail=e1.msg)
+    except MissingReportError as e2:
+        raise HTTPException(status_code=500, detail=e2.msg)
+    except NotReadyServiceError as e3:
+        raise HTTPException(status_code=503, detail=e3.msg)
 
 @router.get("/quick/analysis/news/{ticker}", 
-            response_model=Union[NewsAnalysisReport, ErrorResponse],
+            response_model=NewsReportResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},
                 500: {"description": "Internal analysis module failed"},
@@ -104,8 +116,12 @@ async def get_forecasting_quick_analysis(ticker: str,
 )
 async def get_news_quick_analysis(ticker: str, 
                        orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator)):
-    report = await orchestrator.get_news_report(ticker)
-    if isinstance(report, ErrorResponse):
-        raise HTTPException(status_code=report.code, detail=report.error)
-    
-    return report
+    try:
+        report = await orchestrator.get_news_report(ticker)
+        return NewsReportResponse.model_validate(report.model_dump())
+    except NoDataError as e1:
+        raise HTTPException(status_code=404, detail=e1.msg)
+    except MissingReportError as e2:
+        raise HTTPException(status_code=500, detail=e2.msg)
+    except NotReadyServiceError as e3:
+        raise HTTPException(status_code=503, detail=e3.msg)

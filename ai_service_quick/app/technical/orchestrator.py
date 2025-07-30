@@ -6,7 +6,7 @@ from app.technical.feature_engine import DailyFeatureEngine, IntradayFeatureEngi
 from app.technical.analysis_engine.daily import DailyAnalysisEngine
 from app.technical.analysis_engine.intraday import IntradayAnalysisEngine
 
-from itapia_common.dblib.schemas.reports.technical import TechnicalReport
+from itapia_common.schemas.entities.reports.technical import TechnicalReport
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Technical Orchestrator')

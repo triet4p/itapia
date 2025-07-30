@@ -13,7 +13,7 @@ from .explainer import TreeSHAPExplainer, MultiOutputTreeSHAPExplainer, SHAPExpl
 
 import app.core.config as cfg
 
-from itapia_common.dblib.schemas.reports.forecasting import (
+from itapia_common.schemas.entities.reports.forecasting import (
     ForecastingReport, SingleTaskForecastReport
 )
 

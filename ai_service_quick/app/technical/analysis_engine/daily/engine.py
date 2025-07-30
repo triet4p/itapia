@@ -6,8 +6,8 @@ from app.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
 from app.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
 from app.technical.analysis_engine.daily.pattern_recognizer import DailyPatternRecognizer
 
-from itapia_common.dblib.schemas.reports.technical import DailyAnalysisReport
-from itapia_common.dblib.schemas.reports.technical.daily import KeyIndicators
+from itapia_common.schemas.entities.reports.technical import DailyAnalysisReport
+from itapia_common.schemas.entities.reports.technical.daily import KeyIndicators
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Daily Analysis Engine')

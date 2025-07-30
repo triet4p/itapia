@@ -1,7 +1,7 @@
 from typing import Literal, Union
 
 # Import schema báo cáo cấp cao nhất và các explainer của từng module
-from itapia_common.dblib.schemas.reports import QuickCheckReport
+from itapia_common.schemas.entities.reports import QuickCheckReport
 
 from .technical import TechnicalAnalysisExplainer
 from .news import NewsAnalysisExplainer

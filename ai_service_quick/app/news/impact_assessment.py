@@ -1,5 +1,5 @@
 from typing import List, Set, Union, Literal, Tuple
-from itapia_common.dblib.schemas.reports.news import ImpactAssessmentReport
+from itapia_common.schemas.entities.reports.news import ImpactAssessmentReport
 # ... (Import schema và keywords giữ nguyên) ...
 
 ImpactLabel = Literal['low', 'moderate', 'high', 'unknown']

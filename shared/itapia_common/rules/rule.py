@@ -7,10 +7,11 @@ from typing import Dict, Any
 # Giả định các module này tồn tại và chứa các hàm tương ứng
 # Trong thực tế, bạn sẽ import chúng một cách chính xác
 from .nodes import OperatorNode, _TreeNode
+from itapia_common.schemas.enums import SemanticType
 from .parser import parse_tree_from_dict, serialize_tree_to_dict
 
 # Giả định sự tồn tại của schema báo cáo
-from itapia_common.dblib.schemas.reports import QuickCheckReport
+from itapia_common.schemas.entities.reports import QuickCheckReport
 
 
 class Rule:
@@ -116,12 +117,24 @@ class Rule:
         # created_at và updated_at có thể không có trong dữ liệu cũ
         created_ts = data.get("created_at")
         updated_ts = data.get("updated_at")
+        
+        purpose_from_data_str = data.get("purpose")
+        if purpose_from_data_str:
+            try:
+                # Chuyển chuỗi từ JSON thành Enum
+                purpose_from_data = SemanticType[purpose_from_data_str]
+                if purpose_from_data != root_node.return_type:
+                    raise TypeError(
+                        f"Purpose trong metadata ('{purpose_from_data.name}') "
+                        f"không khớp với return_type của root node ('{root_node.return_type.name}')."
+                    )
+            except KeyError:
+                raise ValueError(f"Purpose không hợp lệ: '{purpose_from_data_str}'")
 
         return cls(
-            rule_id=data["rule_id"],
+            rule_id=data.get('rule_id'),
             name=data["name"],
             description=data.get("description", ""),
-            purpose=data.get("purpose", "GENERAL"),
             is_active=data.get("is_active", True),
             version=data.get("version", 1.0),
             created_at=datetime.fromisoformat(created_ts) if created_ts else None,

@@ -1,5 +1,5 @@
 from typing import Union, List, Dict
-from itapia_common.dblib.schemas.reports.forecasting import (
+from itapia_common.schemas.entities.reports.forecasting import (
     ForecastingReport, SingleTaskForecastReport, 
     TripleBarrierTaskMetadata, NDaysDistributionTaskMetadata,
     SHAPExplaination, TopFeature

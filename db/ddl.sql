@@ -67,3 +67,38 @@ tsvector_update_trigger(keyword_tsv, 'pg_catalog.english', keyword);
 CREATE INDEX daily_prices_ticker ON public.daily_prices(ticker);
 CREATE INDEX relevant_news_ticker ON public.relevant_news(ticker);
 CREATE INDEX keyword_tsv_idx ON universal_news USING GIN(keyword_tsv);
+
+-- Thêm vào cuối file db/ddl.sql
+
+CREATE TABLE IF NOT EXISTS rules (
+    rule_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    version FLOAT NOT NULL DEFAULT 1.0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    
+    -- Cột quan trọng nhất, lưu toàn bộ định nghĩa Rule
+    -- bao gồm cả metadata và cây logic (root)
+    rule_definition JSONB NOT NULL,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Tạo một trigger để tự động cập nhật updated_at
+CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_timestamp
+BEFORE UPDATE ON rules
+FOR EACH ROW
+EXECUTE PROCEDURE trigger_set_timestamp();
+
+-- (Tùy chọn nhưng khuyến khích) Đánh chỉ mục trên cột JSONB để tăng tốc truy vấn
+-- Ví dụ: Đánh chỉ mục trên trường "purpose" bên trong JSON
+CREATE INDEX idx_rules_purpose ON rules USING GIN ((rule_definition->'purpose'));

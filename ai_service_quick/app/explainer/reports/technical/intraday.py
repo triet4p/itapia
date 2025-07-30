@@ -1,7 +1,7 @@
 from typing import List, Dict, Any
 
 # Import các schema Pydantic tương ứng từ thư viện chung
-from itapia_common.dblib.schemas.reports.technical.intraday import (
+from itapia_common.schemas.entities.reports.technical.intraday import (
     IntradayAnalysisReport,
     CurrentStatusReport,
     KeyLevelsReport,

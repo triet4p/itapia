@@ -1,5 +1,5 @@
 from typing import List
-from itapia_common.dblib.schemas.reports.news import SingleNewsAnalysisReport, SummaryReport
+from itapia_common.schemas.entities.reports.news import SingleNewsAnalysisReport, SummaryReport
 
 class ResultSummarizer:
     def summary(self, reports: List[SingleNewsAnalysisReport]):

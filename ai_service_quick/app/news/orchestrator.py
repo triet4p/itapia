@@ -16,7 +16,7 @@ from .summary import ResultSummarizer
 
 from .utils import preprocess_news_texts, load_dictionary
 
-from itapia_common.dblib.schemas.reports.news import (
+from itapia_common.schemas.entities.reports.news import (
     NewsAnalysisReport, SingleNewsAnalysisReport
 )
 

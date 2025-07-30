@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Literal, Any, Set, Tuple, Dict, List
-from itapia_common.dblib.schemas.reports import QuickCheckReport
+from itapia_common.schemas.entities.reports import QuickCheckReport
 from itapia_common.rules.exceptions import NotFoundVarPathError
-from .semantic_typing import SemanticType
+from itapia_common.schemas.enums import SemanticType
 
 def normalize(raw_value: int|float, default_value: int|float,
               source_range: Tuple[float, float], target_range: Tuple[float, float]):
@@ -42,9 +42,9 @@ def denormalize(encoded_value: int|float,
 NODE_TYPE = Literal['constant', 'variable', 'operator']
 
 class _TreeNode(ABC):
-    def __init__(self, node_id: str, node_type: NODE_TYPE,
+    def __init__(self, node_name: str, node_type: NODE_TYPE,
                  description: str, return_type: SemanticType):
-        self.node_id = node_id
+        self.node_name = node_name
         self.node_type = node_type
         self.description = description
         self.return_type = return_type
@@ -56,14 +56,14 @@ class _TreeNode(ABC):
     def __eq__(self, value):
         if not isinstance(value, _TreeNode):
             return False
-        return self.node_id == value.node_id
+        return self.node_name == value.node_name and self.return_type == value.return_type
     
 class ConstantNode(_TreeNode):
-    def __init__(self, node_id: str, description: str, return_type: SemanticType,
+    def __init__(self, node_name: str, description: str, return_type: SemanticType,
                  value: float, use_normalize: bool = False,
                  source_range: Tuple[float, float]|None = None,
                  target_range: Tuple[float, float]|None = None):
-        super().__init__(node_id, node_type='constant', description=description, return_type=return_type)
+        super().__init__(node_name, node_type='constant', description=description, return_type=return_type)
         self.value = value
         
         if use_normalize:
@@ -85,10 +85,10 @@ class VarNode(_TreeNode):
     Lớp cơ sở cho các "Biến thông minh".
     Nó biết cách trích xuất một giá trị thô từ report và mã hóa nó thành số.
     """
-    def __init__(self, node_id: str, description: str, return_type: SemanticType,
+    def __init__(self, node_name: str, description: str, return_type: SemanticType,
                  path: str, default_value: float = 0.0):
         # Lưu ý: node_type sẽ được gán ở lớp con
-        super().__init__(node_id, node_type='variable', description=description, return_type=return_type)
+        super().__init__(node_name, node_type='variable', description=description, return_type=return_type)
         self.path = path
         self.default_value = default_value
         
@@ -148,11 +148,11 @@ class VarNode(_TreeNode):
 
 class NumericalVarNode(VarNode):
     """Node biến dành cho các giá trị số."""
-    def __init__(self, node_id: str, description: str, return_type: SemanticType,
+    def __init__(self, node_name: str, description: str, return_type: SemanticType,
                  path: str, default_value: float = 0.0,
                  source_range: Tuple[float, float] = (0, 100),
                  target_range: Tuple[float, float] = (-1, 1)):
-        super().__init__(node_id, description, return_type, path, default_value)
+        super().__init__(node_name, description, return_type, path, default_value)
         self.source_range = source_range
         self.target_range = target_range
 
@@ -169,12 +169,12 @@ class NumericalVarNode(VarNode):
 
 class CategoricalVarNode(VarNode):
     """Node biến dành cho các giá trị hạng mục (chuỗi)."""
-    def __init__(self, node_id: str, description: str, return_type: SemanticType,
+    def __init__(self, node_name: str, description: str, return_type: SemanticType,
                  path: str, default_value: float = 0.0,
                  mapping: Dict[str, float] = None,
                  use_default_label_mapping: bool = False,
                  available_values: Set[str]|None = None):
-        super().__init__(node_id, description, return_type, path, default_value)
+        super().__init__(node_name, description, return_type, path, default_value)
         self.mapping = mapping if mapping is not None else {}
         if use_default_label_mapping:
             self.create_label_mapping(available_values)
@@ -223,10 +223,10 @@ class CategoricalVarNode(VarNode):
             
 class OperatorNode(_TreeNode):
     """Node thực hiện một phép toán trên các node con của nó."""
-    def __init__(self, node_id: str, description: str, num_child: int|None,
+    def __init__(self, node_name: str, description: str, num_child: int|None,
                  return_type: SemanticType, args_type: List[SemanticType],
                  children: List[_TreeNode] = []):
-        super().__init__(node_id, node_type='operator', description=description, return_type=return_type)
+        super().__init__(node_name, node_type='operator', description=description, return_type=return_type)
         self.num_child = num_child
         self.children = children
         
@@ -242,14 +242,10 @@ class OperatorNode(_TreeNode):
                 raise ValueError('Children of this node is full!')
         self.children.append(child_node)
         
-    def update_node(self, old_node: _TreeNode, new_node: _TreeNode):
-        try:
-            # Can use index because _TreeNode has overrided __eq__ function
-            old_idx = self.children.index(old_node)
-            self.children[old_idx] = new_node
-        except ValueError:
-            # Do nothing
-            return
+    def update_node(self, old_idx: int, new_node: _TreeNode):
+        if not (0 <= old_idx < len(self.children)):
+            raise IndexError("Chỉ số của node con không hợp lệ.")
+        self.children[old_idx] = new_node
         
     def clear(self):
         self.children.clear()
@@ -271,10 +267,10 @@ class OperatorNode(_TreeNode):
         return self._evaluate_valid(report)
     
 class FunctionalOperatorNode(OperatorNode):
-    def __init__(self, node_id: str, description: str, num_child: int|None,
+    def __init__(self, node_name: str, description: str, num_child: int|None,
                  return_type: SemanticType, args_type: List[SemanticType], 
                  opr_func: Any, children: List[_TreeNode] = []):
-        super().__init__(node_id, description, num_child, return_type, args_type, children)
+        super().__init__(node_name, description, num_child, return_type, args_type, children)
         self.opr_func = opr_func
         
     def _evaluate_valid(self, report):
@@ -283,10 +279,10 @@ class FunctionalOperatorNode(OperatorNode):
     
 class BranchOperatorNode(OperatorNode):
     """If A then B else C"""
-    def __init__(self, node_id: str, description: str,
+    def __init__(self, node_name: str, description: str,
                  return_type: SemanticType, args_type: List[SemanticType],
                  children: List[_TreeNode] = []):
-        super().__init__(node_id, description, num_child=3, 
+        super().__init__(node_name, description, num_child=3, 
                          return_type=return_type, args_type=args_type, children=children)
         
     def _evaluate_valid(self, report):

@@ -5,7 +5,7 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from typing import Literal, Dict, List
 
-from itapia_common.dblib.schemas.reports.forecasting import _BaseTaskMetadata
+from itapia_common.schemas.entities.reports.forecasting import _BaseTaskMetadata
 
 import app.core.config as cfg
 

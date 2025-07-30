@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.multioutput import MultiOutputRegressor
 from .model import ForecastingModel
 
-from itapia_common.dblib.schemas.reports.forecasting import TopFeature, BaseSHAPExplaination, SHAPExplaination
+from itapia_common.schemas.entities.reports.forecasting import TopFeature, BaseSHAPExplaination, SHAPExplaination
 
 from abc import ABC, abstractmethod
 

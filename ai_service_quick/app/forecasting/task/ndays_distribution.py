@@ -4,7 +4,7 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 from ._task import ForecastingTask
 
-from itapia_common.dblib.schemas.reports.forecasting import NDaysDistributionTaskMetadata
+from itapia_common.schemas.entities.reports.forecasting import NDaysDistributionTaskMetadata
 
 DISTRIBUTION_FEATURES = ['mean', 'std', 'min', 'max', 'q25', 'q75']
 

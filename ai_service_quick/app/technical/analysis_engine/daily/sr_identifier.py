@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Any, List
 
-from itapia_common.dblib.schemas.reports.technical.daily import SRIdentifyLevelObj, SRReport
+from itapia_common.schemas.entities.reports.technical.daily import SRIdentifyLevelObj, SRReport
 
 class DailySRIdentifier:
     """

@@ -5,6 +5,10 @@
 
 # Format num template
 CONST_NUM_TEMPLATE = 'CONST_NUM_{sign_char}{name}'
+def CONST_NUM(value: float):
+    sign_char = "P" if value >= 0 else "N"
+    name_str = str(abs(value)).replace('.', '_')
+    return CONST_NUM_TEMPLATE.format(sign_char=sign_char, name=name_str)
 
 CONST_RSI_OVERBOUGHT = 'CONST_RSI_OVERBOUGHT'
 CONST_RSI_OVERSOLD = 'CONST_RSI_OVERSOLD'

@@ -5,7 +5,7 @@ import spacy
 from spacy.language import Language
 from transformers import pipeline
 
-from itapia_common.dblib.schemas.reports.news import NERElement, NERReport
+from itapia_common.schemas.entities.reports.news import NERElement, NERReport
 
 class TransformerNERModel:
     def __init__(self, model_name: str, ner_score_threshold: float):

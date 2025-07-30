@@ -1,7 +1,7 @@
 from typing import List
 from transformers import pipeline
 
-from itapia_common.dblib.schemas.reports.news import SentimentAnalysisReport
+from itapia_common.schemas.entities.reports.news import SentimentAnalysisReport
 
 class SentimentAnalysisModel:
     def __init__(self, model_name: str):

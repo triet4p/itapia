@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 
 # Import các schema Pydantic tương ứng
-from itapia_common.dblib.schemas.reports.news import (
+from itapia_common.schemas.entities.reports.news import (
     NewsAnalysisReport,
     SingleNewsAnalysisReport,
     SentimentAnalysisReport,

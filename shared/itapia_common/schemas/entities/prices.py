@@ -17,6 +17,6 @@ class PriceDataPoint(BaseModel):
         from_attributes = True
     
         
-class PriceFullPayload(BaseModel):
+class Price(BaseModel):
     metadata: TickerMetadata = Field(..., description='metadata of a ticker')
     datas: List[PriceDataPoint] = Field(..., description='daily data or intraday data')

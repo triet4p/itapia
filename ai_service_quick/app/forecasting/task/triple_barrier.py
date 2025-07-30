@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from ._task import ForecastingTask
-from itapia_common.dblib.schemas.reports.forecasting import TripleBarrierTaskMetadata
+from itapia_common.schemas.entities.reports.forecasting import TripleBarrierTaskMetadata
 
 def get_triple_barrier_labels(prices: pd.Series, h: int, tp_pct: float, sl_pct: float) -> pd.Series:
     """

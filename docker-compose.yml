@@ -52,7 +52,7 @@ services:
     volumes:
       - ./data_processing:/data-processing
     # Chạy script điều phối real-time
-    command: python -u scripts/fetch_realtime_price.py
+    command: python -u scripts/fetch_realtime_prices.py
   
   api-gateway:
     image: itapia-api-gateway:latest

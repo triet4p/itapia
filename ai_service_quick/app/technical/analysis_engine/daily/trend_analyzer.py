@@ -1,6 +1,6 @@
 import pandas as pd
 
-from itapia_common.dblib.schemas.reports.technical.daily import MidTermTrendReport, \
+from itapia_common.schemas.entities.reports.technical.daily import MidTermTrendReport, \
     LongTermTrendReport, OverallStrengthTrendReport, TrendReport
 
 class DailyTrendAnalyzer:

@@ -21,9 +21,9 @@ def serialize_tree_to_dict(node: _TreeNode) -> Dict[str, Any]:
         raise TypeError("Đầu vào phải là một thể hiện của _TreeNode.")
 
     # Tạo dictionary cơ bản
-    # Lưu ý: node.node_id đã được .upper() trong constructor
+    # Lưu ý: node.node_name đã được .upper() trong constructor
     node_dict: Dict[str, Any] = {
-        "node_id": node.node_id,
+        "node_name": node.node_name,
     }
     
     # Nếu là một Operator, đệ quy serialize các con của nó
@@ -32,7 +32,7 @@ def serialize_tree_to_dict(node: _TreeNode) -> Dict[str, Any]:
             node_dict["children"] = [serialize_tree_to_dict(child) for child in node.children]
             
     # Các loại node khác (Constant, Var) không có 'children' hay tham số đặc biệt
-    # nên không cần làm gì thêm. Tên của chúng (node_id) đã đủ để tái tạo lại.
+    # nên không cần làm gì thêm. Tên của chúng (node_name) đã đủ để tái tạo lại.
 
     return node_dict
 
@@ -47,10 +47,10 @@ def parse_tree_from_dict(data: Dict[str, Any]) -> _TreeNode:
     Returns:
         _TreeNode: Node gốc của cây hoặc nhánh cây đã được tái tạo.
     """
-    if not isinstance(data, dict) or "node_id" not in data:
+    if not isinstance(data, dict) or "node_name" not in data:
         raise ValueError("Dữ liệu không hợp lệ, thiếu key 'node_name'.")
     
-    node_id = data["node_id"]
+    node_name = data["node_name"]
 
     # Chuẩn bị các tham số sẽ được truyền vào factory
     # Đây là các tham số động, không được định nghĩa sẵn trong Spec
@@ -68,13 +68,13 @@ def parse_tree_from_dict(data: Dict[str, Any]) -> _TreeNode:
     # Thêm các tham số đặc biệt khác ở đây nếu có...
 
     # 3. Gọi Node Factory để tạo node hiện tại
-    # node_id của một node trong cây sẽ được tự tạo hoặc có thể lấy từ dict nếu muốn
+    # node_name của một node trong cây sẽ được tự tạo hoặc có thể lấy từ dict nếu muốn
     # Ở đây, ta đơn giản hóa bằng cách dùng chính node_name
     try:
         # Nhà máy sẽ sử dụng node_name để tra cứu Spec và dùng kwargs để truyền các tham số động
-        node_instance = create_node(node_id=node_id, **factory_kwargs)
+        node_instance = create_node(node_name=node_name, **factory_kwargs)
     except Exception as e:
         # Bọc lỗi gốc để cung cấp thêm ngữ cảnh khi debug
-        raise ValueError(f"Lỗi khi tạo node với tên '{node_id}'. Lỗi gốc: {e}") from e
+        raise ValueError(f"Lỗi khi tạo node với tên '{node_name}'. Lỗi gốc: {e}") from e
 
     return node_instance

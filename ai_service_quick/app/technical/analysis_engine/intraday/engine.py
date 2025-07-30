@@ -5,7 +5,7 @@ from app.technical.analysis_engine.intraday.status_analyzer import IntradayStatu
 from app.technical.analysis_engine.intraday.level_identifier import IntradayLevelIdentifier
 from app.technical.analysis_engine.intraday.momentum_analyzer import IntradayMomentumAnalyzer
 
-from itapia_common.dblib.schemas.reports.technical import IntradayAnalysisReport
+from itapia_common.schemas.entities.reports.technical import IntradayAnalysisReport
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Intraday Analysis Engine')

@@ -1,7 +1,7 @@
 from typing import List, Union, Set
 
 # Import các schema Pydantic đã định nghĩa
-from itapia_common.dblib.schemas.reports.news import (
+from itapia_common.schemas.entities.reports.news import (
     KeywordHighlightingReport
 )
 

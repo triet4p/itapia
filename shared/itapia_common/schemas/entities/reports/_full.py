@@ -11,9 +11,3 @@ class QuickCheckReport(BaseModel):
     technical_report: Optional[TechnicalReport] = Field(..., description='Technical Report')
     forecasting_report: Optional[ForecastingReport] = Field(..., description='Forecasting report')
     news_report: Optional[NewsAnalysisReport] = Field(..., description='News report')
-    
-    
-class ErrorResponse(BaseModel):
-    error: str
-    code: int
-    

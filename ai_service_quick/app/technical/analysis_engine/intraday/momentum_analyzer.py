@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import Dict, Any
 
-from itapia_common.dblib.schemas.reports.technical.intraday import MomentumReport
+from itapia_common.schemas.entities.reports.technical.intraday import MomentumReport
 
 class IntradayMomentumAnalyzer:
     def __init__(self, feature_df: pd.DataFrame):

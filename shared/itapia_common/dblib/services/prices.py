@@ -10,7 +10,7 @@ from redis.client import Redis
 from itapia_common.dblib.crud.prices import get_daily_prices, get_intraday_prices, \
     get_latest_intraday_price, get_tickers_by_sector, add_intraday_candle, get_last_history_date
 from itapia_common.dblib.crud.general_update import bulk_insert
-from itapia_common.dblib.schemas.prices import PriceDataPoint, PriceFullPayload
+from itapia_common.schemas.entities.prices import Price, PriceDataPoint
 
 from .metadata import APIMetadataService
 
@@ -27,7 +27,7 @@ class APIPricesService:
         self.redis_client = redis_client
         self.metadata_service = metadata_service
         
-    def get_daily_prices(self, ticker: str, skip: int, limit: int) -> PriceFullPayload:
+    def get_daily_prices(self, ticker: str, skip: int, limit: int) -> Price:
         """Lấy và đóng gói dữ liệu giá lịch sử hàng ngày cho một ticker."""
         logger.info(f"SERVICE: Preparing daily prices for ticker {ticker}")
         metadata = self.metadata_service.get_validate_ticker_info(ticker, 'daily')
@@ -43,10 +43,10 @@ class APIPricesService:
             ) for row in price_rows
         ]
         
-        return PriceFullPayload(metadata=metadata, 
+        return Price(metadata=metadata, 
                                 datas=price_points)
         
-    def get_daily_prices_by_sector(self, sector_code: str, skip: int, limit: int):
+    def get_daily_prices_by_sector(self, sector_code: str, skip: int, limit: int) -> List[Price]:
         """Lấy và đóng gói dữ liệu giá hàng ngày cho tất cả các cổ phiếu trong một nhóm ngành."""
         logger.info(f"SERVICE: Preparing daily prices for sector {sector_code}...")
         
@@ -54,7 +54,7 @@ class APIPricesService:
         tickers_in_sector = get_tickers_by_sector(self.rdbms_session, dbcfg.TICKER_METADATA_TABLE_NAME,
                                                   sector_code.upper())
         
-        all_payloads: List[PriceFullPayload] = []
+        all_payloads: List[Price] = []
         
         if not tickers_in_sector:
             # Có thể trả về list rỗng hoặc ném lỗi tùy theo yêu cầu
@@ -81,7 +81,7 @@ class APIPricesService:
                 
         return all_payloads
     
-    def get_intraday_prices(self, ticker: str, latest_only: bool = False):
+    def get_intraday_prices(self, ticker: str, latest_only: bool = False) -> Price:
         """Lấy và đóng gói dữ liệu giá trong ngày từ Redis cho một ticker."""
         logger.info(f"SERVICE: Preparing intraday prices for ticker {ticker}")
         metadata = self.metadata_service.get_validate_ticker_info(ticker, 'intraday')
@@ -101,7 +101,7 @@ class APIPricesService:
             ) for row in price_rows
         ]
         
-        return PriceFullPayload(metadata=metadata,
+        return Price(metadata=metadata,
                                 datas=price_points)
         
 class DataPricesService:
