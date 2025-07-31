@@ -1,3 +1,3 @@
-from itapia_common.schemas.entities.reports.news import NewsAnalysisReport
+from itapia_common.schemas.entities.advisor.news import NewsAnalysisReport
 
 NewsReportResponse = NewsAnalysisReport

@@ -9,7 +9,7 @@ import math
 from itapia_common.rules.nodes.registry import register_node_by_spec, NodeSpec
 from itapia_common.rules.nodes import FunctionalOperatorNode, BranchOperatorNode
 from itapia_common.schemas.enums import SemanticType
-from itapia_common.rules.nodes import names as nms
+from itapia_common.rules import names as nms
 
 # ===================================================================
 # == A. Các hàm Phụ trợ (Helper Functions)

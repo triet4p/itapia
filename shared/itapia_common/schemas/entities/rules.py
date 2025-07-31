@@ -7,6 +7,7 @@ class RuleEntity(BaseModel):
     rule_id: str
     name: str
     description: str
+    purpose: str
     version: float
     is_active: bool
     created_at: datetime

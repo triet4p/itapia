@@ -11,7 +11,7 @@ import numpy as np
 from itapia_common.rules.nodes.registry import register_node_by_spec, NodeSpec
 from itapia_common.rules.nodes import ConstantNode
 from itapia_common.schemas.enums import SemanticType
-from itapia_common.rules.nodes import names as nms
+from itapia_common.rules import names as nms
 
 # == A. Hằng số Số học Chung (Ephemeral Random Constants - ERCs)
 # == Mục đích: Cung cấp "vật liệu xây dựng" thô cho Evo-worker.
@@ -131,57 +131,3 @@ register_node_by_spec(
         node_type='constant'
     )
 )
-
-# ===================================================================
-# == C. Hằng số Quyết định (Kết quả của Decision Maker)
-# ===================================================================
-DECISION_SIGNALS = {
-    # Mua
-    nms.CONST_DECISION_BUY_IMMEDIATE:   (0.95, "Signal: Buy immediately with high confidence"),
-    nms.CONST_DECISION_BUY_STRONG:      (0.8, "Signal: Strong indication to buy"),
-    nms.CONST_DECISION_BUY_MODERATE:    (0.5, "Signal: Moderate indication to buy, consider confirming"),
-    nms.CONST_DECISION_ACCUMULATE:      (0.3, "Signal: Accumulate/Buy on dips"),
-    # Giữ
-    nms.CONST_DECISION_HOLD_NEUTRAL:    (0.0, "Signal: Hold, no clear direction"),
-    nms.CONST_DECISION_HOLD_POSITIVE:   (0.1, "Signal: Hold with positive outlook"),
-    nms.CONST_DECISION_HOLD_NEGATIVE:   (-0.1,"Signal: Hold but with caution, negative outlook"),
-    # Bán
-    nms.CONST_DECISION_REDUCE_POSITION: (-0.3,"Signal: Consider reducing position/Take partial profit"),
-    nms.CONST_DECISION_SELL_MODERATE:   (-0.5,"Signal: Moderate indication to sell"),
-    nms.CONST_DECISION_SELL_STRONG:     (-0.8,"Signal: Strong indication to sell"),
-    nms.CONST_DECISION_SELL_IMMEDIATE:  (-0.95,"Signal: Sell immediately with high confidence"),
-}
-for name, (value, desc) in DECISION_SIGNALS.items():
-    register_node_by_spec(name, NodeSpec(ConstantNode, desc, return_type=SemanticType.DECISION_SIGNAL, 
-                                         params={'value': value, 'use_normalize': False},
-                                         node_type='constant'))
-
-# ===================================================================
-# == D. Hằng số Quản lý Rủi ro (Kết quả của Risk Manager)
-# ===================================================================
-RISK_LEVELS = {
-    nms.CONST_RISK_VERY_LOW:    (0.1, "Risk Level: Very Low, suitable for capital preservation"),
-    nms.CONST_RISK_LOW:         (0.3, "Risk Level: Low, conservative approach"),
-    nms.CONST_RISK_MODERATE:    (0.5, "Risk Level: Moderate, balanced risk/reward"),
-    nms.CONST_RISK_HIGH:        (0.8, "Risk Level: High, requires close monitoring"),
-    nms.CONST_RISK_VERY_HIGH:   (0.95, "Risk Level: Very High, speculative"),
-}
-for name, (value, desc) in RISK_LEVELS.items():
-    register_node_by_spec(name, NodeSpec(ConstantNode, desc, return_type=SemanticType.RISK_LEVEL, 
-                                         params={'value': value, 'use_normalize': False},
-                                         node_type='constant'))
-
-# ===================================================================
-# == E. Hằng số Đánh giá Cơ hội (Kết quả của Opportunity Finder)
-# ===================================================================
-OPPORTUNITY_RATINGS = {
-    nms.CONST_OPP_RATING_TOP_TIER:    (0.95, "Opportunity Rating: A top-tier opportunity, high conviction"),
-    nms.CONST_OPP_RATING_STRONG:    (0.8, "Opportunity Rating: A strong opportunity, worth investigating"),
-    nms.CONST_OPP_RATING_INTERESTING: (0.5, "Opportunity Rating: Interesting, add to watchlist"),
-    nms.CONST_OPP_RATING_NEUTRAL:   (0.2, "Opportunity Rating: Neutral, no special signal"),
-    nms.CONST_OPP_RATING_AVOID:     (0.0, "Opportunity Rating: Low potential, probably avoid"),
-}
-for name, (value, desc) in OPPORTUNITY_RATINGS.items():
-    register_node_by_spec(name, NodeSpec(ConstantNode, desc, return_type=SemanticType.OPPORTUNITY_RATING,
-                                         params={'value': value, 'use_normalize': False},
-                                         node_type='constant'))

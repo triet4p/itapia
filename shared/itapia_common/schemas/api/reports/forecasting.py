@@ -1,3 +1,3 @@
-from itapia_common.schemas.entities.reports.forecasting import ForecastingReport
+from itapia_common.schemas.entities.advisor.forecasting import ForecastingReport
 
 ForecastingReportResponse = ForecastingReport

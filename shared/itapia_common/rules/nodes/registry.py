@@ -7,10 +7,10 @@ from itapia_common.schemas.enums import SemanticType
 class NodeSpec(NamedTuple):
     node_class: Type[_TreeNode]
     description: str
+    node_type: NODE_TYPE
     params: Dict[str, Any]
     return_type: SemanticType
     args_type: List[SemanticType] = None
-    node_type: NODE_TYPE
     
 _NODE_REGISTRY: Dict[str, NodeSpec] = {}
 _CONST_NODES_ID: Set[str] = set()

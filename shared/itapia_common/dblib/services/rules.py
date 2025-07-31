@@ -7,6 +7,25 @@ from itapia_common.schemas.enums import SemanticType
 from itapia_common.dblib.crud.rules import RuleCRUD
 from itapia_common.schemas.entities.rules import RuleEntity
 
+import hashlib
+import uuid
+
+def create_deterministic_uuid_from_string(input_string: str):
+    # Hash the input string using SHA-1
+    hash_object = hashlib.sha1(input_string.encode('utf-8'))
+    hex_digest = hash_object.hexdigest()
+
+    # Take the first 32 characters (16 bytes) for a standard UUID
+    # This assumes SHA-1 provides enough entropy for your needs
+    uuid_hex = hex_digest[:32]
+
+    # Create a UUID object from the hexadecimal string
+    # The uuid.UUID constructor handles formatting if the string is 32 hex digits
+    deterministic_uuid = uuid.UUID(uuid_hex)
+    return deterministic_uuid
+
+NAMESPACE = create_deterministic_uuid_from_string('RuleService')
+
 class RuleService:
     def __init__(self, db_session: Session):
         # Service sẽ chứa một instance của lớp CRUD
@@ -21,7 +40,7 @@ class RuleService:
         rule_dict = rule_entity.model_dump()
         
         # Gọi CRUD để thực hiện thao tác với DB
-        res_uuid = self.crud.create_or_update_rule(uuid.UUID(rule_entity.rule_id), rule_dict)
+        res_uuid = self.crud.create_or_update_rule(uuid.uuid5(NAMESPACE, rule_entity.rule_id), rule_dict)
         
         # Trả về đối tượng Rule ban đầu để có thể tiếp tục sử dụng
         return res_uuid.hex
@@ -32,7 +51,7 @@ class RuleService:
         và "lắp ráp" nó thành một đối tượng Rule.
         """
         try:
-            rule_uuid = uuid.UUID(rule_id)
+            rule_uuid = uuid.uuid5(NAMESPACE, rule_id)
         except ValueError:
             return None # ID không hợp lệ
 

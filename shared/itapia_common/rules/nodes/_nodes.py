@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Literal, Any, Set, Tuple, Dict, List
-from itapia_common.schemas.entities.reports import QuickCheckReport
+from itapia_common.schemas.entities.advisor import QuickCheckReport
 from itapia_common.rules.exceptions import NotFoundVarPathError
 from itapia_common.schemas.enums import SemanticType
 

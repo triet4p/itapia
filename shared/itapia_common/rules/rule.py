@@ -11,7 +11,7 @@ from itapia_common.schemas.enums import SemanticType
 from .parser import parse_tree_from_dict, serialize_tree_to_dict
 
 # Giả định sự tồn tại của schema báo cáo
-from itapia_common.schemas.entities.reports import QuickCheckReport
+from itapia_common.schemas.entities.advisor import QuickCheckReport
 
 
 class Rule:
@@ -27,7 +27,7 @@ class Rule:
                  name: str = "Untitled Rule",
                  description: str = "",
                  is_active: bool = True,
-                 version: float = 1.0,
+                 version: int = 1,
                  created_at: datetime | None = None,
                  updated_at: datetime | None = None):
         """
@@ -86,7 +86,7 @@ class Rule:
             "rule_id": self.rule_id,
             "name": self.name,
             "description": self.description,
-            "purpose": self.purpose,
+            "purpose": self.purpose.value,
             "is_active": self.is_active,
             "version": self.version,
             "created_at": self.created_at.isoformat(),

@@ -1,0 +1,1 @@
+from itapia_common.schemas.entities.advisor._full import QuickCheckReport

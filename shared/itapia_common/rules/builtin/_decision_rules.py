@@ -7,9 +7,10 @@ Mỗi quy tắc đều có node gốc là một Toán tử Kết luận Đặc b
 
 from typing import List
 
+from itapia_common.rules import names as nms
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes.registry import create_node
-from itapia_common.rules.nodes import names as nms, _TreeNode
+from itapia_common.rules.nodes import _TreeNode
 
 # ===================================================================
 # == A. CÁC HÀM TẠO QUY TẮC RA QUYẾT ĐỊNH (DECISION MAKING RULES)
@@ -18,7 +19,7 @@ from itapia_common.rules.nodes import names as nms, _TreeNode
 def _build_rule(rule_id: str, name: str, description: str, logic_tree: _TreeNode) -> Rule:
     """Hàm helper để bọc logic vào một Toán tử Kết luận và tạo Rule."""
     root_node = create_node(
-        name=nms.OPR_TO_DECISION_SIGNAL,
+        node_name=nms.OPR_TO_DECISION_SIGNAL,
         children=[logic_tree]
     )
     return Rule(
@@ -125,8 +126,8 @@ def _create_rule_9_intraday_breakout() -> Rule:
 
 def _create_rule_10_negative_news_override() -> Rule:
     """[10] Tin xấu ghi đè: Bán ngay lập tức nếu có tin rất tiêu cực và tác động mạnh, bất kể tín hiệu kỹ thuật."""
-    cond_very_negative = create_node(nms.OPR_GT, children=[create_node(nms.VAR_NEWS_SUM_NUM_NEGATIVE), create_node(nms.CONST_NUM(2.0))]) # > 2 tin xấu
-    cond_has_high_impact = create_node(nms.OPR_GTE, children=[create_node(nms.VAR_NEWS_SUM_NUM_HIGH_IMPACT), create_node(nms.CONST_NUM(1.0))])
+    cond_very_negative = create_node(nms.OPR_GT, children=[create_node(nms.VAR_NEWS_SUM_NUM_NEGATIVE), create_node(nms.CONST_NUM(0.5))]) # > 2 tin xấu
+    cond_has_high_impact = create_node(nms.OPR_GTE, children=[create_node(nms.VAR_NEWS_SUM_NUM_HIGH_IMPACT), create_node(nms.CONST_NUM(0.9))])
     logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
         create_node(nms.OPR_AND, children=[cond_very_negative, cond_has_high_impact]),
         create_node(nms.CONST_DECISION_SELL_IMMEDIATE),
@@ -137,10 +138,11 @@ def _create_rule_10_negative_news_override() -> Rule:
 # ===================================================================
 # == B. DANH SÁCH TỔNG HỢP CÁC QUY TẮC DỰNG SẴN
 # ===================================================================
-_BUILTIN_DECISION_RULES: List[Rule] = []
+_BUILTIN_DECISION_RULES: List[Rule] | None = None
 
-def builtin_rules() -> List[Rule]:
+def builtin_decision_rules() -> List[Rule]:
     global _BUILTIN_DECISION_RULES
+    
     if _BUILTIN_DECISION_RULES is not None:
         return _BUILTIN_DECISION_RULES
     _BUILTIN_DECISION_RULES = [
@@ -155,3 +157,5 @@ def builtin_rules() -> List[Rule]:
         _create_rule_9_intraday_breakout(),
         _create_rule_10_negative_news_override()
     ]
+    
+    return _BUILTIN_DECISION_RULES
