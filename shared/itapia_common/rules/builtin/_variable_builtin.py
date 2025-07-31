@@ -36,7 +36,7 @@ register_node_by_spec(nms.VAR_D_ATR_14, NodeSpec(
     node_type='variable',
     return_type=SemanticType.VOLATILITY,
     # Giả định ATR 10% là rất cao
-    params={'path': 'technical_report.daily_report.key_indicators.atr_14_pct', 'source_range': (0, 15), 'target_range': (0, 1)}
+    params={'path': 'technical_report.daily_report.key_indicators.atr_14', 'source_range': (0, 15), 'target_range': (0, 1)}
 ))
 # --- A.2. Từ báo cáo xu hướng (Trend Report) ---
 

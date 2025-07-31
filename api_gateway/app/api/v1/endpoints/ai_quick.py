@@ -4,10 +4,10 @@ from fastapi.responses import PlainTextResponse
 from app.clients.ai_quick import get_full_quick_analysis, get_full_quick_analysis_explain, \
     get_technical_quick_analysis, get_news_quick_analysis, get_forecasting_quick_analysis
 
-from itapia_common.schemas.api.reports import QuickCheckReportResponse
-from itapia_common.schemas.api.reports.technical import TechnicalReportResponse
-from itapia_common.schemas.api.reports.forecasting import ForecastingReportResponse
-from itapia_common.schemas.api.reports.news import NewsReportResponse
+from itapia_common.schemas.api.analysis import QuickCheckReportResponse
+from itapia_common.schemas.api.analysis.technical import TechnicalReportResponse
+from itapia_common.schemas.api.analysis.forecasting import ForecastingReportResponse
+from itapia_common.schemas.api.analysis.news import NewsReportResponse
 
 router = APIRouter()
 

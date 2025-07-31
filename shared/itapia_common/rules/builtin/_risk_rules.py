@@ -29,110 +29,68 @@ def _build_risk_rule(rule_id: str, name: str, description: str, logic_tree: _Tre
         root=root_node
     )
 
-def _create_rule_1_high_volatility_warning() -> Rule:
-    """
-    [1] Cảnh báo Biến động Cao: Nếu ATR (đã chuẩn hóa) cao, rủi ro cao.
-    - LOGIC: Nếu ATR > 7.5% (tương đương giá trị chuẩn hóa 0.5), rủi ro được đánh giá là CAO.
-    - TRIẾT LÝ: Biến động cao có nghĩa là giá có thể di chuyển ngược lại vị thế của bạn một cách nhanh chóng.
-    """
-    # ATR > 7.5%. source_range (0,15) -> 7.5 tương đương giá trị chuẩn hóa 0.5
-    volatility_threshold = create_node(nms.CONST_NUM(0.5))
+def _create_rule_1_volatility_risk() -> Rule:
+    """[1] Rủi ro Biến động: Điểm rủi ro chính là mức độ biến động đã chuẩn hóa."""
+    # Logic: Điểm rủi ro = Giá trị đã chuẩn hóa của VAR_D_ATR_14.
+    # Biến này đã được chuẩn hóa về [0, 1], với giá trị cao hơn cho thấy biến động lớn hơn.
+    logic_tree = create_node(nms.VAR_D_ATR_14)
     
-    cond_high_atr = create_node(nms.OPR_GT, children=[
-        create_node(nms.VAR_D_ATR_14),
-        volatility_threshold
-    ])
-    
-    logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        cond_high_atr,
-        create_node(nms.CONST_RISK_HIGH),
-        create_node(nms.CONST_RISK_LOW) # Nếu không, rủi ro biến động là thấp
-    ])
-    
-    return _build_risk_rule("RULE_R_01_HIGH_VOLATILITY", "High Volatility Warning", "Flags high risk when ATR is significantly elevated.", logic_tree)
+    return _build_risk_rule("RULE_R_01_VOLATILITY_RISK", "Volatility Risk Score", "Scores risk based on the normalized ATR value.", logic_tree)
 
 def _create_rule_2_weak_trend_risk() -> Rule:
-    """
-    [2] Rủi ro Xu hướng Yếu: Giao dịch khi xu hướng yếu có rủi ro cao.
-    - LOGIC: Nếu sức mạnh xu hướng tổng thể là 'weak' hoặc 'undefined', rủi ro là TRUNG BÌNH.
-    - TRIẾT LÝ: Giao dịch trong thị trường đi ngang (sideways) hoặc không rõ xu hướng thường khó đoán và dễ bị "whipsaw" (tín hiệu nhiễu).
-    """
-    # Sức mạnh xu hướng < 0.5 (tương đương 'moderate')
-    strength_threshold = create_node(nms.CONST_NUM(0.5))
+    """[2] Rủi ro Xu hướng Yếu: Rủi ro cao hơn khi xu hướng không rõ ràng."""
+    # Logic: Điểm rủi ro = 1.0 - Sức mạnh xu hướng.
+    # Nếu xu hướng mạnh (strength=1.0), rủi ro là 0. Nếu xu hướng yếu (strength=0.2), rủi ro là 0.8.
+    trend_strength = create_node(nms.VAR_D_TREND_OVERALL_STRENGTH)
     
-    cond_weak_trend = create_node(nms.OPR_LT, children=[
-        create_node(nms.VAR_D_TREND_OVERALL_STRENGTH),
-        strength_threshold
-    ])
-
-    logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        cond_weak_trend,
-        create_node(nms.CONST_RISK_MODERATE),
-        create_node(nms.CONST_RISK_LOW)
+    logic_tree = create_node(nms.OPR_SUB2, children=[
+        create_node(nms.CONST_NUM(1.0)),
+        trend_strength
     ])
     
-    return _build_risk_rule("RULE_R_02_WEAK_TREND", "Weak Trend Risk", "Flags moderate risk when the overall trend is weak or undefined.", logic_tree)
+    return _build_risk_rule("RULE_R_02_WEAK_TREND_RISK", "Weak Trend Risk", "Scores higher risk when the trend strength is weaker.", logic_tree)
 
-def _create_rule_3_forecasted_downside() -> Rule:
-    """
-    [3] Rủi ro Giảm giá theo Dự báo: Nếu mô hình dự báo rủi ro giảm giá lớn.
-    - LOGIC: Nếu dự báo mức giảm tối đa (min_pct) trong 5 ngày tới < -5%, rủi ro là CAO.
-    - TRIẾT LÝ: Tin vào cảnh báo của mô hình định lượng về rủi ro tiềm ẩn.
-    """
-    # -5% downside. source_range (-10, 0) -> -5 tương đương giá trị chuẩn hóa -0.5
-    downside_threshold = create_node(nms.CONST_NUM(-0.5))
-
-    cond_high_downside_risk = create_node(nms.OPR_LT, children=[
-        create_node(nms.VAR_FC_5D_MIN_PCT),
-        downside_threshold
-    ])
+def _create_rule_3_forecasted_downside_risk() -> Rule:
+    """[3] Rủi ro Giảm giá theo Dự báo: Điểm rủi ro là tiềm năng giảm giá dự báo."""
+    # Logic: Điểm rủi ro = abs(Giá trị đã chuẩn hóa của VAR_FC_5D_MIN_PCT).
+    # Biến VAR_FC_5D_MIN_PCT có giá trị từ -1 đến 0. Lấy giá trị tuyệt đối sẽ chuyển nó về [0, 1].
+    # Tiềm năng giảm giá càng lớn (ví dụ: -10% -> chuẩn hóa -1.0), điểm rủi ro càng cao (1.0).
+    max_downside = create_node(nms.VAR_FC_5D_MIN_PCT)
     
-    logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        cond_high_downside_risk,
-        create_node(nms.CONST_RISK_HIGH),
-        create_node(nms.CONST_RISK_MODERATE)
-    ])
+    logic_tree = create_node(nms.OPR_ABS, children=[max_downside])
 
-    return _build_risk_rule("RULE_R_03_FC_DOWNSIDE", "Forecasted Downside Risk", "Flags high risk if the ML model forecasts a significant potential drop.", logic_tree)
+    return _build_risk_rule("RULE_R_03_FC_DOWNSIDE_RISK", "Forecasted Downside Risk", "Scores risk based on the absolute normalized forecasted max downside.", logic_tree)
 
 def _create_rule_4_negative_news_risk() -> Rule:
-    """
-    [4] Rủi ro từ Tin tức Tiêu cực: Nếu có nhiều tin tức tiêu cực, rủi ro tổng thể tăng.
-    - LOGIC: Nếu số lượng tin tức tiêu cực > 1, rủi ro được nâng lên mức TRUNG BÌNH.
-    - TRIẾT LÝ: Dòng tin tức xấu có thể báo hiệu những thay đổi tiêu cực về cơ bản hoặc tâm lý thị trường.
-    """
-    cond_many_negative_news = create_node(nms.OPR_GT, children=[
-        create_node(nms.VAR_NEWS_SUM_NUM_NEGATIVE),
-        create_node(nms.CONST_NUM(0.9)) # > 1 tin xấu
-    ])
+    """[4] Rủi ro từ Tin tức Tiêu cực: Điểm rủi ro là mức độ tin tức tiêu cực."""
+    # Logic: Điểm rủi ro = Giá trị đã chuẩn hóa của VAR_NEWS_SUM_NUM_NEGATIVE.
+    # Biến này đã được chuẩn hóa về [0, 1], với giá trị cao hơn cho thấy nhiều tin xấu hơn.
+    logic_tree = create_node(nms.VAR_NEWS_SUM_NUM_NEGATIVE)
 
-    logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        cond_many_negative_news,
-        create_node(nms.CONST_RISK_MODERATE),
-        create_node(nms.CONST_RISK_LOW)
-    ])
+    return _build_risk_rule("RULE_R_04_NEGATIVE_NEWS_RISK", "Negative News Risk", "Scores risk based on the normalized count of negative news.", logic_tree)
 
-    return _build_risk_rule("RULE_R_04_NEGATIVE_NEWS", "Negative News Risk", "Flags moderate risk if there is a flow of negative news.", logic_tree)
-
-def _create_rule_5_overextended_market() -> Rule:
+def _create_rule_5_overextended_risk() -> Rule:
     """
-    [5] Rủi ro Thị trường Tăng quá nóng: Nếu RSI đã ở vùng quá mua quá lâu.
-    - LOGIC: Nếu RSI (daily) > 70, rủi ro điều chỉnh là CAO.
-    - TRIẾT LÝ: Mua vào khi thị trường đã tăng quá nóng là rất rủi ro.
+    [5] Rủi ro Thị trường Tăng quá nóng: Điểm rủi ro cao nếu RSI ở vùng quá mua.
+    - LOGIC: Nếu RSI > 50, điểm rủi ro bắt đầu tăng tuyến tính.
+             Nếu RSI < 50, điểm rủi ro là 0.
+    - Công thức: max(0, (RSI_chuẩn_hóa - 0)) -> vì RSI=50 được chuẩn hóa về 0.
     """
-    cond_rsi_overbought = create_node(nms.OPR_GT, children=[
+    # RSI > 50 (giá trị chuẩn hóa là 0)
+    cond_is_bullish_territory = create_node(nms.OPR_GT, children=[
         create_node(nms.VAR_D_RSI_14),
-        create_node(nms.CONST_RSI_OVERBOUGHT)
+        create_node(nms.CONST_NUM(0.0)) 
     ])
     
+    # Nếu đúng, điểm rủi ro chính là giá trị RSI đã chuẩn hóa.
+    # Nếu sai, điểm rủi ro là 0.
     logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        cond_rsi_overbought,
-        create_node(nms.CONST_RISK_HIGH),
-        create_node(nms.CONST_RISK_MODERATE)
+        cond_is_bullish_territory,
+        create_node(nms.VAR_D_RSI_14),
+        create_node(nms.CONST_NUM(0.0))
     ])
 
-    return _build_risk_rule("RULE_R_05_OVEREXTENDED", "Overextended Market Risk", "Flags high risk of a pullback when the market is overbought (RSI > 70).", logic_tree)
-
+    return _build_risk_rule("RULE_R_05_OVEREXTENDED_RISK", "Overextended Market Risk", "Scores higher risk as RSI moves deeper into overbought territory (>50).", logic_tree)
 # ===================================================================
 # == B. DANH SÁCH TỔNG HỢP CÁC QUY TẮC DỰNG SẴN
 # ===================================================================
@@ -149,10 +107,10 @@ def builtin_risk_rules() -> List[Rule]:
         return _BUILTIN_RISK_RULES
         
     _BUILTIN_RISK_RULES = [
-        _create_rule_1_high_volatility_warning(),
+        _create_rule_1_volatility_risk(),
         _create_rule_2_weak_trend_risk(),
-        _create_rule_3_forecasted_downside(),
+        _create_rule_3_forecasted_downside_risk(),
         _create_rule_4_negative_news_risk(),
-        _create_rule_5_overextended_market(),
+        _create_rule_5_overextended_risk(),
     ]
     return _BUILTIN_RISK_RULES

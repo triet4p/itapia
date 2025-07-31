@@ -1,3 +1,4 @@
-from itapia_common.dblib.services.metadata import APIMetadataService, DataMetadataService
-from itapia_common.dblib.services.prices import APIPricesService, DataPricesService
-from itapia_common.dblib.services.news import APINewsService, DataNewsService
+from .metadata import APIMetadataService, DataMetadataService
+from .prices import APIPricesService, DataPricesService
+from .news import APINewsService, DataNewsService
+from .rules import RuleService

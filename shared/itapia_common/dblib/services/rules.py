@@ -5,7 +5,7 @@ import uuid
 from itapia_common.rules.rule import Rule
 from itapia_common.schemas.enums import SemanticType
 from itapia_common.dblib.crud.rules import RuleCRUD
-from itapia_common.schemas.entities.rules import RuleEntity
+from itapia_common.schemas.entities.advisor.rules import RuleEntity
 
 import hashlib
 import uuid
@@ -40,23 +40,19 @@ class RuleService:
         rule_dict = rule_entity.model_dump()
         
         # Gọi CRUD để thực hiện thao tác với DB
-        res_uuid = self.crud.create_or_update_rule(uuid.uuid5(NAMESPACE, rule_entity.rule_id), rule_dict)
+        res_uuid = self.crud.create_or_update_rule(rule_entity.rule_id, rule_dict)
         
         # Trả về đối tượng Rule ban đầu để có thể tiếp tục sử dụng
-        return res_uuid.hex
+        return res_uuid
 
     def get_rule_by_id(self, rule_id: str) -> RuleEntity | None:
         """
         Nhận một rule_id (str), lấy dữ liệu thô từ CRUD,
         và "lắp ráp" nó thành một đối tượng Rule.
         """
-        try:
-            rule_uuid = uuid.uuid5(NAMESPACE, rule_id)
-        except ValueError:
-            return None # ID không hợp lệ
 
         # Lấy dữ liệu thô
-        rule_data = self.crud.get_rule_by_id(rule_uuid)
+        rule_data = self.crud.get_rule_by_id(rule_id)
         
         if rule_data:
             # "Lắp ráp" dữ liệu thô thành đối tượng nghiệp vụ
@@ -75,4 +71,4 @@ class RuleService:
         list_of_rule_data = self.crud.get_active_rules_by_purpose(purpose_name)
         
         # "Lắp ráp" từng dictionary thành đối tượng Rule
-        return [RuleEntity.model_validate(data) for data in list_of_rule_data]
+        return [RuleEntity(**row) for row in list_of_rule_data]

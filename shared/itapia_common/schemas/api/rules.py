@@ -20,7 +20,7 @@ class RuleResponse(BaseModel):
     purpose: SemanticType
     version: float
     is_active: bool
-    created_at: str
+    created_at_ts: int
 
     class Config:
         from_attributes = True

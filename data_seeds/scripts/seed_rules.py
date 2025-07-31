@@ -2,7 +2,7 @@ from itapia_common.rules.builtin import builtin_decision_rules, builtin_risk_rul
 from itapia_common.rules.rule import Rule
 from itapia_common.dblib.services.rules import RuleService
 from itapia_common.dblib.session import get_rdbms_session
-from itapia_common.schemas.entities.rules import RuleEntity
+from itapia_common.schemas.entities.advisor.rules import RuleEntity
 from itapia_common.logger import ITAPIALogger
 from typing import List
 
@@ -11,11 +11,9 @@ logger = ITAPIALogger('Rules Seeding')
 def seed_rules(rule_service: RuleService, rules: List[Rule]):
     for rule in rules:
         rule_dict = rule.to_dict()
-        rule_entity = RuleEntity(
-            rule_definition=rule_dict['root'],
-            **rule_dict
-        )
+        rule_entity = RuleEntity.model_validate(rule_dict)
         rule_service.save_rule(rule_entity)
+        
 def seed_all():
     rdbms_session = next(get_rdbms_session())
     rule_service = RuleService(rdbms_session)

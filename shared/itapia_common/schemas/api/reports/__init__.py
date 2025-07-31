@@ -1,1 +1,0 @@
-from itapia_common.schemas.api.reports._full import QuickCheckReportResponse

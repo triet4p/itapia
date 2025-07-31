@@ -52,7 +52,20 @@ services:
     volumes:
       - ./data_processing:/data-processing
     # Chạy script điều phối real-time
-    command: python -u scripts/fetch_realtime_prices.py
+    command: python -m scripts.fetch_realtime_prices
+
+  data-seeds:
+    image: itapia-data-seeds:latest
+    container_name: itapia-data-seeds
+    env_file:
+      - .env
+    depends_on:
+      - stocks_postgre_db
+    volumes:
+      - ./data_seeds:/data-seeds
+    networks:
+      - itapia-network
+
   
   api-gateway:
     image: itapia-api-gateway:latest

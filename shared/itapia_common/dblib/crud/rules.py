@@ -8,7 +8,7 @@ class RuleCRUD:
     def __init__(self, db_session: Session):
         self.db = db_session
 
-    def create_or_update_rule(self, rule_id: uuid.UUID, rule_data: Dict[str, Any]) -> uuid.UUID:
+    def create_or_update_rule(self, rule_id: str, rule_data: Dict[str, Any]) -> str:
         """
         Tạo hoặc cập nhật một quy tắc trong CSDL bằng dữ liệu thô.
         Hàm này sử dụng `ON CONFLICT DO UPDATE` (UPSERT) của Postgres.
@@ -29,18 +29,18 @@ class RuleCRUD:
         created_at = rule_data.get("created_at")
         
         # Chuyển toàn bộ dict thành chuỗi JSON để lưu vào cột jsonb
-        rule_definition_str = json.dumps(rule_data.get('rule_definition'))
+        root_str = json.dumps(rule_data.get('root'))
         
         stmt = text("""
-            INSERT INTO rules (rule_id, name, description, purpose, version, is_active, created_at, rule_definition)
-            VALUES (:rule_id, :name, :description, :purpose, :version, :is_active, :created_at, :rule_definition)
+            INSERT INTO rules (rule_id, name, description, purpose, version, is_active, created_at, root)
+            VALUES (:rule_id, :name, :description, :purpose, :version, :is_active, :created_at, :root)
             ON CONFLICT (rule_id) DO UPDATE SET
                 name = EXCLUDED.name,
                 description = EXCLUDED.description,
                 purpose = EXCLUDED.purpose,
                 version = EXCLUDED.version,
                 is_active = EXCLUDED.is_active,
-                rule_definition = EXCLUDED.rule_definition,
+                root = EXCLUDED.root,
                 updated_at = NOW()
             RETURNING rule_id;
         """)
@@ -53,33 +53,33 @@ class RuleCRUD:
             "version": version,
             "is_active": is_active,
             "created_at": created_at, 
-            "rule_definition": rule_definition_str
+            "root": root_str
         })
         self.db.commit()
         return rule_id
 
-    def get_rule_by_id(self, rule_id: uuid.UUID) -> Dict[str, Any] | None:
+    def get_rule_by_id(self, rule_id: str) -> Dict[str, Any] | None:
         """Lấy dữ liệu thô (dict) của một quy tắc bằng ID."""
-        stmt = text("""SELECT rule_id, name, description, purpose, version, is_active, created_at, updated_at, rule_definition 
+        stmt = text("""SELECT rule_id, name, description, purpose, version, is_active, created_at, updated_at, root 
                     FROM rules WHERE is_active=TRUE AND rule_id = :rule_id;""")
         result = self.db.execute(stmt, {"rule_id": rule_id}).fetchone()
         
         if result:
-            # result[0] chứa cột rule_definition (kiểu jsonb),
+            # result[0] chứa cột root (kiểu jsonb),
             # SQLAlchemy tự động parse nó thành dict
-            return result[0]
+            return result
         return None
 
-    def get_active_rules_by_purpose(self, purpose_name: str) -> List[Dict[str, Any]]:
+    def get_active_rules_by_purpose(self, purpose_name: str):
         """
         Lấy danh sách dữ liệu thô (list of dicts) của các quy tắc đang hoạt động
         theo một mục đích cụ thể.
         """
         # Postgres JSONB query: `->>` trích xuất trường dưới dạng text
-        stmt = text("""SELECT rule_id, name, description, purpose, version, is_active, created_at, updated_at, rule_definition 
+        stmt = text("""SELECT rule_id, name, description, purpose, version, is_active, created_at, updated_at, root 
                     FROM rules WHERE is_active=TRUE AND purpose = :purpose;""")
         
-        results = self.db.execute(stmt, {"purpose": purpose_name}).fetchall()
+        results = self.db.execute(stmt, {"purpose": purpose_name})
         
         # Trả về một list các dictionary
-        return [row[0] for row in results]
+        return results.mappings().all()

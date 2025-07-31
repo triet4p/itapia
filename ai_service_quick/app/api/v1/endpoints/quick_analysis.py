@@ -7,10 +7,10 @@ from app.orchestrator import AIServiceQuickOrchestrator
 from app.core.exceptions import PreloadCacheError, NoDataError, MissingReportError, NotReadyServiceError
 from app.dependencies import get_ceo_orchestrator
 
-from itapia_common.schemas.api.reports import QuickCheckReportResponse
-from itapia_common.schemas.api.reports.technical import TechnicalReportResponse
-from itapia_common.schemas.api.reports.forecasting import ForecastingReportResponse
-from itapia_common.schemas.api.reports.news import NewsReportResponse
+from itapia_common.schemas.api.analysis import QuickCheckReportResponse
+from itapia_common.schemas.api.analysis.technical import TechnicalReportResponse
+from itapia_common.schemas.api.analysis.forecasting import ForecastingReportResponse
+from itapia_common.schemas.api.analysis.news import NewsReportResponse
 
 router = APIRouter()
 
@@ -55,7 +55,7 @@ async def get_quick_analysis_explanation(
     explain_type: Literal['technical', 'news', 'forecasting', 'all'] = 'all'
 ):
     try:
-        report = await orchestrator.get_full_explanation_report(ticker, daily_analysis_type, required_type, explain_type)
+        report = await orchestrator.get_full_analysis_explaination_report(ticker, daily_analysis_type, required_type, explain_type)
         return report
     except NoDataError as e1:
         raise HTTPException(status_code=404, detail=e1.msg)

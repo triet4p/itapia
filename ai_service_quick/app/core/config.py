@@ -32,9 +32,9 @@ NEWS_TRANSFORMER_NER_MODEL = 'dslim/distilbert-NER'
 NEWS_NER_SCORE_THRESHOLD = 0.75
 NEWS_SPACY_NER_MODEL = 'en_core_web_md'
 NEWS_IMPACT_ASSESSMENT_MODEL = 'custom-word-based-impact-assessment'
-NEWS_IMPACT_DICTIONARY_PATH = '/ai-service-quick/app/news/dictionaries/impact_{level}.csv'
+NEWS_IMPACT_DICTIONARY_PATH = '/ai-service-quick/app/analysis/news/dictionaries/impact_{level}.csv'
 NEWS_KEYWORD_HIGHLIGHT_MODEL = 'custom-word-based-keyword-highlight'
-NEWS_KEYWORD_HIGHLIGHT_PATH = '/ai-service-quick/app/news/dictionaries/keyword_{direction}.csv'
+NEWS_KEYWORD_HIGHLIGHT_PATH = '/ai-service-quick/app/analysis/news/dictionaries/keyword_{direction}.csv'
 NEWS_RESULT_SUMMARY_MODEL = 'custom-result-summarizer'
 
 NEWS_COUNT_RELEVANT = 10

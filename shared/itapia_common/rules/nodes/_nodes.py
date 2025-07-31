@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Literal, Any, Set, Tuple, Dict, List
-from itapia_common.schemas.entities.advisor import QuickCheckReport
+from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from itapia_common.rules.exceptions import NotFoundVarPathError
 from itapia_common.schemas.enums import SemanticType
 
@@ -50,7 +50,7 @@ class _TreeNode(ABC):
         self.return_type = return_type
         
     @abstractmethod
-    def evaluate(self, report: QuickCheckReport) -> float:
+    def evaluate(self, report: QuickCheckAnalysisReport) -> float:
         pass
     
     def __eq__(self, value):
@@ -92,7 +92,7 @@ class VarNode(_TreeNode):
         self.path = path
         self.default_value = default_value
         
-    def _get_raw_value_from_report(self, report: QuickCheckReport) -> Any:
+    def _get_raw_value_from_report(self, report: QuickCheckAnalysisReport) -> Any:
         """
         Hàm nội bộ để lấy giá trị thô, hỗ trợ cả thuộc tính object, key của dict, và chỉ số của list.
         """
@@ -123,7 +123,7 @@ class VarNode(_TreeNode):
         except (AttributeError, KeyError, TypeError, IndexError):
             raise NotFoundVarPathError(self.path)
 
-    def evaluate(self, report: QuickCheckReport) -> float:
+    def evaluate(self, report: QuickCheckAnalysisReport) -> float:
         """
         Luồng thực thi chính của một VarNode.
         1. Lấy giá trị thô, nếu path sai thì ném lỗi (cái này quan trọng, nó khác có path nhưng ko có giá trị)
@@ -258,7 +258,7 @@ class OperatorNode(_TreeNode):
         return True
     
     @abstractmethod
-    def _evaluate_valid(self, report: QuickCheckReport) -> float:
+    def _evaluate_valid(self, report: QuickCheckAnalysisReport) -> float:
         pass
     
     def evaluate(self, report):

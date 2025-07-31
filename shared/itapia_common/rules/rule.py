@@ -11,7 +11,7 @@ from itapia_common.schemas.enums import SemanticType
 from .parser import parse_tree_from_dict, serialize_tree_to_dict
 
 # Giả định sự tồn tại của schema báo cáo
-from itapia_common.schemas.entities.advisor import QuickCheckReport
+from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 
 
 class Rule:
@@ -64,7 +64,7 @@ class Rule:
     def __repr__(self) -> str:
         return f"Rule(rule_id='{self.rule_id}', name='{self.name}', version={self.version}, is_active={self.is_active})"
 
-    def execute(self, report: QuickCheckReport) -> float:
+    def execute(self, report: QuickCheckAnalysisReport) -> float:
         """
         Thực thi quy tắc dựa trên một báo cáo phân tích và trả về kết quả.
 
@@ -89,8 +89,8 @@ class Rule:
             "purpose": self.purpose.value,
             "is_active": self.is_active,
             "version": self.version,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
             # Sử dụng helper để chuyển đổi cây logic thành dict
             "root": serialize_tree_to_dict(self.root)
         }
@@ -137,8 +137,8 @@ class Rule:
             description=data.get("description", ""),
             is_active=data.get("is_active", True),
             version=data.get("version", 1.0),
-            created_at=datetime.fromisoformat(created_ts) if created_ts else None,
-            updated_at=datetime.fromisoformat(updated_ts) if updated_ts else None,
+            created_at=created_ts,
+            updated_at=updated_ts,
             # Truyền cây logic đã được tái tạo
             root=root_node
         )

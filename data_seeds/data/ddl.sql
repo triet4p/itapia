@@ -71,7 +71,7 @@ CREATE INDEX keyword_tsv_idx ON universal_news USING GIN(keyword_tsv);
 -- Thêm vào cuối file db/ddl.sql
 
 CREATE TABLE IF NOT EXISTS rules (
-    rule_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    rule_id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     purpose VARCHAR(30),
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS rules (
     
     -- Cột quan trọng nhất, lưu toàn bộ định nghĩa Rule
     -- bao gồm cả metadata và cây logic (root)
-    rule_definition JSONB NOT NULL,
+    root JSONB NOT NULL,
     
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

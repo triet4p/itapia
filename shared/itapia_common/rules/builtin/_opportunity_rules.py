@@ -30,122 +30,73 @@ def _build_opportunity_rule(rule_id: str, name: str, description: str, logic_tre
     )
 
 def _create_rule_1_deep_value_screener() -> Rule:
-    """
-    [1] Sàng lọc "Mua giá trị": Tìm cổ phiếu bị bán quá đà trong một xu hướng dài hạn vẫn tốt.
-    - LOGIC: Nếu RSI (daily) < 30 (quá bán) VÀ xu hướng dài hạn là UPTREND.
-    - TRIẾT LÝ: Tìm kiếm cơ hội mua "kim cương trong bùn", cổ phiếu tốt đang bị điều chỉnh tạm thời.
-    """
-    cond_rsi_oversold = create_node(nms.OPR_LT, children=[
-        create_node(nms.VAR_D_RSI_14),
-        create_node(nms.CONST_RSI_OVERSOLD)
-    ])
-    cond_long_trend_up = create_node(nms.OPR_EQ, children=[
-        create_node(nms.VAR_D_TREND_LONGTERM_DIR),
-        create_node(nms.CONST_NUM(1.0))
-    ])
+    """[1] Sàng lọc "Mua giá trị": Điểm số cao nếu RSI quá bán trong một xu hướng dài hạn tốt."""
+    # Logic: Điểm = (Tín hiệu RSI quá bán) * (Tín hiệu xu hướng dài hạn tốt)
+    # Tín hiệu RSI quá bán: 1 nếu RSI < 30, 0 nếu không.
+    # Tín hiệu xu hướng dài hạn tốt: 1 nếu uptrend, 0 nếu không.
+    # Chỉ khi cả hai điều kiện đều đúng thì điểm mới là 1.
+    cond_rsi_oversold = create_node(nms.OPR_LT, children=[create_node(nms.VAR_D_RSI_14), create_node(nms.CONST_RSI_OVERSOLD)])
+    cond_long_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(1.0))])
     
-    logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        create_node(nms.OPR_AND, children=[cond_rsi_oversold, cond_long_trend_up]),
-        create_node(nms.CONST_OPP_RATING_STRONG), # Đây là một cơ hội mạnh
-        create_node(nms.CONST_OPP_RATING_AVOID)   # Nếu không, quy tắc này không tìm thấy gì
-    ])
+    # Dùng AND, nó sẽ trả về 1.0 nếu cả hai đúng, 0.0 nếu không.
+    logic_tree = create_node(nms.OPR_AND, children=[cond_rsi_oversold, cond_long_trend_up])
     
-    return _build_opportunity_rule("RULE_O_01_DEEP_VALUE", "Deep Value Screener", "Finds oversold stocks within a long-term uptrend.", logic_tree)
+    return _build_opportunity_rule("RULE_O_01_DEEP_VALUE", "Deep Value Screener", "Scores highly for oversold stocks within a long-term uptrend.", logic_tree)
 
 def _create_rule_2_trend_reversal_screener() -> Rule:
-    """
-    [2] Sàng lọc Đảo chiều Xu hướng: Tìm tín hiệu sớm của một sự đảo chiều từ giảm sang tăng.
-    - LOGIC: Nếu xu hướng trung hạn vừa chuyển sang UPTREND VÀ xu hướng dài hạn đang là DOWNTREND.
-    - TRIẾT LÝ: Bắt con sóng sớm khi có dấu hiệu xu hướng đang thay đổi.
-    """
-    cond_mid_trend_up = create_node(nms.OPR_EQ, children=[
-        create_node(nms.VAR_D_TREND_MIDTERM_DIR),
-        create_node(nms.CONST_NUM(1.0))
-    ])
-    cond_long_trend_down = create_node(nms.OPR_EQ, children=[
-        create_node(nms.VAR_D_TREND_LONGTERM_DIR),
-        create_node(nms.CONST_NUM(-1.0))
-    ])
+    """[2] Sàng lọc Đảo chiều Xu hướng: Điểm số dương nếu có tín hiệu đảo chiều."""
+    # Logic: Điểm = 0.5 nếu xu hướng trung hạn vừa chuyển sang tăng trong khi xu hướng dài hạn vẫn đang giảm.
+    cond_mid_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_MIDTERM_DIR), create_node(nms.CONST_NUM(1.0))])
+    cond_long_trend_down = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(-1.0))])
     
+    is_reversal_signal = create_node(nms.OPR_AND, children=[cond_mid_trend_up, cond_long_trend_down])
+    
+    # Nếu có tín hiệu đảo chiều, trả về điểm 0.5 (cơ hội thú vị), nếu không thì 0.
     logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        create_node(nms.OPR_AND, children=[cond_mid_trend_up, cond_long_trend_down]),
-        create_node(nms.CONST_OPP_RATING_INTERESTING), # Cơ hội thú vị, cần theo dõi thêm
-        create_node(nms.CONST_OPP_RATING_AVOID)
+        is_reversal_signal,
+        create_node(nms.CONST_NUM(0.5)), # Điểm cho một cơ hội "thú vị"
+        create_node(nms.CONST_NUM(0.0))
     ])
     
-    return _build_opportunity_rule("RULE_O_02_TREND_REVERSAL", "Trend Reversal Screener", "Finds early signs of a trend reversal from bearish to bullish.", logic_tree)
+    return _build_opportunity_rule("RULE_O_02_TREND_REVERSAL", "Trend Reversal Screener", "Scores positively for early signs of a trend reversal from bearish to bullish.", logic_tree)
 
 def _create_rule_3_forecast_upside_potential() -> Rule:
-    """
-    [3] Sàng lọc theo Tiềm năng Tăng trưởng Dự báo: Tìm cổ phiếu được AI dự báo có tiềm năng tăng giá cao.
-    - LOGIC: Nếu dự báo mức tăng tối đa (max_pct) trong 20 ngày tới > 10%.
-    - TRIẾT LÝ: Tận dụng khả năng dự báo của mô hình để tìm các cơ hội tăng trưởng.
-    """
-    # 10% upside potential. source_range (0, 15) -> 10 tương đương giá trị chuẩn hóa 0.66
-    upside_threshold = create_node(nms.CONST_NUM(0.7))
-    
-    cond_high_upside = create_node(nms.OPR_GT, children=[
-        create_node(nms.VAR_FC_20D_MAX_PCT),
-        upside_threshold
-    ])
-    
-    logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        cond_high_upside,
-        create_node(nms.CONST_OPP_RATING_STRONG),
-        create_node(nms.CONST_OPP_RATING_NEUTRAL)
-    ])
+    """[3] Sàng lọc theo Tiềm năng Tăng trưởng Dự báo: Điểm số là tiềm năng tăng giá dự báo."""
+    # Logic: Điểm = Giá trị đã chuẩn hóa của VAR_FC_20D_MAX_PCT.
+    # Biến này đã được chuẩn hóa về [0, 1], nên ta có thể dùng trực tiếp.
+    logic_tree = create_node(nms.VAR_FC_20D_MAX_PCT)
 
-    return _build_opportunity_rule("RULE_O_03_FC_UPSIDE", "Forecasted Upside Potential", "Finds stocks with high potential upside forecasted by the ML model.", logic_tree)
+    return _build_opportunity_rule("RULE_O_03_FC_UPSIDE", "Forecasted Upside Potential", "Scores based on the normalized forecasted max upside potential.", logic_tree)
 
 def _create_rule_4_bullish_pattern_screener() -> Rule:
-    """
-    [4] Sàng lọc Mẫu hình Tăng giá: Tìm các cổ phiếu vừa xác nhận một mẫu hình tăng giá mạnh.
-    - LOGIC: Nếu mẫu hình hàng đầu được nhận diện là 'bull' VÀ có điểm số cao.
-    - TRIẾT LÝ: Các mẫu hình giá kinh điển là những tín hiệu mạnh mẽ về tâm lý thị trường.
-    """
-    # Điểm số mẫu hình > 60 là một tín hiệu đáng tin cậy
-    score_threshold = create_node(nms.CONST_NUM(0.6))
+    """[4] Sàng lọc Mẫu hình Tăng giá: Điểm số dựa trên sự tồn tại của mẫu hình tăng giá mạnh."""
+    # Logic: Điểm = (Tín hiệu mẫu hình tăng giá) * (Điểm của mẫu hình / 100)
+    # Ví dụ: Mẫu hình bull (1.0) với điểm 80 -> 1.0 * (80/100) = 0.8
+    cond_is_bull_pattern = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_PATTERN_1_SENTIMENT), create_node(nms.CONST_NUM(1.0))])
     
-    cond_is_bull_pattern = create_node(nms.OPR_EQ, children=[
-        create_node(nms.VAR_D_PATTERN_1_SENTIMENT),
-        create_node(nms.CONST_NUM(1.0))
-    ])
-    cond_high_score = create_node(nms.OPR_GT, children=[
-        create_node(nms.VAR_D_PATTERN_1_SCORE),
-        score_threshold
-    ])
+    # Chuẩn hóa điểm số của mẫu hình (vốn từ 0-100) về khoảng [0, 1]
+    normalized_pattern_score = create_node(nms.VAR_D_PATTERN_1_SCORE)
     
+    # Nếu là mẫu hình bull, trả về điểm đã chuẩn hóa, nếu không thì 0
     logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        create_node(nms.OPR_AND, children=[cond_is_bull_pattern, cond_high_score]),
-        create_node(nms.CONST_OPP_RATING_STRONG),
-        create_node(nms.CONST_OPP_RATING_AVOID)
+        cond_is_bull_pattern,
+        normalized_pattern_score,
+        create_node(nms.CONST_NUM(0.0))
     ])
 
-    return _build_opportunity_rule("RULE_O_04_BULLISH_PATTERN", "Bullish Pattern Screener", "Finds stocks that have recently confirmed a strong bullish chart/candlestick pattern.", logic_tree)
+    return _build_opportunity_rule("RULE_O_04_BULLISH_PATTERN", "Bullish Pattern Screener", "Scores based on the existence and strength of a bullish pattern.", logic_tree)
 
 def _create_rule_5_news_catalyst_screener() -> Rule:
-    """
-    [5] Sàng lọc theo Chất xúc tác Tin tức: Tìm các cổ phiếu đang có dòng tin tức tích cực đột biến.
-    - LOGIC: Nếu số lượng tin tức tích cực > 3 VÀ có ít nhất 2 tin tức tác động mạnh.
-    - TRIẾT LÝ: Một dòng tin tức đột biến có thể là chất xúc tác cho một đợt tăng giá mạnh.
-    """
-    cond_many_positive_news = create_node(nms.OPR_GT, children=[
-        create_node(nms.VAR_NEWS_SUM_NUM_POSITIVE),
-        create_node(nms.CONST_NUM(0.9))
-    ])
-    cond_many_high_impact = create_node(nms.OPR_GTE, children=[
-        create_node(nms.VAR_NEWS_SUM_NUM_HIGH_IMPACT),
-        create_node(nms.CONST_NUM(0.6))
-    ])
+    """[5] Sàng lọc theo Chất xúc tác Tin tức: Điểm số dựa trên mật độ tin tốt và có tác động."""
+    # Logic: Điểm = (Điểm tin tích cực) * (Điểm tin tác động mạnh)
+    # Cả hai biến này đều đã được chuẩn hóa về [0, 1].
+    # Điểm sẽ chỉ cao khi cả hai yếu tố đều cao.
+    positive_news_score = create_node(nms.VAR_NEWS_SUM_NUM_POSITIVE)
+    high_impact_news_score = create_node(nms.VAR_NEWS_SUM_NUM_HIGH_IMPACT)
     
-    logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
-        create_node(nms.OPR_AND, children=[cond_many_positive_news, cond_many_high_impact]),
-        create_node(nms.CONST_OPP_RATING_INTERESTING),
-        create_node(nms.CONST_OPP_RATING_NEUTRAL)
-    ])
+    logic_tree = create_node(nms.OPR_MUL2, children=[positive_news_score, high_impact_news_score])
 
-    return _build_opportunity_rule("RULE_O_05_NEWS_CATALYST", "News Catalyst Screener", "Finds stocks with a surge of positive and high-impact news.", logic_tree)
-
+    return _build_opportunity_rule("RULE_O_05_NEWS_CATALYST", "News Catalyst Screener", "Scores based on the density of positive and high-impact news.", logic_tree)
 
 # ===================================================================
 # == B. DANH SÁCH TỔNG HỢP CÁC QUY TẮC DỰNG SẴN

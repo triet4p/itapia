@@ -3,10 +3,10 @@ from fastapi import HTTPException
 import httpx
 from app.core.config import AI_SERVICE_QUICK_BASE_URL
 
-from itapia_common.schemas.api.reports import QuickCheckReportResponse
-from itapia_common.schemas.api.reports.technical import TechnicalReportResponse
-from itapia_common.schemas.api.reports.forecasting import ForecastingReportResponse
-from itapia_common.schemas.api.reports.news import NewsReportResponse
+from itapia_common.schemas.api.analysis import QuickCheckReportResponse
+from itapia_common.schemas.api.analysis.technical import TechnicalReportResponse
+from itapia_common.schemas.api.analysis.forecasting import ForecastingReportResponse
+from itapia_common.schemas.api.analysis.news import NewsReportResponse
 
 ai_quick_client = httpx.AsyncClient(base_url=AI_SERVICE_QUICK_BASE_URL, timeout=30.0)
 
