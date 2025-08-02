@@ -5,7 +5,7 @@ import uuid
 from itapia_common.rules.rule import Rule
 from itapia_common.schemas.enums import SemanticType
 from itapia_common.dblib.crud.rules import RuleCRUD
-from itapia_common.schemas.entities.advisor.rules import RuleEntity
+from itapia_common.schemas.entities.rules import RuleEntity
 
 import hashlib
 import uuid
@@ -56,7 +56,7 @@ class RuleService:
         
         if rule_data:
             # "Lắp ráp" dữ liệu thô thành đối tượng nghiệp vụ
-            return RuleEntity.model_validate(rule_data)
+            return RuleEntity(**rule_data)
         return None
 
     def get_active_rules_by_purpose(self, purpose: SemanticType) -> List[RuleEntity]:

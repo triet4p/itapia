@@ -58,16 +58,16 @@ class RuleCRUD:
         self.db.commit()
         return rule_id
 
-    def get_rule_by_id(self, rule_id: str) -> Dict[str, Any] | None:
+    def get_rule_by_id(self, rule_id: str):
         """Lấy dữ liệu thô (dict) của một quy tắc bằng ID."""
         stmt = text("""SELECT rule_id, name, description, purpose, version, is_active, created_at, updated_at, root 
                     FROM rules WHERE is_active=TRUE AND rule_id = :rule_id;""")
-        result = self.db.execute(stmt, {"rule_id": rule_id}).fetchone()
+        result = self.db.execute(stmt, {"rule_id": rule_id})
         
         if result:
             # result[0] chứa cột root (kiểu jsonb),
             # SQLAlchemy tự động parse nó thành dict
-            return result
+            return result.mappings().one()
         return None
 
     def get_active_rules_by_purpose(self, purpose_name: str):

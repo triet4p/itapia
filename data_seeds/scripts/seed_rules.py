@@ -2,7 +2,7 @@ from itapia_common.rules.builtin import builtin_decision_rules, builtin_risk_rul
 from itapia_common.rules.rule import Rule
 from itapia_common.dblib.services.rules import RuleService
 from itapia_common.dblib.session import get_rdbms_session
-from itapia_common.schemas.entities.advisor.rules import RuleEntity
+from itapia_common.schemas.entities.rules import RuleEntity
 from itapia_common.logger import ITAPIALogger
 from typing import List
 

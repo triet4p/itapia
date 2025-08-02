@@ -1,11 +1,21 @@
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.api.v1.endpoints import quick_analysis, quick_advisor
+from app.api.v1.endpoints import quick_analysis, quick_advisor, rules
 from app.core.config import AI_QUICK_V1_BASE_ROUTE
 from app.orchestrator import AIServiceQuickOrchestrator
-from app.analysis.orchestrator import AnalysisOrchestrator
-from app.advisor.orchestrator import AdvisorOrchestrator
+from app.analysis import AnalysisOrchestrator
+from app.advisor import AdvisorOrchestrator
+from app.analysis.technical import TechnicalOrchestrator
+from app.analysis.news import NewsOrchestrator
+from app.analysis.forecasting import ForecastingOrchestrator
+from app.advisor.aggeration import AggregationOrchestrator
+from app.rules import RulesOrchestrator
+from app.rules.explainer import RuleExplainerOrchestrator
+from app.personal import PersonalAnalysisOrchestrator
+from app.data_prepare import DataPrepareOrchestrator
+from app.analysis.explainer import AnalysisExplainerOrchestrator
+from app.advisor.explainer import AdvisorExplainerOrchestrator
 
 from itapia_common.dblib.session import get_rdbms_session, get_redis_connection
 from itapia_common.dblib.services import APIMetadataService, APIPricesService, APINewsService, RuleService
@@ -26,19 +36,46 @@ async def lifespan(app: FastAPI):
         prices_service = APIPricesService(rdbms_session=db, redis_client=redis, metadata_service=metadata_service)
         news_service = APINewsService(rdbms_session=db, metadata_service=metadata_service)
         rule_service = RuleService(db_session=db)
-        # --- KHỞI TẠO "CEO" ORCHESTRATOR DUY NHẤT ---
+        # --- KHỞI TẠO CÁC TRƯỞNG PHÒNG VÀ PHÓ CEO CHẮC CHẮN PHẢI TỒN TẠI ---
         
-        analysis_orc = AnalysisOrchestrator(
+        data_prepare_orc = DataPrepareOrchestrator(
             metadata_service=metadata_service,
             prices_service=prices_service,
             news_service=news_service
         )
         
-        advisor_orc = AdvisorOrchestrator(rule_service)
+        technical_orc = TechnicalOrchestrator()
+        news_orc = NewsOrchestrator()
+        forecasting_orc = ForecastingOrchestrator()
+        
+        analysis_explaine_orc = AnalysisExplainerOrchestrator()
+        
+        analysis_orc = AnalysisOrchestrator(
+            data_preparer=data_prepare_orc,
+            tech_analyzer=technical_orc,
+            forecaster=forecasting_orc,
+            news_analyzer=news_orc,
+            explainer=analysis_explaine_orc
+        )
+        
+        aggeration_orc = AggregationOrchestrator()
+        advisor_explainer_orc = AdvisorExplainerOrchestrator()
+        
+        advisor_orc = AdvisorOrchestrator(
+            agg_orc=aggeration_orc,
+            explainer=advisor_explainer_orc
+        )
+        
+        rule_explainer = RuleExplainerOrchestrator()
+        
+        rule_orc = RulesOrchestrator(rule_service, explainer=rule_explainer)
+        personal_orc = PersonalAnalysisOrchestrator()
         
         ceo = AIServiceQuickOrchestrator(
             analysis_orchestrator=analysis_orc,
-            advisor_orchestrator=advisor_orc
+            advisor_orchestrator=advisor_orc,
+            rule_orchestrator=rule_orc,
+            personal_orchestrator=personal_orc
         )
         # Gán vào state của app để các endpoint có thể truy cập
         app.state.ceo_orchestrator = ceo
@@ -65,8 +102,9 @@ app = FastAPI(
 app.state.orchestrator = None
 
 # Bao gồm router từ file data_viewer
-app.include_router(quick_analysis.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=["AI Quick"])
-app.include_router(quick_advisor.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=["AI Advisor"])
+app.include_router(quick_analysis.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=["AI Quick Analysis"])
+app.include_router(quick_advisor.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=["AI Quick Advisor"])
+app.include_router(rules.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=["AI Rules"])
 
 @app.get("/", tags=["Root"])
 def read_root():

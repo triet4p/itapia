@@ -92,7 +92,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./ai_service_quick:/ai-service-quick
+      - ./ai_service_quick/app:/ai-service-quick/app
       - ai_service_quick_kaggle_cache:/root/.cache/kagglehub
       - ai_service_quick_hgf_cache:/root/.cache/huggingface
     depends_on:

@@ -14,7 +14,7 @@ from itapia_common.schemas.api.analysis.news import NewsReportResponse
 
 router = APIRouter()
 
-@router.get("/quick/analysis/full/{ticker}", 
+@router.get("/analysis/{ticker}/full", 
             response_model=QuickCheckReportResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},
@@ -38,7 +38,7 @@ async def get_full_quick_analysis(ticker: str,
 
 # ENDPOINT 2: Trả về Plain Text (endpoint mới)
 @router.get(
-    "/quick/analysis/explaination/{ticker}", 
+    "/analysis/{ticker}/explain", 
     # response_class=PlainTextResponse đảm bảo header Content-Type là text/plain
     response_class=PlainTextResponse,
     responses={
@@ -64,7 +64,7 @@ async def get_quick_analysis_explanation(
     except NotReadyServiceError as e3:
         raise HTTPException(status_code=503, detail=e3.msg)
 
-@router.get("/quick/analysis/technical/{ticker}", 
+@router.get("/analysis/{ticker}/technical", 
             response_model=TechnicalReportResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},
@@ -86,7 +86,7 @@ async def get_technical_quick_analysis(ticker: str,
     except NotReadyServiceError as e3:
         raise HTTPException(status_code=503, detail=e3.msg)
 
-@router.get("/quick/analysis/forecasting/{ticker}", 
+@router.get("/analysis/{ticker}/forecasting", 
             response_model=ForecastingReportResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},
@@ -106,7 +106,7 @@ async def get_forecasting_quick_analysis(ticker: str,
     except NotReadyServiceError as e3:
         raise HTTPException(status_code=503, detail=e3.msg)
 
-@router.get("/quick/analysis/news/{ticker}", 
+@router.get("/analysis/{ticker}/news", 
             response_model=NewsReportResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},

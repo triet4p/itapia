@@ -17,10 +17,13 @@ class RuleResponse(BaseModel):
     """Schema cho dữ liệu ĐI RA sau khi tạo Rule thành công."""
     rule_id: str
     name: str
-    purpose: SemanticType
+    purpose: str
     version: float
     is_active: bool
     created_at_ts: int
 
     class Config:
         from_attributes = True
+        
+class ExplainationRuleResponse(RuleResponse):
+    explain: str

@@ -33,6 +33,7 @@ class FinalRecommendation(BaseModel):
     """
     # Điểm số cuối cùng sau khi đã qua MetaRule
     final_score: float = Field(..., description="Điểm số cuối cùng sau khi đã tổng hợp và cá nhân hóa.")
+    purpose: str
     # Nhãn diễn giải từ điểm số
     final_recommend: str = Field(..., description='Final recommend')
     

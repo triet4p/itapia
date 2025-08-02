@@ -7,7 +7,7 @@ from app.data_prepare.orchestrator import DataPrepareOrchestrator
 from .technical.orchestrator import TechnicalOrchestrator
 from .forecasting.orchestrator import ForecastingOrchestrator
 from .news.orchestrator import NewsOrchestrator
-from app.explainer.analysis.orchestrator import AnalysisExplainerOrchestrator, ExplainReportType
+from .explainer.orchestrator import AnalysisExplainerOrchestrator, ExplainReportType
 
 from app.core.exceptions import PreloadCacheError, NoDataError, NotReadyServiceError, MissingReportError
 
@@ -15,7 +15,6 @@ from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from itapia_common.schemas.entities.analysis.forecasting import ForecastingReport
 from itapia_common.schemas.entities.analysis.news import NewsAnalysisReport
 from itapia_common.schemas.entities.analysis.technical import TechnicalReport
-from itapia_common.dblib.services import APIMetadataService, APINewsService, APIPricesService
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Quick Check Orchestrator')
@@ -42,15 +41,17 @@ class AnalysisOrchestrator:
     Nó điều phối các orchestrator của từng module lớn để thực hiện các
     quy trình nghiệp vụ hoàn chỉnh.
     """
-    def __init__(self, metadata_service: APIMetadataService,
-                 prices_service: APIPricesService,
-                 news_service: APINewsService):
+    def __init__(self, data_preparer: DataPrepareOrchestrator,
+                 tech_analyzer: TechnicalOrchestrator,
+                 forecaster: ForecastingOrchestrator,
+                 news_analyzer: NewsOrchestrator,
+                 explainer: AnalysisExplainerOrchestrator):
         # Khởi tạo các "Trưởng phòng"
-        self.data_preparer = DataPrepareOrchestrator(metadata_service, prices_service, news_service)
-        self.tech_analyzer = TechnicalOrchestrator()
-        self.forecaster = ForecastingOrchestrator()
-        self.news_analyzer = NewsOrchestrator()
-        self.reports_explainer = AnalysisExplainerOrchestrator()
+        self.data_preparer = data_preparer
+        self.tech_analyzer = tech_analyzer
+        self.forecaster = forecaster
+        self.news_analyzer = news_analyzer
+        self.explainer = explainer
         self.is_active = False
 
     # === HÀM TIỆN ÍCH CHO TỪNG MODULE (ASYNC HELPERS) ===
@@ -229,7 +230,7 @@ class AnalysisOrchestrator:
         cleaned_report_dict = clean_json_outliers(final_report.model_dump())
         return QuickCheckAnalysisReport.model_validate(cleaned_report_dict)
     
-    async def get_full_explanation_report(
+    async def get_full_explaination_report(
         self, 
         ticker: str, 
         daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
@@ -247,7 +248,7 @@ class AnalysisOrchestrator:
         )
 
         # BƯỚC 2: Gọi đến Explainer Orchestrator để "dịch" báo cáo
-        explanation_text = self.reports_explainer.explain(
+        explanation_text = self.explainer.explain(
             report=json_report, 
             report_type=explain_type
         )
@@ -261,8 +262,8 @@ class AnalysisOrchestrator:
         logger.info("--- CEO: Starting PARALLEL pre-warming for all sub-modules ---")
         
         # Chuẩn bị các tham số cần thiết
-        sectors = self.data_preparer.get_all_sectors_code()
-        
+        #sectors = self.data_preparer.get_all_sectors_code()
+        sectors = ['TECH']
         # 1. Tạo một danh sách các "công việc lớn" cần thực hiện
         # Mỗi công việc là một lần gọi đến hàm preload của một "trưởng phòng"
         tasks = [

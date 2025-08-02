@@ -18,3 +18,7 @@ class RuleEntity(BaseModel):
     
     class Config:
         from_attributes = True
+        
+class ExplainationRuleEntity(RuleEntity):
+    explain: str
+    
