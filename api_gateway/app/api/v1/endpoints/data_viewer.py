@@ -11,7 +11,7 @@ from itapia_common.dblib.services import APIMetadataService, APINewsService, API
 
 router = APIRouter()
 
-@router.get("/prices/daily/{ticker}", response_model=PriceResponse, tags=['Prices'])
+@router.get("/market/tickers/{ticker}/prices/daily", response_model=PriceResponse, tags=['Market Prices'])
 def get_daily_prices(ticker: str, skip: int = 0, limit: int = 500, 
                      prices_service: APIPricesService = Depends(get_prices_service)):
     """API endpoint để lấy dữ liệu giá lịch sử hàng ngày cho một mã cổ phiếu."""
@@ -23,7 +23,7 @@ def get_daily_prices(ticker: str, skip: int = 0, limit: int = 500,
     except Exception as e:
         raise HTTPException(status_code=500, detail='Unknown error occured in server')
 
-@router.get("/prices/sector/daily/{sector}", response_model=list[PriceResponse], tags=['Prices'])
+@router.get("/market/sectors/{sector}/prices/daily", response_model=list[PriceResponse], tags=['Market Prices'])
 def get_daily_prices_by_sector(sector: str, skip: int = 0, limit: int = 2000,
                                prices_service: APIPricesService = Depends(get_prices_service)):
     """API endpoint để lấy dữ liệu giá hàng ngày cho tất cả các cổ phiếu trong một nhóm ngành."""
@@ -34,32 +34,22 @@ def get_daily_prices_by_sector(sector: str, skip: int = 0, limit: int = 2000,
         raise HTTPException(status_code=404, detail=f'Not found metadata for {sector}')
     except Exception as e:
         raise HTTPException(status_code=500, detail='Unknown error occured in server')
-    
-@router.get("/prices/intraday/last/{ticker}", response_model=PriceResponse, tags=['Prices'])
-def get_intraday_last_prices(ticker: str, 
-                             prices_service: APIPricesService = Depends(get_prices_service)):
-    """API endpoint để lấy điểm dữ liệu giá trong ngày gần nhất của một cổ phiếu."""
-    try:
-        res = prices_service.get_intraday_prices(ticker, latest_only=True)
-        return PriceResponse.model_validate(res.model_dump())
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=f'Not found metadata for {ticker}')
-    except Exception as e:
-        raise HTTPException(status_code=500, detail='Unknown error occured in server')
 
-@router.get("/prices/intraday/history/{ticker}", response_model=PriceResponse, tags=['Prices'])
-def get_intraday_history_prices(ticker: str, 
-                                prices_service: APIPricesService = Depends(get_prices_service)):
+
+@router.get("/market/tickers/{ticker}/prices/intraday", response_model=PriceResponse, tags=['Market Prices'])
+def get_intraday_prices(ticker: str, 
+                        prices_service: APIPricesService = Depends(get_prices_service),
+                        latest_only: bool = False):
     """API endpoint để lấy toàn bộ lịch sử giá trong ngày (giới hạn bởi stream) của một cổ phiếu."""
     try:
-        res = prices_service.get_intraday_prices(ticker, latest_only=False)
+        res = prices_service.get_intraday_prices(ticker, latest_only=latest_only)
         return PriceResponse.model_validate(res.model_dump())
     except ValueError as e:
         raise HTTPException(status_code=404, detail=f'Not found metadata for {ticker}')
     except Exception as e:
         raise HTTPException(status_code=500, detail='Unknown error occured in server')
 
-@router.get("/news/relevants/{ticker}", response_model=RelevantNewsResponse, tags=['News'])
+@router.get("/market/tickers/{ticker}/news", response_model=RelevantNewsResponse, tags=['Market News'])
 def get_relevant_news(ticker: str, skip: int = 0, limit: int = 10,
              news_service: APINewsService = Depends(get_news_service)):
     """API endpoint để lấy danh sách các tin tức gần đây cho một mã cổ phiếu."""
@@ -71,7 +61,7 @@ def get_relevant_news(ticker: str, skip: int = 0, limit: int = 10,
     except Exception as e:
         raise HTTPException(status_code=500, detail='Unknown error occured in server')
 
-@router.get("/news/universal", response_model=UniversalNewsResponse, tags=['News'])
+@router.get("/market/news/universal", response_model=UniversalNewsResponse, tags=['Market News'])
 def get_universal_news(search_terms: str, skip: int = 0, limit: int = 10,
              news_service: APINewsService = Depends(get_news_service)):
     """API endpoint để lấy danh sách các tin tức gần đây cho một mã cổ phiếu."""

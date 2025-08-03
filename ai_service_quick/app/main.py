@@ -13,7 +13,7 @@ from app.advisor.aggeration import AggregationOrchestrator
 from app.rules import RulesOrchestrator
 from app.rules.explainer import RuleExplainerOrchestrator
 from app.personal import PersonalAnalysisOrchestrator
-from app.data_prepare import DataPrepareOrchestrator
+from app.analysis.data_prepare import DataPrepareOrchestrator
 from app.analysis.explainer import AnalysisExplainerOrchestrator
 from app.advisor.explainer import AdvisorExplainerOrchestrator
 

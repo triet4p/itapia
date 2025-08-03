@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Literal, Union
 import numpy as np
 import pandas as pd
-from app.data_prepare.orchestrator import DataPrepareOrchestrator
+from .data_prepare.orchestrator import DataPrepareOrchestrator
 from .technical.orchestrator import TechnicalOrchestrator
 from .forecasting.orchestrator import ForecastingOrchestrator
 from .news.orchestrator import NewsOrchestrator
