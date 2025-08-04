@@ -1,29 +1,29 @@
 <script lang="ts" setup>
-  import { ref, reactive } from 'vue';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-  const tickerSym = ref('');
-  // Dùng reactive cho các tùy chọn để nhóm chúng lại
-  const analysisOptions = reactive({
-    daily_analysis_type: 'medium', // Giá trị mặc định
-    required_type: 'all'      // Giá trị mặc định
-  });
+const tickerSym = ref('');
+const router = useRouter();
 
-  const router = useRouter();
-
-  function startAnalysis() {
-    if (tickerSym.value) {
-      const upperTickerSym = tickerSym.value.toUpperCase();
-      // Sửa đổi router.push để gửi cả query params
-      router.push({
-        name: '/analysis/[ticker]', // Tên route được tạo tự động
-        params: { ticker: upperTickerSym },
-        query: { ...analysisOptions } // Gửi các tùy chọn làm query params
-      });
-    } else {
-      // Sau này sẽ thay bằng v-snackbar của Vuetify
-      alert("Vui lòng nhập một mã cổ phiếu hợp lệ");
-    }
+function startQuickAnalysis() {
+  if (tickerSym.value) {
+    const upperTickerSym = tickerSym.value.toUpperCase();
+    
+    // Chỉ điều hướng mà không gửi bất kỳ query params nào
+    // Trang kết quả sẽ tự động dùng giá trị mặc định
+    router.push({
+      name: '/analysis/[ticker]',
+      params: { ticker: upperTickerSym },
+    });
+  } else {
+    alert("Please input a valid ticker symbol.");
   }
+}
+
+// Hàm mới để điều hướng đến trang phân tích nâng cao
+function goToAdvancedAnalysis() {
+    router.push({ name: '/analysis/' }); // Điều hướng đến /analysis
+}
 </script>
 
 <template>
@@ -31,33 +31,40 @@
     <v-row justify="center" align="center">
       <v-col cols="12" md="8" lg="6">
         <v-card elevation="4" class="pa-4">
-          <VCardTitle class="text-center text-h5">Start your first quick check analysis</VCardTitle>
+          <v-card-title class="text-center text-h5">
+            Start Your First Quick Check
+          </v-card-title>
 
-          <VCardText>
-            <VTextField
-              label="Input Ticker symbol (ex. AAPL)"
+          <v-card-text>
+            <v-text-field
+              label="Input Ticker Symbol (e.g., AAPL, FPT)"
               variant="outlined"
               v-model="tickerSym"
-              @keydown.enter="startAnalysis"
-            >
-            </VTextField>
-            <VRow>
-              <VCol cols="12" sm="6">
-                <VSelect v-model="analysisOptions.daily_analysis_type"
-                label="Daily Analysis Time Frame"
-                :items="['short', 'medium', 'long']"
-                variant="outlined"></VSelect>
-              </VCol>
-              <VCol cols="12" sm="6">
-                <VSelect v-model="analysisOptions.required_type"
-                label="Return Analysis Report Type"
-                :items="['daily', 'intraday', 'all']"
-                variant="outlined"></VSelect>
-              </VCol>
-            </VRow>
+              @keydown.enter="startQuickAnalysis"
+              class="mb-4"
+            ></v-text-field>
 
-            <VBtn block color="primary" size="large" @click="startAnalysis">Analysis</VBtn>
-          </VCardText>
+            <v-btn 
+              block 
+              color="primary" 
+              size="large" 
+              @click="startQuickAnalysis"
+            >
+              Run Quick Analysis
+            </v-btn>
+          </v-card-text>
+          
+          <v-divider class="my-4"></v-divider>
+          
+          <v-card-actions class="justify-center">
+            <!-- Nút điều hướng đến trang nâng cao -->
+            <v-btn 
+              variant="text" 
+              @click="goToAdvancedAnalysis"
+            >
+              Or go to Advanced Analysis
+            </v-btn>
+          </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
