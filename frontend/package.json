@@ -9,11 +9,13 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
-    "lint": "eslint . --fix"
+    "lint": "eslint . --fix",
+    "sync:schemas": "openapi-typescript http://localhost:8000/openapi.json --output ./src/types/api.ts"
   },
   "dependencies": {
     "@fontsource/roboto": "5.2.6",
     "@mdi/font": "7.4.47",
+    "axios": "^1.11.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.17",
     "vuetify": "^3.9.1"
@@ -26,6 +28,7 @@
     "eslint": "^9.30.1",
     "eslint-config-vuetify": "^3.0.3",
     "npm-run-all2": "^7.0.2",
+    "openapi-typescript": "^7.8.0",
     "sass-embedded": "^1.89.2",
     "typescript": "~5.8.3",
     "unplugin-auto-import": "^19.3.0",

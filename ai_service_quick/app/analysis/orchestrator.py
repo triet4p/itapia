@@ -262,8 +262,8 @@ class AnalysisOrchestrator:
         logger.info("--- CEO: Starting PARALLEL pre-warming for all sub-modules ---")
         
         # Chuẩn bị các tham số cần thiết
-        #sectors = self.data_preparer.get_all_sectors_code()
-        sectors = ['TECH']
+        sectors = self.data_preparer.get_all_sectors_code()
+        #sectors = ['TECH']
         # 1. Tạo một danh sách các "công việc lớn" cần thực hiện
         # Mỗi công việc là một lần gọi đến hàm preload của một "trưởng phòng"
         tasks = [

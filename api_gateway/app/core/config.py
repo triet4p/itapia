@@ -16,6 +16,7 @@ load_dotenv(dotenv_path=env_path)
 
 # Cấu hình API
 GATEWAY_V1_BASE_ROUTE = os.getenv("GATEWAY_V1_BASE_ROUTE", "/api/v1")
+GATEWAY_ALLOW_ORIGINS = os.getenv('GATEWAY_ALLOW_ORIGINS', "").split(",")
 
 # Cấu hình CLient
 AI_SERVICE_QUICK_HOST = os.getenv("AI_QUICK_HOST", 'localhost')
