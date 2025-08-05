@@ -419,6 +419,8 @@ export interface components {
             final_score: number;
             /** Purpose */
             purpose: string;
+            /** Label */
+            label: string;
             /**
              * Final Recommend
              * @description Final recommend

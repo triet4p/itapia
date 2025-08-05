@@ -64,7 +64,7 @@ def _create_rule_3_forecast_upside_potential() -> Rule:
     """[3] Sàng lọc theo Tiềm năng Tăng trưởng Dự báo: Điểm số là tiềm năng tăng giá dự báo."""
     # Logic: Điểm = Giá trị đã chuẩn hóa của VAR_FC_20D_MAX_PCT.
     # Biến này đã được chuẩn hóa về [0, 1], nên ta có thể dùng trực tiếp.
-    logic_tree = create_node(nms.VAR_FC_20D_MAX_PCT)
+    logic_tree = create_node(nms.VAR_FC_5D_MAX_PCT)
 
     return _build_opportunity_rule("RULE_O_03_FC_UPSIDE", "Forecasted Upside Potential", "Scores based on the normalized forecasted max upside potential.", logic_tree)
 

@@ -57,6 +57,11 @@ class ScoreAggregator:
         if not scores:
             return 0.0
         return max(scores)
+    
+    def get_lowest_score(self, scores: List[float]) -> float:
+        if not scores:
+            return 0.5
+        return min(scores)
 
 # ===================================================================
 # == LỚP 4/10: SCORE FINAL MAPPER
@@ -78,7 +83,7 @@ class ScoreFinalMapper:
             SemanticType.OPPORTUNITY_RATING: OPPORTUNITY_THRESHOLDS,
         }
 
-    def map(self, score: float, purpose: SemanticType) -> str:
+    def map(self, score: float, purpose: SemanticType) -> Tuple[str, str]:
         """
         Thực hiện logic mapping chính.
 
@@ -106,4 +111,4 @@ class ScoreFinalMapper:
                 # Vì danh sách đã được sắp xếp, ta có thể dừng ngay khi gặp ngưỡng lớn hơn
                 break
 
-        return ScoreFinalMapper.FINAL_MAPPER_TEMPLATE.format(name=best_match.name, description=best_match.description)
+        return best_match.name, ScoreFinalMapper.FINAL_MAPPER_TEMPLATE.format(name=best_match.name, description=best_match.description)

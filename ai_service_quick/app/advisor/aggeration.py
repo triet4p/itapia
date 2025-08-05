@@ -22,7 +22,7 @@ class AggregationOrchestrator:
         """Tổng hợp các điểm số thô từ các bộ quy tắc."""
         agg_decision = self.aggregator.average(decision_scores)
         agg_risk = self.aggregator.get_highest_score(risk_scores)
-        agg_opportunity = self.aggregator.get_highest_score(opportunity_scores)
+        agg_opportunity = self.aggregator.get_lowest_score(opportunity_scores)
         
         return AggregatedScoreInfo(
             raw_decision_score=agg_decision,

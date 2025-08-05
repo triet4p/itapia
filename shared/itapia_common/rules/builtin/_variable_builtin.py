@@ -161,35 +161,35 @@ register_node_by_spec(nms.VAR_FC_5D_MEAN_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted mean price change in 5 days (%)',
     return_type=SemanticType.PERCENTAGE, node_type='variable',
     # Giả định thay đổi 5% trong 5 ngày là lớn
-    params={'path': 'forecasting_report.forecasts.1.prediction.0', 'source_range': (-5, 5), 'target_range': (-1, 1)}
+    params={'path': 'forecasting_report.forecasts.1.prediction.0', 'source_range': (-2, 2), 'target_range': (-1, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_5D_STD_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted price volatility (std) in 5 days (%)', 
     return_type=SemanticType.VOLATILITY, node_type='variable',
     # Giả định độ lệch chuẩn 5% là rất cao
-    params={'path': 'forecasting_report.forecasts.1.prediction.1', 'source_range': (0, 5), 'target_range': (0, 1)}
+    params={'path': 'forecasting_report.forecasts.1.prediction.1', 'source_range': (0, 2.5), 'target_range': (0, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_5D_MAX_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted max potential upside in 5 days (%)', 
     return_type=SemanticType.PERCENTAGE, node_type='variable',
-    params={'path': 'forecasting_report.forecasts.1.prediction.3', 'source_range': (0, 10), 'target_range': (0, 1)}
+    params={'path': 'forecasting_report.forecasts.1.prediction.3', 'source_range': (-2.5, 2.5), 'target_range': (-1, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_5D_MIN_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted max potential downside in 5 days (%)', 
     return_type=SemanticType.PERCENTAGE, node_type='variable',
-    params={'path': 'forecasting_report.forecasts.1.prediction.2', 'source_range': (-10, 0), 'target_range': (-1, 0)}
+    params={'path': 'forecasting_report.forecasts.1.prediction.2', 'source_range': (-2.5, 2.5), 'target_range': (-1, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_5D_Q25_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted q25 price change in 5 days (%)', 
     return_type=SemanticType.PERCENTAGE, node_type='variable',
     # Giả định thay đổi 5% trong 5 ngày là lớn
-    params={'path': 'forecasting_report.forecasts.1.prediction.4', 'source_range': (-5, 5), 'target_range': (-1, 1)}
+    params={'path': 'forecasting_report.forecasts.1.prediction.4', 'source_range': (-2.5, 2.5), 'target_range': (-1, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_5D_Q75_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted q75 price change in 5 days (%)', 
     return_type=SemanticType.PERCENTAGE, node_type='variable',
     # Giả định thay đổi 5% trong 5 ngày là lớn
-    params={'path': 'forecasting_report.forecasts.1.prediction.5', 'source_range': (-5, 5), 'target_range': (-1, 1)}
+    params={'path': 'forecasting_report.forecasts.1.prediction.5', 'source_range': (-2.5, 2.5), 'target_range': (-1, 1)}
 ))
 
 # --- C.3. Từ task 20-Day Distribution Regression (forecasts[2]) ---
@@ -197,23 +197,23 @@ register_node_by_spec(nms.VAR_FC_20D_MEAN_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted mean price change in 20 days (%)',
     return_type=SemanticType.PERCENTAGE, node_type='variable',
     # Giả định thay đổi 10% trong 20 ngày là lớn
-    params={'path': 'forecasting_report.forecasts.2.prediction.0', 'source_range': (-10, 10), 'target_range': (-1, 1)}
+    params={'path': 'forecasting_report.forecasts.2.prediction.0', 'source_range': (-2.5, 2.5), 'target_range': (-1, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_20D_STD_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted price volatility (std) in 20 days (%)', 
     return_type=SemanticType.VOLATILITY, node_type='variable',
     # Giả định độ lệch chuẩn 10% là rất cao
-    params={'path': 'forecasting_report.forecasts.2.prediction.1', 'source_range': (0, 10), 'target_range': (0, 1)}
+    params={'path': 'forecasting_report.forecasts.2.prediction.1', 'source_range': (0, 3.5), 'target_range': (0, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_20D_MAX_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted max potential upside in 20 days (%)', 
     return_type=SemanticType.PERCENTAGE, node_type='variable',
-    params={'path': 'forecasting_report.forecasts.2.prediction.3', 'source_range': (0, 15), 'target_range': (0, 1)}
+    params={'path': 'forecasting_report.forecasts.2.prediction.3', 'source_range': (-3, 3), 'target_range': (-1, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_20D_MIN_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted max potential downside in 20 days (%)', 
     return_type=SemanticType.PERCENTAGE, node_type='variable',
-    params={'path': 'forecasting_report.forecasts.2.prediction.2', 'source_range': (-15, 0), 'target_range': (-1, 0)}
+    params={'path': 'forecasting_report.forecasts.2.prediction.2', 'source_range': (-3, 3), 'target_range': (-1, 1)}
 ))
 
 # ===================================================================
@@ -270,7 +270,7 @@ register_node_by_spec(nms.VAR_NEWS_SUM_AVG_POSITIVE_KEYWORDS, NodeSpec(
     node_type='variable',
     return_type=SemanticType.SENTIMENT,
     # Giả định: Trung bình 3 từ khóa tích cực/tin là một tín hiệu mạnh
-    params={'path': 'news_report.summary.avg_of_positive_keyword_found', 'source_range': (0, 3), 'target_range': (0, 1)}
+    params={'path': 'news_report.summary.avg_of_positive_keyword_found', 'source_range': (0, 2), 'target_range': (0, 1)}
 ))
 
 register_node_by_spec(nms.VAR_NEWS_SUM_AVG_NEGATIVE_KEYWORDS, NodeSpec(
@@ -278,7 +278,7 @@ register_node_by_spec(nms.VAR_NEWS_SUM_AVG_NEGATIVE_KEYWORDS, NodeSpec(
     description='Summary: Average number of negative keywords found per news item',
     node_type='variable',
     return_type=SemanticType.SENTIMENT,
-    params={'path': 'news_report.summary.avg_of_negative_keyword_found', 'source_range': (0, 3), 'target_range': (0, 1)}
+    params={'path': 'news_report.summary.avg_of_negative_keyword_found', 'source_range': (0, 2), 'target_range': (0, 1)}
 ))
 
 register_node_by_spec(nms.VAR_NEWS_SUM_AVG_NER, NodeSpec(
@@ -287,5 +287,5 @@ register_node_by_spec(nms.VAR_NEWS_SUM_AVG_NER, NodeSpec(
     node_type='variable',
     return_type=SemanticType.SENTIMENT,
     # Giả định: Trung bình 5 thực thể/tin cho thấy tin tức rất cụ thể và đáng tin
-    params={'path': 'news_report.summary.avg_of_ner_found', 'source_range': (0, 5), 'target_range': (0, 1)}
+    params={'path': 'news_report.summary.avg_of_ner_found', 'source_range': (0, 4), 'target_range': (0, 1)}
 ))

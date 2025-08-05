@@ -118,9 +118,11 @@ def _create_rule_8_forecast_potential() -> Rule:
     # Ví dụ: max_pct=0.8 (+10%), min_pct=-0.2 (-2%) -> Điểm = 0.6 (thiên về tăng)
     max_upside = create_node(nms.VAR_FC_5D_MAX_PCT)
     max_downside = create_node(nms.VAR_FC_5D_MIN_PCT)
+    const_2 = create_node(nms.CONST_NUM(2.0))
     
-    logic_tree = create_node(nms.OPR_ADD2, children=[max_upside, max_downside])
-    
+    sub_tree = create_node(nms.OPR_SUB2, children=[max_upside, max_downside])
+    sub_tree2 = create_node(nms.OPR_SUB2, children=[const_2, sub_tree])
+    logic_tree = create_node(nms.OPR_DIV2, children=[sub_tree2, const_2])
     return _build_rule("RULE_D_08_FC_POTENTIAL", "Forecasted Potential Score", "Balances the forecasted max upside against the max downside.", logic_tree)
 
 def _create_rule_9_intraday_momentum() -> Rule:

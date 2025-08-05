@@ -43,13 +43,12 @@ class RulesOrchestrator:
         for rule in selected_rules:
             score = rule.execute(report)
             scores.append(score)
-            if not math.isclose(score, 0.0):
-                 triggered_rules.append(TriggeredRuleInfo(
-                     rule_id=rule.rule_id, 
-                     name=rule.name, 
-                     score=score, 
-                     purpose=purpose.name
-                 ))
+            triggered_rules.append(TriggeredRuleInfo(
+                rule_id=rule.rule_id, 
+                name=rule.name, 
+                score=score, 
+                purpose=purpose.name
+            ))
         return scores, triggered_rules
     
     def run_single_rule(
