@@ -6,16 +6,18 @@ import axios from 'axios';
 import type { components } from '@/types/api';
 import { SEMANTIC_TYPE_OPTIONS } from '@/constants/api';
 import { VDataTable } from 'vuetify/components';
+import { useRulesStore } from '@/stores/rulesStore';
 
 // --- TYPE DEFINITIONS ---
 type RuleResponse = components['schemas']['RuleResponse'];
 type SemanticType = components['schemas']['SemanticType'];
-type ReadonlyHeaders = VDataTable['$props']['headers']
+type ReadonlyHeaders = VDataTable['$props']['headers'];
+
+// --- STORE ---
+const rulesStore = useRulesStore();
+const { rulesList, isLoadingList, error } = storeToRefs(rulesStore);
 
 // --- REACTIVE STATE ---
-const rules = ref<RuleResponse[]>([]);
-const isLoading = ref<boolean>(true);
-const error = ref<string | null>(null);
 const search = ref('');
 const selectedPurpose = ref<SemanticType>('ANY');
 
@@ -68,22 +70,6 @@ const headers: ReadonlyHeaders = [
 ];
 
 const router = useRouter();
-
-// --- DATA FETCHING ---
-async function fetchRules() {
-  try {
-    isLoading.value = true;
-    const response = await axios.get('http://localhost:8000/api/v1/rules', {
-      params: { purpose: selectedPurpose.value }
-    });
-    rules.value = response.data;
-  } catch (e: any) {
-    error.value = `Could not fetch rules. Error: ${e.message}`;
-  } finally {
-    isLoading.value = false;
-  }
-}
-
 // --- HELPERS ---
 function formatTimestamp(ts: number): string {
   return new Date(ts * 1000).toLocaleString('vn-VN');
@@ -95,7 +81,7 @@ function viewRuleDetails(item: RuleResponse) {
 
 // --- LIFECYCLE & WATCHERS ---
 onMounted(() => {
-  fetchRules();
+  rulesStore.fetchRules(selectedPurpose.value);
 });
 </script>
 
@@ -115,7 +101,7 @@ onMounted(() => {
               density="compact"
               variant="outlined"
               hide-details
-              @update:modelValue="fetchRules"
+              @update:modelValue="rulesStore.fetchRules"
             ></v-select>
           </v-col>
           <v-col cols="12" md="8">
@@ -134,9 +120,9 @@ onMounted(() => {
 
       <v-data-table
         :headers="headers"
-        :items="rules"
+        :items="rulesList"
         :search="search"
-        :loading="isLoading"
+        :loading="isLoadingList"
         items-per-page="15"
       >
         <template v-slot:item.is_active="{ value }">

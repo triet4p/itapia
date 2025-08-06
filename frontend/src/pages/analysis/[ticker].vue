@@ -1,36 +1,18 @@
 <script lang="ts" setup>
-import { ref, onMounted, computed } from 'vue';
+import { onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
-import type { components } from '@/types/api';
+import { useAnalysisStore } from '@/stores/analysisStore';
 
-// --- TYPE DEFINITIONS ---
-type AnalysisReport = components['schemas']['QuickCheckAnalysisReport'];
-
-// --- REACTIVE STATE ---
-const analysisData = ref<AnalysisReport | null>(null);
-const explanationText = ref<string>('');
-const isLoading = ref<boolean>(true);
-const error = ref<string | null>(null);
 const showFullJson = ref<boolean>(false);
+
+// --- Store
+const analysisStore = useAnalysisStore();
+const { report, explaination, isLoading, error } = storeToRefs(analysisStore);
 
 // --- ROUTE & PARAMS ---
 const route = useRoute('/analysis/[ticker]');
 const ticker = route.params.ticker as string;
-
-// Đọc và xử lý tất cả các query params từ URL
-const displayOptions = computed(() => {
-  const query = route.query;
-  return {
-    daily_analysis_type: (query.daily_analysis_type || 'medium') as 'short' | 'medium' | 'long',
-    required_type: (query.required_type || 'all') as 'daily' | 'intraday' | 'all',
-    showKeyIndicators: query.showKeyIndicators !== 'false',
-    showTopPatterns: query.showTopPatterns !== 'false',
-    showTopNews: query.showTopNews !== 'false',
-    showSummary: query.showSummary !== 'false', // Chỉ dành cho News Summary
-    selectedForecasts: query.forecasts ? (query.forecasts as string).split(',').map(Number) : [0,1,2]
-  };
-});
 
 // --- HELPER FUNCTIONS FOR FORMATTING ---
 
@@ -57,64 +39,44 @@ function formatDistributionTargetName(target: string): string {
   return target; // Trả về nguyên bản nếu không đúng định dạng
 }
 
-
-// --- DATA FETCHING ---
-async function fetchAllData() {
-  if (!ticker) {
-    error.value = "Ticker symbol not found in URL.";
-    isLoading.value = false;
-    return;
-  }
-  
-  try {
-    isLoading.value = true;
-    const baseUrl = `http://localhost:8000/api/v1/analysis/quick/${ticker}`;
-    const apiParams = {
-      daily_analysis_type: displayOptions.value.daily_analysis_type,
-      required_type: displayOptions.value.required_type
-    };
-
-    // Luôn gọi cả hai API vì explanationText luôn được hiển thị
-    const jsonPromise = axios.get(`${baseUrl}/full`, { params: apiParams });
-    const textPromise = axios.get(`${baseUrl}/explain`, { params: apiParams });
-
-    const [jsonResponse, textResponse] = await Promise.all([jsonPromise, textPromise]);
-
-    analysisData.value = jsonResponse.data;
-    explanationText.value = textResponse.data;
-
-  } catch (e: any) {
-    error.value = `Could not fetch report for ticker ${ticker}. Error: ${e.message}`;
-    console.error(e);
-  } finally {
-    isLoading.value = false;
-  }
-}
-
 // --- LIFECYCLE HOOK ---
 onMounted(() => {
-  fetchAllData();
+  analysisStore.fetchReport(ticker, route.query);
+});
+
+// Đọc và xử lý tất cả các query params từ URL
+const displayOptions = computed(() => {
+  const query = route.query;
+  return {
+    daily_analysis_type: (query.daily_analysis_type || 'medium') as 'short' | 'medium' | 'long',
+    required_type: (query.required_type || 'all') as 'daily' | 'intraday' | 'all',
+    showKeyIndicators: query.showKeyIndicators !== 'false',
+    showTopPatterns: query.showTopPatterns !== 'false',
+    showTopNews: query.showTopNews !== 'false',
+    showSummary: query.showSummary !== 'false', // Chỉ dành cho News Summary
+    selectedForecasts: query.forecasts ? (query.forecasts as string).split(',').map(Number) : [0,1,2]
+  };
 });
 
 // --- COMPUTED PROPERTIES ---
 const keyIndicatorsList = computed(() => {
-  if (!analysisData.value?.technical_report.daily_report?.key_indicators) return [];
-  const indicators = analysisData.value.technical_report.daily_report.key_indicators;
+  if (!report.value?.technical_report.daily_report?.key_indicators) return [];
+  const indicators = report.value.technical_report.daily_report.key_indicators;
   return Object.entries(indicators).map(([key, value]) => ({
     name: key.toUpperCase(),
     value: typeof value === 'number' ? value.toFixed(2) : 'Can not compute'
   }));
 });
 
-const topPatterns = computed(() => analysisData.value?.technical_report.daily_report?.pattern_report.top_patterns?.slice(0, 3) || []);
+const topPatterns = computed(() => report.value?.technical_report.daily_report?.pattern_report.top_patterns?.slice(0, 3) || []);
 
 const filteredForecasts = computed(() => {
-  const allForecasts = analysisData.value?.forecasting_report.forecasts || [];
+  const allForecasts = report.value?.forecasting_report.forecasts || [];
   return allForecasts.filter((_, index) => displayOptions.value.selectedForecasts.includes(index));
 });
 
 // Computed property mới cho News Summary
-const newsSummary = computed(() => analysisData.value?.news_report.summary);
+const newsSummary = computed(() => report.value?.news_report.summary);
 
 </script>
 
@@ -128,9 +90,9 @@ const newsSummary = computed(() => analysisData.value?.news_report.summary);
     <v-alert type="error" v-else-if="error" title="Analysis Error" :text="error" variant="tonal"></v-alert>
 
     <!-- Giao diện hiển thị dữ liệu -->
-    <div v-else-if="analysisData">
+    <div v-else-if="report">
       <h1 class="text-h4 mb-2">Analysis Report: {{ ticker }}</h1>
-      <p class="text-subtitle-1 mb-6">Generated at {{ new Date(analysisData.generated_at_utc).toLocaleString('en-GB') }}</p>
+      <p class="text-subtitle-1 mb-6">Generated at {{ new Date(report.generated_at_utc).toLocaleString('en-GB') }}</p>
 
       <v-row>
         <!-- CỘT BÊN TRÁI: GIẢI THÍCH VÀ CÁC BÁO CÁO CHÍNH -->
@@ -139,7 +101,7 @@ const newsSummary = computed(() => analysisData.value?.news_report.summary);
           <v-card class="mb-6">
             <v-card-title>Explanation Summary</v-card-title>
             <v-card-text>
-              <pre class="explanation-text">{{ explanationText }}</pre>
+              <pre class="explanation-text">{{ explaination }}</pre>
             </v-card-text>
           </v-card>
 
@@ -227,7 +189,7 @@ const newsSummary = computed(() => analysisData.value?.news_report.summary);
           <div v-show="showFullJson">
             <v-divider></v-divider>
             <v-card-text>
-              <pre class="json-dump"><code>{{ JSON.stringify(analysisData, null, 2) }}</code></pre>
+              <pre class="json-dump"><code>{{ JSON.stringify(report, null, 2) }}</code></pre>
             </v-card-text>
           </div>
         </v-expand-transition>

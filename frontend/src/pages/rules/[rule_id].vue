@@ -4,17 +4,16 @@ import { useRoute } from 'vue-router';
 import axios from 'axios';
 import type { components } from '@/types/api';
 import TreeNode from '@/components/TreeNode.vue';
+import { useRulesStore } from '@/stores/rulesStore';
+
+// --- STORE ---
+const rulesStore = useRulesStore();
+const { currentRule, nodeDictionary, isLoadingDetails, error } = storeToRefs(rulesStore);
 
 // --- TYPE DEFINITIONS ---
-type RuleExplanation = components['schemas']['ExplainationRuleResponse'];
 type NodeSpec = components['schemas']['NodeSpecEntity'];
 
 // --- REACTIVE STATE ---
-const ruleData = ref<RuleExplanation | null>(null);
-const allNodes = ref<NodeSpec[]>([]);
-const isLoading = ref<boolean>(true);
-const error = ref<string | null>(null);
-
 const dialogVisible = ref(false);
 const selectedNodeDetails = ref<NodeSpec | null>(null);
 
@@ -25,24 +24,24 @@ const ruleId = route.params.rule_id as string;
 // --- DATA FETCHING ---
 async function fetchData() {
   try {
-    isLoading.value = true;
+    isLoadingDetails.value = true;
     const rulePromise = axios.get(`http://localhost:8000/api/v1/rules/${ruleId}/explain`);
     const nodesPromise = axios.get('http://localhost:8000/api/v1/rules/nodes');
     
     const [ruleResponse, nodesResponse] = await Promise.all([rulePromise, nodesPromise]);
     
-    ruleData.value = ruleResponse.data;
-    allNodes.value = nodesResponse.data;
+    currentRule.value = ruleResponse.data;
+    nodeDictionary.value = nodesResponse.data;
   } catch (e: any) {
     error.value = `Could not fetch data for rule ${ruleId}. Error: ${e.message}`;
   } finally {
-    isLoading.value = false;
+    isLoadingDetails.value = false;
   }
 }
 
 // --- LOGIC ---
 function handleNodeClick(nodeName: string) {
-  const foundNode = allNodes.value.find(n => n.node_name === nodeName);
+  const foundNode = nodeDictionary.value.find(n => n.node_name === nodeName);
   if (foundNode) {
     selectedNodeDetails.value = foundNode;
     dialogVisible.value = true;
@@ -57,30 +56,30 @@ onMounted(() => {
 
 <template>
   <v-container>
-    <div v-if="isLoading" class="text-center pa-10">
+    <div v-if="isLoadingDetails" class="text-center pa-10">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
     <v-alert v-else-if="error" type="error">{{ error }}</v-alert>
 
-    <div v-else-if="ruleData">
-      <h1 class="text-h4">{{ ruleData.name }}</h1>
-      <p class="text-subtitle-1 mb-4">{{ ruleData.rule_id }}</p>
+    <div v-else-if="currentRule">
+      <h1 class="text-h4">{{ currentRule.name }}</h1>
+      <p class="text-subtitle-1 mb-4">{{ currentRule.rule_id }}</p>
 
       <v-row>
         <v-col cols="12" md="4">
           <v-card>
             <v-card-title>Metadata</v-card-title>
             <v-list density="compact">
-              <v-list-item title="Purpose" :subtitle="ruleData.purpose"></v-list-item>
-              <v-list-item title="Version" :subtitle="ruleData.version"></v-list-item>
+              <v-list-item title="Purpose" :subtitle="currentRule.purpose"></v-list-item>
+              <v-list-item title="Version" :subtitle="currentRule.version"></v-list-item>
               <v-list-item title="Status">
                 <template v-slot:subtitle>
-                  <v-chip :color="ruleData.is_active ? 'success' : 'grey'" size="small">
-                    {{ ruleData.is_active ? 'Active' : 'Inactive' }}
+                  <v-chip :color="currentRule.is_active ? 'success' : 'grey'" size="small">
+                    {{ currentRule.is_active ? 'Active' : 'Inactive' }}
                   </v-chip>
                 </template>
               </v-list-item>
-              <v-list-item title="Created At" :subtitle="new Date(ruleData.created_at_ts * 1000).toLocaleString('en-GB')"></v-list-item>
+              <v-list-item title="Created At" :subtitle="new Date(currentRule.created_at_ts * 1000).toLocaleString('en-GB')"></v-list-item>
             </v-list>
           </v-card>
         </v-col>
@@ -88,7 +87,7 @@ onMounted(() => {
           <v-card>
             <v-card-title>Rule Tree</v-card-title>
             <v-card-text>
-              <TreeNode :node="ruleData.root" :depth="0" @node-click="handleNodeClick" />
+              <TreeNode :node="currentRule.root" :depth="0" @node-click="handleNodeClick" />
             </v-card-text>
           </v-card>
         </v-col>
@@ -97,7 +96,7 @@ onMounted(() => {
       <v-card class="mt-6">
         <v-card-title>Explanation</v-card-title>
         <v-card-text>
-          <p class="explanation-text">{{ ruleData.explain }}</p>
+          <p class="explanation-text">{{ currentRule.explain }}</p>
         </v-card-text>
       </v-card>
 

@@ -5,6 +5,8 @@ doc/docx/*
 **/local
 **/.vscode
 
+.VSCodeCounter
+
 # Logs
 logs
 *.log

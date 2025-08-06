@@ -3,17 +3,12 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 import type { components } from '@/types/api';
+import { useAdvisorStore } from '@/stores/advisorStore';
 
-// --- TYPE DEFINITIONS ---
-type AdvisorReport = components['schemas']['AdvisorReportSchema'];
-type FinalAdvice = components['schemas']['AdvisorReportSchema'];
-
-// --- REACTIVE STATE ---
-const advisorData = ref<AdvisorReport | null>(null);
-const explanationText = ref<string>('');
-const isLoading = ref<boolean>(true);
-const error = ref<string | null>(null);
 const showFullJson = ref<boolean>(false);
+
+const advisorStore = useAdvisorStore();
+const { report, explaination, isLoading, error } = storeToRefs(advisorStore);
 
 // --- ROUTE & PARAMS ---
 const route = useRoute('/advisor/[ticker]');
@@ -42,40 +37,9 @@ function getLabelColor(label: string): string {
   return 'grey'; // Xám cho trung tính
 }
 
-// --- DATA FETCHING ---
-async function fetchAdvisoryData() {
-  if (!ticker) {
-    error.value = "Ticker symbol not found in URL.";
-    isLoading.value = false;
-    return;
-  }
-  
-  try {
-    isLoading.value = true;
-    const baseUrl = `http://localhost:8000/api/v1/advisor/quick/${ticker}`;
-    const apiParams = {
-      user_id: userId.value // Truyền user_id vào params
-    };
-
-    const jsonPromise = axios.get(`${baseUrl}/full`, { params: apiParams });
-    const textPromise = axios.get(`${baseUrl}/explain`, { params: apiParams });
-
-    const [jsonResponse, textResponse] = await Promise.all([jsonPromise, textPromise]);
-
-    advisorData.value = jsonResponse.data;
-    explanationText.value = textResponse.data;
-
-  } catch (e: any) {
-    error.value = `Could not fetch advisory for ticker ${ticker}. Error: ${e.message}`;
-    console.error(e);
-  } finally {
-    isLoading.value = false;
-  }
-}
-
 // --- LIFECYCLE HOOK ---
 onMounted(() => {
-  fetchAdvisoryData();
+  advisorStore.fetchReport(ticker, userId.value);
 });
 </script>
 
@@ -89,9 +53,9 @@ onMounted(() => {
     <v-alert type="error" v-else-if="error" title="Advisory Error" :text="error" variant="tonal"></v-alert>
 
     <!-- Giao diện hiển thị dữ liệu -->
-    <div v-else-if="advisorData">
-      <h1 class="text-h4 mb-2">Advisory Report: {{ advisorData.ticker }}</h1>
-      <p class="text-subtitle-1 mb-6">Generated at {{ new Date(advisorData.generated_at_utc).toLocaleString('en-GB') }}</p>
+    <div v-else-if="report">
+      <h1 class="text-h4 mb-2">Advisory Report: {{ report.ticker }}</h1>
+      <p class="text-subtitle-1 mb-6">Generated at {{ new Date(report.generated_at_utc).toLocaleString('en-GB') }}</p>
 
       <v-row>
         <!-- CỘT BÊN TRÁI: GIẢI THÍCH CHI TIẾT -->
@@ -99,7 +63,7 @@ onMounted(() => {
           <v-card class="mb-6">
             <v-card-title>Explanation Summary</v-card-title>
             <v-card-text>
-              <pre class="explanation-text">{{ explanationText }}</pre>
+              <pre class="explanation-text">{{ explaination }}</pre>
             </v-card-text>
           </v-card>
         </v-col>
@@ -113,11 +77,11 @@ onMounted(() => {
                 <v-icon color="blue">mdi-lightbulb-on-outline</v-icon>
               </template>
               <v-list-item-title class="text-h6">Decision</v-list-item-title>
-              <v-list-item-subtitle>Final Score: {{ advisorData.final_decision.final_score.toFixed(2) }}</v-list-item-subtitle>
+              <v-list-item-subtitle>Final Score: {{ report.final_decision.final_score.toFixed(2) }}</v-list-item-subtitle>
             </v-list-item>
             <v-card-text>
-              <v-chip :color="getLabelColor(advisorData.final_decision.label)" class="wrap-chip-text">
-                {{ advisorData.final_decision.final_recommend.replace("Threshold match is THRESHOLD_DECISION_", "").replace(", which mean ", ": ") }}
+              <v-chip :color="getLabelColor(report.final_decision.label)" class="wrap-chip-text">
+                {{ report.final_decision.final_recommend.replace("Threshold match is THRESHOLD_DECISION_", "").replace(", which mean ", ": ") }}
               </v-chip>
             </v-card-text>
             <v-expansion-panels variant="accordion">
@@ -125,7 +89,7 @@ onMounted(() => {
                 <v-expansion-panel-text>
                   <v-list density="compact">
                     <v-list-item
-                      v-for="rule in advisorData.final_decision.triggered_rules"
+                      v-for="rule in report.final_decision.triggered_rules"
                       :key="rule.rule_id"
                       :title="rule.name"
                     >
@@ -148,11 +112,11 @@ onMounted(() => {
                 <v-icon color="orange">mdi-shield-alert-outline</v-icon>
               </template>
               <v-list-item-title class="text-h6">Risk Level</v-list-item-title>
-              <v-list-item-subtitle>Final Score: {{ advisorData.final_risk.final_score.toFixed(2) }}</v-list-item-subtitle>
+              <v-list-item-subtitle>Final Score: {{ report.final_risk.final_score.toFixed(2) }}</v-list-item-subtitle>
             </v-list-item>
             <v-card-text>
-              <v-chip :color="getLabelColor(advisorData.final_risk.label)" class="wrap-chip-text">
-                {{ advisorData.final_risk.final_recommend.replace("Threshold match is THRESHOLD_RISK_", "").replace(", which mean ", ": ") }}
+              <v-chip :color="getLabelColor(report.final_risk.label)" class="wrap-chip-text">
+                {{ report.final_risk.final_recommend.replace("Threshold match is THRESHOLD_RISK_", "").replace(", which mean ", ": ") }}
               </v-chip>
             </v-card-text>
             <v-expansion-panels variant="accordion">
@@ -160,7 +124,7 @@ onMounted(() => {
                 <v-expansion-panel-text>
                   <v-list density="compact">
                     <v-list-item
-                      v-for="rule in advisorData.final_risk.triggered_rules"
+                      v-for="rule in report.final_risk.triggered_rules"
                       :key="rule.rule_id"
                       :title="rule.name"
                     >
@@ -183,11 +147,11 @@ onMounted(() => {
                 <v-icon color="green">mdi-trending-up</v-icon>
               </template>
               <v-list-item-title class="text-h6">Opportunity Rating</v-list-item-title>
-              <v-list-item-subtitle>Final Score: {{ advisorData.final_opportunity.final_score.toFixed(2) }}</v-list-item-subtitle>
+              <v-list-item-subtitle>Final Score: {{ report.final_opportunity.final_score.toFixed(2) }}</v-list-item-subtitle>
             </v-list-item>
             <v-card-text>
-              <v-chip :color="getLabelColor(advisorData.final_opportunity.label)" class="wrap-chip-text">
-                {{ advisorData.final_opportunity.final_recommend.replace("Threshold match is THRESHOLD_OPP_RATING_", "").replace(", which mean ", ": ") }}
+              <v-chip :color="getLabelColor(report.final_opportunity.label)" class="wrap-chip-text">
+                {{ report.final_opportunity.final_recommend.replace("Threshold match is THRESHOLD_OPP_RATING_", "").replace(", which mean ", ": ") }}
               </v-chip>
             </v-card-text>
             <v-expansion-panels variant="accordion">
@@ -195,7 +159,7 @@ onMounted(() => {
                 <v-expansion-panel-text>
                   <v-list density="compact">
                     <v-list-item
-                      v-for="rule in advisorData.final_opportunity.triggered_rules"
+                      v-for="rule in report.final_opportunity.triggered_rules"
                       :key="rule.rule_id"
                       :title="rule.name"
                     >
@@ -226,7 +190,7 @@ onMounted(() => {
           <div v-show="showFullJson">
             <v-divider></v-divider>
             <v-card-text>
-              <pre class="json-dump"><code>{{ JSON.stringify(advisorData, null, 2) }}</code></pre>
+              <pre class="json-dump"><code>{{ JSON.stringify(report, null, 2) }}</code></pre>
             </v-card-text>
           </div>
         </v-expand-transition>
