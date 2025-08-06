@@ -25,6 +25,7 @@ declare module 'vue-router/auto-routes' {
     '/analysis/[ticker]': RouteRecordInfo<'/analysis/[ticker]', '/analysis/:ticker', { ticker: ParamValue<true> }, { ticker: ParamValue<false> }>,
     '/login': RouteRecordInfo<'/login', '/login', Record<never, never>, Record<never, never>>,
     '/profile': RouteRecordInfo<'/profile', '/profile', Record<never, never>, Record<never, never>>,
-    '/rules': RouteRecordInfo<'/rules', '/rules', Record<never, never>, Record<never, never>>,
+    '/rules/': RouteRecordInfo<'/rules/', '/rules', Record<never, never>, Record<never, never>>,
+    '/rules/[rule_id]': RouteRecordInfo<'/rules/[rule_id]', '/rules/:rule_id', { rule_id: ParamValue<true> }, { rule_id: ParamValue<false> }>,
   }
 }

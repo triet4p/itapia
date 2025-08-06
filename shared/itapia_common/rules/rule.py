@@ -8,7 +8,8 @@ from typing import Dict, Any
 # Trong thực tế, bạn sẽ import chúng một cách chính xác
 from .nodes import OperatorNode, _TreeNode
 from itapia_common.schemas.enums import SemanticType
-from .parser import parse_tree_from_dict, serialize_tree_to_dict
+from itapia_common.schemas.entities.rules import RuleEntity
+from .parser import parse_tree, serialize_tree
 
 # Giả định sự tồn tại của schema báo cáo
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
@@ -75,54 +76,51 @@ class Rule:
             return 0.0 
         return self.root.evaluate(report)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_entity(self) -> RuleEntity:
         """
         Chuyển đổi (serialize) toàn bộ đối tượng Rule thành một dictionary.
         
         Cấu trúc dictionary này phù hợp để lưu trữ dưới dạng JSON trong CSDL 
         hoặc truyền qua API.
         """
-        return {
-            "rule_id": self.rule_id,
-            "name": self.name,
-            "description": self.description,
-            "purpose": self.purpose.value,
-            "is_active": self.is_active,
-            "version": self.version,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            # Sử dụng helper để chuyển đổi cây logic thành dict
-            "root": serialize_tree_to_dict(self.root)
-        }
+        return RuleEntity(
+            rule_id=self.rule_id,
+            name=self.name,
+            description=self.description,
+            purpose=self.purpose,
+            version=self.version,
+            is_active=self.is_active,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            root=serialize_tree(self.root)
+        )
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Rule':
+    def from_entity(cls, data: RuleEntity) -> 'Rule':
         """
         Tạo (deserialize) một đối tượng Rule từ một dictionary.
 
         Đây là một factory method, thường được sử dụng sau khi đọc dữ liệu
         từ CSDL hoặc một request API.
         """
-        root_json = data.get("root")
+        root_json = data.root
         if not root_json:
             raise ValueError("Dữ liệu quy tắc thiếu cây logic 'root'.")
         
         # Sử dụng parser để tái tạo lại cây logic từ cấu trúc JSON
         try:
-            root_node = parse_tree_from_dict(root_json)
+            root_node = parse_tree(root_json)
         except Exception as e:
             # Bọc lỗi gốc để cung cấp thêm ngữ cảnh
             raise ValueError(f"Không thể phân tích cây logic cho rule_id '{data.get('rule_id')}'. Lỗi: {e}") from e
             
         # created_at và updated_at có thể không có trong dữ liệu cũ
-        created_ts = data.get("created_at")
-        updated_ts = data.get("updated_at")
         
-        purpose_from_data_str = data.get("purpose")
+        purpose_from_data_str = data.purpose
         if purpose_from_data_str:
             try:
                 # Chuyển chuỗi từ JSON thành Enum
-                purpose_from_data = SemanticType[purpose_from_data_str]
+                purpose_from_data = purpose_from_data_str
                 if purpose_from_data != root_node.return_type:
                     raise TypeError(
                         f"Purpose trong metadata ('{purpose_from_data.name}') "
@@ -132,13 +130,13 @@ class Rule:
                 raise ValueError(f"Purpose không hợp lệ: '{purpose_from_data_str}'")
 
         return cls(
-            rule_id=data.get('rule_id'),
-            name=data["name"],
-            description=data.get("description", ""),
-            is_active=data.get("is_active", True),
-            version=data.get("version", 1.0),
-            created_at=created_ts,
-            updated_at=updated_ts,
+            rule_id=data.rule_id,
+            name=data.name,
+            description=data.description,
+            is_active=data.is_active,
+            version=data.version,
+            created_at=data.created_at,
+            updated_at=data.updated_at,
             # Truyền cây logic đã được tái tạo
             root=root_node
         )

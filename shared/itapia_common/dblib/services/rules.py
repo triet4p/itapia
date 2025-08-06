@@ -72,3 +72,10 @@ class RuleService:
         
         # "Lắp ráp" từng dictionary thành đối tượng Rule
         return [RuleEntity(**row) for row in list_of_rule_data]
+    
+    def get_all_active_rules(self) -> List[RuleEntity]:
+        # Lấy danh sách dữ liệu thô
+        list_of_rule_data = self.crud.get_all_active_rules()
+        
+        # "Lắp ráp" từng dictionary thành đối tượng Rule
+        return [RuleEntity(**row) for row in list_of_rule_data]

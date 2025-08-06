@@ -1,21 +1,19 @@
 import inspect
 from typing import NamedTuple, Dict, List, Any, Set, Type
 
-from ._nodes import _TreeNode, NODE_TYPE
-from itapia_common.schemas.enums import SemanticType
+from ._nodes import _TreeNode
+from itapia_common.schemas.enums import SemanticType, NodeType
+from itapia_common.schemas.entities.rules import NodeSpecEntity
 
 class NodeSpec(NamedTuple):
     node_class: Type[_TreeNode]
     description: str
-    node_type: NODE_TYPE
+    node_type: NodeType
     params: Dict[str, Any]
     return_type: SemanticType
-    args_type: List[SemanticType] = None
+    args_type: List[SemanticType]|None = None
     
 _NODE_REGISTRY: Dict[str, NodeSpec] = {}
-_CONST_NODES_ID: Set[str] = set()
-_VAR_NODES_ID: Set[str] = set()
-_OPR_NODES_ID: Set[str] = set()
     
 def register_node_by_spec(node_name: str, spec: NodeSpec):
     """Đăng ký một bản thiết kế node mới."""
@@ -23,13 +21,6 @@ def register_node_by_spec(node_name: str, spec: NodeSpec):
     if node_name in _NODE_REGISTRY:
         raise ValueError(f"Node có tên '{node_name}' đã được đăng ký.")
     _NODE_REGISTRY[node_name] = spec
-    
-    if spec.node_type == 'constant':
-        _CONST_NODES_ID.add(node_name)
-    elif spec.node_type == 'variable':
-        _VAR_NODES_ID.add(node_name)
-    elif spec.node_type == 'operator':
-        _OPR_NODES_ID.add(node_name)
 
 # --- HÀM "NHÀ MÁY" (FACTORY FUNCTION) ---
 # ... các import khác ...
@@ -83,18 +74,14 @@ def create_node(node_name: str, **kwargs) -> _TreeNode:
             f"Tham số cuối cùng: {final_params}. Lỗi gốc: {e}"
         ) from e
         
-def get_all_const_nodes() -> Set[str]:
-    return _CONST_NODES_ID
+def get_nodes_by_type(node_type: NodeType, purpose: SemanticType) -> List[NodeSpecEntity]:
 
-def get_all_var_nodes() -> Set[str]:
-    return _VAR_NODES_ID
-
-def get_all_opr_nodes() -> Set[str]:
-    return _OPR_NODES_ID
-
-def get_nodes_by_type(node_type: NODE_TYPE, semantic_type: SemanticType) -> List[str]:
-    return [
-        node_name for node_name, spec in _NODE_REGISTRY.items()
-        if spec.node_type == node_type and spec.return_type == semantic_type
-    ]
+    return [NodeSpecEntity(node_name=name, 
+                           description=spec.description,
+                           node_type=spec.node_type,
+                           return_type=spec.return_type,
+                           args_type=spec.args_type)
+            for name, spec in _NODE_REGISTRY.items()
+            if ((spec.node_type == node_type) or node_type == NodeType.ANY)
+                and ((spec.return_type == purpose) or purpose == SemanticType.ANY)]
     

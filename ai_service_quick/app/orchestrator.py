@@ -2,7 +2,7 @@
 import asyncio
 from typing import Literal
 
-from itapia_common.schemas.enums import SemanticType
+from itapia_common.schemas.enums import NodeType, SemanticType
 
 from .analysis import AnalysisOrchestrator
 from .advisor import AdvisorOrchestrator
@@ -133,6 +133,13 @@ class AIServiceQuickOrchestrator:
     
     async def get_single_explaination_rule(self, rule_id: str):
         return await self.rules.get_explaination_for_single_rule(rule_id)
+    
+    async def get_active_rules(self, purpose: SemanticType):
+        return await self.rules.get_active_rules(purpose)
+    
+    def get_nodes(self, node_type: NodeType = NodeType.ANY, 
+                        purpose: SemanticType = SemanticType.ANY):
+        return self.rules.get_nodes(node_type, purpose)
         
     async def preload_all_caches(self):
         """Khởi động song song tất cả các quy trình nền."""

@@ -1,12 +1,13 @@
 # ai_service_quick/app/advisor/rules_orc.py
 import math
-from typing import List, Callable, Tuple
+from typing import List, Callable, Literal, Tuple, Union
 
 from app.core.exceptions import NoDataError
 
 from itapia_common.rules.rule import Rule
+from itapia_common.rules.nodes.registry import get_nodes_by_type
 from itapia_common.schemas.entities.rules import ExplainationRuleEntity
-from itapia_common.schemas.enums import SemanticType
+from itapia_common.schemas.enums import SemanticType, NodeType
 from itapia_common.dblib.services.rules import RuleService
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from itapia_common.schemas.entities.advisor import TriggeredRuleInfo
@@ -33,7 +34,7 @@ class RulesOrchestrator:
         """
         # Lấy tất cả quy tắc đang hoạt động từ DB
         all_rules_schemas = self.rule_service.get_active_rules_by_purpose(purpose)
-        all_rules = [Rule.from_dict(rs.model_dump()) for rs in all_rules_schemas]
+        all_rules = [Rule.from_entity(rs) for rs in all_rules_schemas]
         
         # Áp dụng logic lựa chọn (có thể được cá nhân hóa)
         selected_rules = rule_selector(all_rules)
@@ -101,7 +102,7 @@ class RulesOrchestrator:
         rule_entity = self.rule_service.get_rule_by_id(rule_id)
         if rule_entity is None:
             raise ValueError(f'Not found rule with id {rule_id}')
-        return Rule.from_dict(rule_entity.model_dump())
+        return Rule.from_entity(rule_entity)
     
     async def get_explaination_for_single_rule(self, rule_id: str) -> ExplainationRuleEntity:
         # <<< THAY ĐỔI: Hàm này nên là async vì `rules_orc.get_single_rule` truy cập DB
@@ -114,8 +115,21 @@ class RulesOrchestrator:
             # Sử dụng model_dump() thay vì **rule.to_dict() để an toàn hơn với Pydantic
             entity = ExplainationRuleEntity(
                 explain=explanation,
-                **rule.to_dict()
+                **rule.to_entity().model_dump()
             )
             return entity
         except ValueError as e:
             raise NoDataError(f'Not found data for rule {rule_id}')
+        
+    def get_nodes(self, node_type: NodeType = NodeType.ANY, 
+                  purpose: SemanticType = SemanticType.ANY):
+        return get_nodes_by_type(node_type, purpose)
+    
+    async def get_active_rules(self, purpose: SemanticType):
+        if purpose != SemanticType.ANY:
+            rule_entites = self.rule_service.get_active_rules_by_purpose(purpose)
+        else:
+            rule_entites = self.rule_service.get_all_active_rules()
+        if rule_entites is None:
+            raise NoDataError(f'No rules is actived!')
+        return rule_entites

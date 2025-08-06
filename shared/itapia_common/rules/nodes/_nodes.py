@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Literal, Any, Set, Tuple, Dict, List
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from itapia_common.rules.exceptions import NotFoundVarPathError
-from itapia_common.schemas.enums import SemanticType
+from itapia_common.schemas.enums import SemanticType, NodeType
 
 def normalize(raw_value: int|float, default_value: int|float,
               source_range: Tuple[float, float], target_range: Tuple[float, float]):
@@ -39,10 +39,9 @@ def denormalize(encoded_value: int|float,
     scaled_value = (encoded_value - target_min) / target_span
     return source_min + (scaled_value * source_span)
 
-NODE_TYPE = Literal['constant', 'variable', 'operator']
 
 class _TreeNode(ABC):
-    def __init__(self, node_name: str, node_type: NODE_TYPE,
+    def __init__(self, node_name: str, node_type: NodeType,
                  description: str, return_type: SemanticType):
         self.node_name = node_name
         self.node_type = node_type
@@ -63,7 +62,7 @@ class ConstantNode(_TreeNode):
                  value: float, use_normalize: bool = False,
                  source_range: Tuple[float, float]|None = None,
                  target_range: Tuple[float, float]|None = None):
-        super().__init__(node_name, node_type='constant', description=description, return_type=return_type)
+        super().__init__(node_name, node_type=NodeType.CONSTANT, description=description, return_type=return_type)
         self.value = value
         
         if use_normalize:
@@ -88,7 +87,7 @@ class VarNode(_TreeNode):
     def __init__(self, node_name: str, description: str, return_type: SemanticType,
                  path: str, default_value: float = 0.0):
         # Lưu ý: node_type sẽ được gán ở lớp con
-        super().__init__(node_name, node_type='variable', description=description, return_type=return_type)
+        super().__init__(node_name, node_type=NodeType.VARIABLE, description=description, return_type=return_type)
         self.path = path
         self.default_value = default_value
         
@@ -226,7 +225,7 @@ class OperatorNode(_TreeNode):
     def __init__(self, node_name: str, description: str, num_child: int|None,
                  return_type: SemanticType, args_type: List[SemanticType],
                  children: List[_TreeNode] = []):
-        super().__init__(node_name, node_type='operator', description=description, return_type=return_type)
+        super().__init__(node_name, node_type=NodeType.OPERATOR, description=description, return_type=return_type)
         self.num_child = num_child
         self.children = children
         

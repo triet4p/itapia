@@ -83,3 +83,17 @@ class RuleCRUD:
         
         # Trả về một list các dictionary
         return results.mappings().all()
+    
+    def get_all_active_rules(self):
+        """
+        Lấy danh sách dữ liệu thô (list of dicts) của các quy tắc đang hoạt động
+        theo một mục đích cụ thể.
+        """
+        # Postgres JSONB query: `->>` trích xuất trường dưới dạng text
+        stmt = text("""SELECT rule_id, name, description, purpose, version, is_active, created_at, updated_at, root 
+                    FROM rules WHERE is_active=TRUE;""")
+        
+        results = self.db.execute(stmt)
+        
+        # Trả về một list các dictionary
+        return results.mappings().all()

@@ -5,8 +5,9 @@ from typing import Dict, Any, List
 # Import các lớp Node để kiểm tra kiểu
 from .nodes import _TreeNode, ConstantNode, VarNode, OperatorNode
 from .nodes.registry import create_node
+from itapia_common.schemas.entities.rules import NodeEntity
 
-def serialize_tree_to_dict(node: _TreeNode) -> Dict[str, Any]:
+def serialize_tree(node: _TreeNode) -> NodeEntity:
     """
     Chuyển đổi (serialize) một cây Node (bắt đầu từ node gốc) thành một cấu trúc dictionary lồng nhau.
     Hàm này hoạt động theo kiểu đệ quy.
@@ -22,21 +23,20 @@ def serialize_tree_to_dict(node: _TreeNode) -> Dict[str, Any]:
 
     # Tạo dictionary cơ bản
     # Lưu ý: node.node_name đã được .upper() trong constructor
-    node_dict: Dict[str, Any] = {
-        "node_name": node.node_name,
-    }
+    node_name = node.node_name
+    node_children = None
     
     # Nếu là một Operator, đệ quy serialize các con của nó
     if isinstance(node, OperatorNode):
         if node.children: # Chỉ thêm key 'children' nếu có
-            node_dict["children"] = [serialize_tree_to_dict(child) for child in node.children]
+            node_children = [serialize_tree(child) for child in node.children]
             
     # Các loại node khác (Constant, Var) không có 'children' hay tham số đặc biệt
     # nên không cần làm gì thêm. Tên của chúng (node_name) đã đủ để tái tạo lại.
 
-    return node_dict
+    return NodeEntity(node_name=node_name, children=node_children)
 
-def parse_tree_from_dict(data: Dict[str, Any]) -> _TreeNode:
+def parse_tree(data: NodeEntity) -> _TreeNode:
     """
     Phân tích (parse) một cấu trúc dictionary và tái tạo lại một cây Node hoàn chỉnh.
     Hàm này hoạt động theo kiểu đệ quy và sử dụng Node Factory.
@@ -47,23 +47,20 @@ def parse_tree_from_dict(data: Dict[str, Any]) -> _TreeNode:
     Returns:
         _TreeNode: Node gốc của cây hoặc nhánh cây đã được tái tạo.
     """
-    if not isinstance(data, dict) or "node_name" not in data:
-        raise ValueError("Dữ liệu không hợp lệ, thiếu key 'node_name'.")
-    
-    node_name = data["node_name"]
+    node_name = data.node_name
 
     # Chuẩn bị các tham số sẽ được truyền vào factory
     # Đây là các tham số động, không được định nghĩa sẵn trong Spec
     factory_kwargs: Dict[str, Any] = {}
 
     # 1. Đệ quy parse các node con trước (nếu có)
-    if "children" in data:
-        children_data = data["children"]
+    if data.children is not None:
+        children_data = data.children
         if not isinstance(children_data, list):
             raise TypeError("'children' phải là một danh sách.")
         
         # Tái tạo lại từng node con và thêm vào kwargs
-        factory_kwargs["children"] = [parse_tree_from_dict(child_data) for child_data in children_data]
+        factory_kwargs["children"] = [parse_tree(child_data) for child_data in children_data]
         
     # Thêm các tham số đặc biệt khác ở đây nếu có...
 

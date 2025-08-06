@@ -260,6 +260,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ai Active Rules */
+        get: operations["get_ai_active_rules_api_v1_rules_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rules/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ai Nodes */
+        get: operations["get_ai_nodes_api_v1_rules_nodes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -396,14 +430,14 @@ export interface components {
             rule_id: string;
             /** Name */
             name: string;
-            /** Purpose */
-            purpose: string;
+            purpose: components["schemas"]["SemanticType"];
             /** Version */
             version: number;
             /** Is Active */
             is_active: boolean;
             /** Created At Ts */
             created_at_ts: number;
+            root: components["schemas"]["NodeEntity"];
             /** Explain */
             explain: string;
         };
@@ -661,6 +695,33 @@ export interface components {
             reports: components["schemas"]["SingleNewsAnalysisReport"][];
             summary: components["schemas"]["SummaryReport"];
         };
+        /** NodeEntity */
+        NodeEntity: {
+            /** Node Name */
+            node_name: string;
+            /** Children */
+            children?: components["schemas"]["NodeEntity"][] | null;
+        };
+        /** NodeSpecEntity */
+        NodeSpecEntity: {
+            /** Node Name */
+            node_name: string;
+            /** Description */
+            description: string;
+            node_type: components["schemas"]["NodeType"];
+            /** @description return type of a nodes */
+            return_type: components["schemas"]["SemanticType"];
+            /**
+             * Args Type
+             * @description Argument type, only need for operator node
+             */
+            args_type?: components["schemas"]["SemanticType"][] | null;
+        };
+        /**
+         * NodeType
+         * @enum {string}
+         */
+        NodeType: "constant" | "variable" | "operator" | "any";
         /** OverallStrengthTrendReport */
         OverallStrengthTrendReport: {
             /**
@@ -829,6 +890,24 @@ export interface components {
             /** Collect Ts */
             collect_ts: number;
         };
+        /**
+         * RuleResponse
+         * @description Schema cho dữ liệu ĐI RA sau khi tạo Rule thành công.
+         */
+        RuleResponse: {
+            /** Rule Id */
+            rule_id: string;
+            /** Name */
+            name: string;
+            purpose: components["schemas"]["SemanticType"];
+            /** Version */
+            version: number;
+            /** Is Active */
+            is_active: boolean;
+            /** Created At Ts */
+            created_at_ts: number;
+            root: components["schemas"]["NodeEntity"];
+        };
         /** SHAPExplaination */
         SHAPExplaination: {
             /**
@@ -878,6 +957,13 @@ export interface components {
             /** Sector Name */
             sector_name: string;
         };
+        /**
+         * SemanticType
+         * @description Định nghĩa các kiểu ngữ nghĩa cho các giá trị trong cây quy tắc.
+         *     Điều này là trái tim của Strongly Typed Genetic Programming (STGP).
+         * @enum {string}
+         */
+        SemanticType: "NUMERICAL" | "BOOLEAN" | "PRICE" | "PERCENTAGE" | "FINANCIAL_RATIO" | "MOMENTUM" | "TREND" | "VOLATILITY" | "VOLUME" | "SENTIMENT" | "FORECAST_PROB" | "DECISION_SIGNAL" | "RISK_LEVEL" | "OPPORTUNITY_RATING" | "ANY";
         /** SentimentAnalysisReport */
         SentimentAnalysisReport: {
             /**
@@ -1574,6 +1660,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExplainationRuleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ai_active_rules_api_v1_rules_get: {
+        parameters: {
+            query?: {
+                purpose?: components["schemas"]["SemanticType"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ai_nodes_api_v1_rules_nodes_get: {
+        parameters: {
+            query?: {
+                node_type?: components["schemas"]["NodeType"];
+                purpose?: components["schemas"]["SemanticType"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NodeSpecEntity"][];
                 };
             };
             /** @description Validation Error */

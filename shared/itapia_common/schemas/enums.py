@@ -32,3 +32,9 @@ class SemanticType(str, Enum):
     # Kiểu đặc biệt
     ANY = 'ANY'                # Có thể là bất kỳ kiểu nào (dùng cho các toán tử linh hoạt)
     
+class NodeType(str, Enum):
+    CONSTANT = 'constant'
+    VARIABLE = 'variable'
+    OPERATOR = 'operator'
+    
+    ANY = 'any'
