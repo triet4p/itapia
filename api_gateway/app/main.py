@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from contextlib import asynccontextmanager
 
-from app.api.v1.endpoints import data_viewer, ai_quick_analysis, ai_quick_advisor, ai_rules
+from app.api.v1.endpoints import data_viewer, ai_quick_analysis, ai_quick_advisor, ai_rules, auth, users
 from app.clients.ai_quick_analysis import ai_quick_analysis_client
 from app.clients.ai_quick_advisor import ai_quick_advisor_client
 from app.clients.ai_rules import ai_rules_client
@@ -44,6 +44,8 @@ app.include_router(data_viewer.router, prefix=GATEWAY_V1_BASE_ROUTE)
 app.include_router(ai_quick_analysis.router, prefix=GATEWAY_V1_BASE_ROUTE)
 app.include_router(ai_quick_advisor.router, prefix=GATEWAY_V1_BASE_ROUTE)
 app.include_router(ai_rules.router, prefix=GATEWAY_V1_BASE_ROUTE)
+app.include_router(auth.router, prefix=GATEWAY_V1_BASE_ROUTE)
+app.include_router(users.router, prefix=GATEWAY_V1_BASE_ROUTE)
 
 @app.get("/", tags=["Root"])
 def read_root():

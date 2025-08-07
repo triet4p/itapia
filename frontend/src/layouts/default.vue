@@ -1,6 +1,15 @@
 <script lang="ts" setup>
 import { RouterView } from 'vue-router';
 import { VApp } from 'vuetify/components';
+
+import { useAuthStore } from '@/stores/authStore';
+
+const authStore = useAuthStore();
+const { isLoggedIn, user } = storeToRefs(authStore);
+
+function handleLogout() {
+  authStore.logout();
+}
 </script>
 
 <template>
@@ -18,12 +27,22 @@ import { VApp } from 'vuetify/components';
 
       <VDivider vertical class="mx-2"></VDivider>
 
-      <VBtn to="/login" variant="outlined">
-        <template v-slot:prepend>
-          <VIcon>mdi-login</VIcon>
-        </template>
-        Login
-      </VBtn>
+      <!-- 3. HIỂN THỊ CÓ ĐIỀU KIỆN -->
+      <div v-if="isLoggedIn">
+        <!-- Hiển thị khi đã đăng nhập -->
+        <v-chip color="white" text-color="primary" class="mr-2">
+          <v-icon start>mdi-account-circle-outline</v-icon>
+          {{ user?.full_name }}
+        </v-chip>
+        <v-btn icon="mdi-logout" @click="handleLogout"></v-btn>
+      </div>
+      <div v-else>
+        <!-- Hiển thị khi chưa đăng nhập -->
+        <v-btn to="/login" variant="outlined">
+          <v-icon start>mdi-login</v-icon>
+          Login
+        </v-btn>
+      </div>
     </v-app-bar>
     <v-main>
       <RouterView />

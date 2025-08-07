@@ -103,3 +103,26 @@ EXECUTE PROCEDURE trigger_set_timestamp();
 -- (Tùy chọn nhưng khuyến khích) Đánh chỉ mục trên cột JSONB để tăng tốc truy vấn
 -- Ví dụ: Đánh chỉ mục trên trường "purpose" bên trong JSON
 CREATE INDEX idx_rules_purpose ON rules USING GIN (purpose);
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Tạo bảng users
+CREATE TABLE IF NOT EXISTS users (
+    --id SERIAL PRIMARY KEY,                          -- ID tự tăng, đơn giản cho đồ án
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), -- Cách làm chuyên nghiệp hơn
+    
+    email VARCHAR(255) UNIQUE NOT NULL,             -- Email phải là duy nhất
+    google_id VARCHAR(255) UNIQUE,                  -- ID từ Google để liên kết
+    
+    full_name VARCHAR(255),
+    avatar_url TEXT,                                -- TEXT để chứa URL dài
+    
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    
+    -- Dùng TIMESTAMPTZ để lưu múi giờ UTC, rất quan trọng
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Tạo một index trên google_id để tăng tốc độ tìm kiếm
+CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
