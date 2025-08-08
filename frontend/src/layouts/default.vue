@@ -28,16 +28,36 @@ function handleLogout() {
       <VDivider vertical class="mx-2"></VDivider>
 
       <!-- 3. HIỂN THỊ CÓ ĐIỀU KIỆN -->
-      <div v-if="isLoggedIn">
-        <!-- Hiển thị khi đã đăng nhập -->
-        <v-chip color="white" text-color="primary" class="mr-2">
-          <v-icon start>mdi-account-circle-outline</v-icon>
-          {{ user?.full_name }}
-        </v-chip>
-        <v-btn icon="mdi-logout" @click="handleLogout"></v-btn>
+      <!-- BẮT ĐẦU THAY ĐỔI: USER MENU -->
+      <div v-if="authStore.isLoggedIn">
+        <v-menu>
+          <!-- 1. PHẦN KÍCH HOẠT (ACTIVATOR) -->
+          <template v-slot:activator="{ props }">
+            <v-chip v-bind="props" color="white" text-color="primary" class="mr-2" style="cursor: pointer;">
+              <v-avatar start>
+                <v-img v-if="authStore.user?.avatar_url && authStore.user?.full_name" 
+                :src="authStore.user?.avatar_url" :alt="authStore.user?.full_name"></v-img>
+              </v-avatar>
+              {{ authStore.user?.full_name }}
+            </v-chip>
+          </template>
+
+          <!-- 2. NỘI DUNG CỦA MENU (DANH SÁCH) -->
+          <v-list>
+            <v-list-item to="/profiles" prepend-icon="mdi-account-box-outline">
+              <v-list-item-title>My Profiles</v-list-item-title>
+            </v-list-item>
+            <v-divider></v-divider>
+            <v-list-item @click="handleLogout" prepend-icon="mdi-logout" base-color="error">
+              <v-list-item-title>Logout</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </div>
+      <!-- KẾT THÚC THAY ĐỔI: USER MENU -->
+      
       <div v-else>
-        <!-- Hiển thị khi chưa đăng nhập -->
+        <!-- Hiển thị khi chưa đăng nhập (không đổi) -->
         <v-btn to="/login" variant="outlined">
           <v-icon start>mdi-login</v-icon>
           Login

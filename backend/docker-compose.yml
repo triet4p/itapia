@@ -103,11 +103,24 @@ services:
     networks:
       - itapia-network
     entrypoint: /ai-service-quick/entrypoint.sh
+
 volumes:
+  # KHAI BÁO VOLUME LÀ EXTERNAL
   postgres_data:
+    external: true
+    name: itapia_postgres_data # Chỉ định tên thật của volume đang tồn tại trong Docker
+  
   redis_data:
+    external: true
+    name: itapia_redis_data # Làm tương tự cho redis
+    
   ai_service_quick_kaggle_cache:
+    external: true
+    name: itapia_ai_service_quick_kaggle_cache # Và cho các cache
+
   ai_service_quick_hgf_cache:
+    external: true
+    name: itapia_ai_service_quick_hgf_cache
 
 networks:
   itapia-network:

@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
+import axios from '@/plugins/axios';
 import type { components } from '@/types/api';
 
 type RuleResponse = components['schemas']['RuleResponse'];
 type RuleExplanation = components['schemas']['ExplainationRuleResponse'];
-type NodeSpec = components['schemas']['NodeSpecEntity'];
+type NodeSpec = components['schemas']['NodeResponse'];
 type SemanticType = components['schemas']['SemanticType'];
 
 interface State {
@@ -30,7 +30,7 @@ export const useRulesStore = defineStore('rules', {
       this.isLoadingList = true;
       this.error = null;
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/rules', {
+        const response = await axios.get('/rules', {
           params: { purpose }
         });
         this.rulesList = response.data;
@@ -46,7 +46,7 @@ export const useRulesStore = defineStore('rules', {
       if (this.nodeDictionary.length > 0) return; // Đã có dữ liệu, không cần gọi lại
 
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/rules/nodes');
+        const response = await axios.get('/rules/nodes');
         this.nodeDictionary = response.data;
       } catch (e: any) {
         this.error = `Could not fetch node dictionary. Error: ${e.message}`;
@@ -61,7 +61,7 @@ export const useRulesStore = defineStore('rules', {
         // Luôn đảm bảo "từ điển" node đã được tải
         await this.fetchNodeDictionary();
         
-        const response = await axios.get(`http://localhost:8000/api/v1/rules/${ruleId}/explain`);
+        const response = await axios.get(`/rules/${ruleId}/explain`);
         this.currentRule = response.data;
       } catch (e: any) {
         this.error = `Could not fetch explanation for ${ruleId}. Error: ${e.message}`;

@@ -336,15 +336,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/{google_id}": {
+    "/api/v1/users/me": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Users By Google Id */
-        get: operations["get_users_by_google_id_api_v1_users__google_id__get"];
+        /** Get Me */
+        get: operations["get_me_api_v1_users_me_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -353,18 +353,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1users/me": {
+    "/api/v1/profiles": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Me */
-        get: operations["get_me_api_v1users_me_get"];
+        /**
+         * Get User Profiles
+         * @description Get all investment profiles for the current logged-in user.
+         */
+        get: operations["get_user_profiles_api_v1_profiles_get"];
         put?: never;
-        post?: never;
+        /**
+         * Create User Profile
+         * @description Create a new investment profile for the current logged-in user.
+         */
+        post: operations["create_user_profile_api_v1_profiles_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiles/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get User Profile Details
+         * @description Get details of a specific investment profile.
+         */
+        get: operations["get_user_profile_details_api_v1_profiles__profile_id__get"];
+        /**
+         * Update User Profile
+         * @description Update an existing investment profile.
+         */
+        put: operations["update_user_profile_api_v1_profiles__profile_id__put"];
+        post?: never;
+        /**
+         * Delete User Profile
+         * @description Delete an investment profile.
+         */
+        delete: operations["delete_user_profile_api_v1_profiles__profile_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -391,13 +426,8 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /**
-         * AdvisorReportSchema
-         * @description Schema cho báo cáo tổng hợp cuối cùng từ Advisor Module.
-         *     Đây là "hợp đồng" dữ liệu chính, được sử dụng cả trong nội bộ
-         *     và trả về cho API trong giai đoạn MVP.
-         */
-        AdvisorReportSchema: {
+        /** AdvisorResponse */
+        AdvisorResponse: {
             /** @description Khuyến nghị Quyết định cuối cùng. */
             final_decision: components["schemas"]["FinalRecommendation"];
             /** @description Đánh giá Rủi ro cuối cùng. */
@@ -443,8 +473,8 @@ export interface components {
              */
             raw_opportunity_score: number;
         };
-        /** AuthorizationURL */
-        AuthorizationURL: {
+        /** AuthorizationURLResponse */
+        AuthorizationURLResponse: {
             /** Authorization Url */
             authorization_url: string;
         };
@@ -465,6 +495,20 @@ export interface components {
              * @description List of most influential features.
              */
             top_features: components["schemas"]["TopFeature"][];
+        };
+        /** CapitalIncomePart */
+        CapitalIncomePart: {
+            /**
+             * Initial Capital
+             * @description Initial capital for this profile.
+             */
+            initial_capital: number;
+            /**
+             * Income Dependency
+             * @description Degree of dependence on investment income.
+             * @enum {string}
+             */
+            income_dependency: "low" | "medium" | "high";
         };
         /** CurrentStatusReport */
         CurrentStatusReport: {
@@ -565,6 +609,24 @@ export interface components {
              */
             forecasts: components["schemas"]["SingleTaskForecastReport"][];
         };
+        /** ForecastingReportResponse */
+        ForecastingReportResponse: {
+            /**
+             * Ticker
+             * @description Ticker symbol for forecasting
+             */
+            ticker: string;
+            /**
+             * Sector
+             * @description Sector of ticker
+             */
+            sector: string;
+            /**
+             * Forecasts
+             * @description List of forecasting each single task
+             */
+            forecasts: components["schemas"]["SingleTaskForecastReport"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -592,6 +654,26 @@ export interface components {
             momentum_report: components["schemas"]["MomentumReport"];
             /** @description Some of key levels */
             key_levels: components["schemas"]["KeyLevelsReport"];
+        };
+        /** InvestGoalPart */
+        InvestGoalPart: {
+            /**
+             * Primary Goal
+             * @description The primary goal of this investment profile.
+             * @enum {string}
+             */
+            primary_goal: "capital_preservation" | "income_generation" | "capital_growth" | "speculation";
+            /**
+             * Investment Horizon
+             * @description The expected investment time frame.
+             * @enum {string}
+             */
+            investment_horizon: "short_term" | "mid_term" | "long_term";
+            /**
+             * Expected Annual Return Pct
+             * @description Expected annual rate of return (%)
+             */
+            expected_annual_return_pct: number;
         };
         /** KeyIndicators */
         KeyIndicators: {
@@ -645,6 +727,20 @@ export interface components {
              * @description List of negative keyword highlighted
              */
             negative_keywords: string[];
+        };
+        /** KnowledgeExpPart */
+        KnowledgeExpPart: {
+            /**
+             * Investment Knowledge
+             * @description Level of knowledge of financial markets.
+             * @enum {string}
+             */
+            investment_knowledge: "beginner" | "intermediate" | "advanced" | "expert";
+            /**
+             * Years Of Experience
+             * @description Number of years of investment experience.
+             */
+            years_of_experience: number;
         };
         /** LongTermTrendReport */
         LongTermTrendReport: {
@@ -776,6 +872,14 @@ export interface components {
             reports: components["schemas"]["SingleNewsAnalysisReport"][];
             summary: components["schemas"]["SummaryReport"];
         };
+        /** NewsReportResponse */
+        NewsReportResponse: {
+            /** Ticker */
+            ticker: string;
+            /** Reports */
+            reports: components["schemas"]["SingleNewsAnalysisReport"][];
+            summary: components["schemas"]["SummaryReport"];
+        };
         /** NodeEntity */
         NodeEntity: {
             /** Node Name */
@@ -783,8 +887,8 @@ export interface components {
             /** Children */
             children?: components["schemas"]["NodeEntity"][] | null;
         };
-        /** NodeSpecEntity */
-        NodeSpecEntity: {
+        /** NodeResponse */
+        NodeResponse: {
             /** Node Name */
             node_name: string;
             /** Description */
@@ -892,15 +996,24 @@ export interface components {
              */
             top_patterns: components["schemas"]["PatternObj"][];
         };
-        /** Price */
-        Price: {
-            /** @description metadata of a ticker */
-            metadata: components["schemas"]["TickerMetadata"];
+        /** PersonalPreferPart */
+        PersonalPreferPart: {
             /**
-             * Datas
-             * @description daily data or intraday data
+             * Preferred Sectors
+             * @description Preferred sectors (eg: ['TECH', 'HEALTHCARE']).
              */
-            datas: components["schemas"]["PriceDataPoint"][];
+            preferred_sectors?: string[] | null;
+            /**
+             * Excluded Sectors
+             * @description Sectors you want to exclude.
+             */
+            excluded_sectors?: string[] | null;
+            /**
+             * Ethical Investing
+             * @description Prefer ethical investing (ESG) criteria.
+             * @default false
+             */
+            ethical_investing: boolean;
         };
         /** PriceDataPoint */
         PriceDataPoint: {
@@ -920,8 +1033,102 @@ export interface components {
              */
             timestamp: number;
         };
-        /** QuickCheckAnalysisReport */
-        QuickCheckAnalysisReport: {
+        /** PriceResponse */
+        PriceResponse: {
+            /** @description metadata of a ticker */
+            metadata: components["schemas"]["TickerMetadata"];
+            /**
+             * Datas
+             * @description daily data or intraday data
+             */
+            datas: components["schemas"]["PriceDataPoint"][];
+        };
+        /** ProfileCreateRequest */
+        ProfileCreateRequest: {
+            /**
+             * Profile Name
+             * @description Name of profile
+             */
+            profile_name: string;
+            /**
+             * Description
+             * @description Short description about this profile
+             */
+            description: string;
+            risk_tolerance: components["schemas"]["RiskTolerancePart"];
+            invest_goal: components["schemas"]["InvestGoalPart"];
+            knowledge_exp: components["schemas"]["KnowledgeExpPart"];
+            capital_income: components["schemas"]["CapitalIncomePart"];
+            personal_prefer: components["schemas"]["PersonalPreferPart"];
+            /**
+             * Use In Advisor
+             * @description Allow Advisor to use this profile to personalize advice.
+             * @default true
+             */
+            use_in_advisor: boolean;
+            /**
+             * Is Default
+             * @description Set as default profile.
+             * @default false
+             */
+            is_default: boolean;
+        };
+        /** ProfileResponse */
+        ProfileResponse: {
+            /**
+             * Profile Name
+             * @description Name of profile
+             */
+            profile_name: string;
+            /**
+             * Description
+             * @description Short description about this profile
+             */
+            description: string;
+            risk_tolerance: components["schemas"]["RiskTolerancePart"];
+            invest_goal: components["schemas"]["InvestGoalPart"];
+            knowledge_exp: components["schemas"]["KnowledgeExpPart"];
+            capital_income: components["schemas"]["CapitalIncomePart"];
+            personal_prefer: components["schemas"]["PersonalPreferPart"];
+            /**
+             * Use In Advisor
+             * @description Allow Advisor to use this profile to personalize advice.
+             * @default true
+             */
+            use_in_advisor: boolean;
+            /**
+             * Is Default
+             * @description Set as default profile.
+             * @default false
+             */
+            is_default: boolean;
+            /** Profile Id */
+            profile_id: string;
+            /** User Id */
+            user_id: string;
+            /** Created At Ts */
+            created_at_ts: number;
+            /** Updated At Ts */
+            updated_at_ts: number;
+        };
+        /** ProfileUpdateRequest */
+        ProfileUpdateRequest: {
+            /** Profile Name */
+            profile_name?: string | null;
+            /** Description */
+            description?: string | null;
+            risk_tolerance?: components["schemas"]["RiskTolerancePart"] | null;
+            invest_goal?: components["schemas"]["InvestGoalPart"] | null;
+            knowledge_exp?: components["schemas"]["KnowledgeExpPart"] | null;
+            capital_income?: components["schemas"]["CapitalIncomePart"] | null;
+            personal_prefer?: components["schemas"]["PersonalPreferPart"] | null;
+            /** Use In Advisor */
+            use_in_advisor?: boolean | null;
+            /** Is Default */
+            is_default?: boolean | null;
+        };
+        /** QuickCheckReportResponse */
+        QuickCheckReportResponse: {
             /**
              * Ticker
              * @description Symbol of ticker
@@ -944,16 +1151,6 @@ export interface components {
             /** @description News report */
             news_report: components["schemas"]["NewsAnalysisReport"];
         };
-        /** RelevantNews */
-        RelevantNews: {
-            /** @description metadata of a ticker */
-            metadata: components["schemas"]["TickerMetadata"];
-            /**
-             * Datas
-             * @description news
-             */
-            datas: components["schemas"]["RelevantNewsPoint"][];
-        };
         /** RelevantNewsPoint */
         RelevantNewsPoint: {
             /** News Uuid */
@@ -970,6 +1167,31 @@ export interface components {
             publish_ts?: number | null;
             /** Collect Ts */
             collect_ts: number;
+        };
+        /** RelevantNewsResponse */
+        RelevantNewsResponse: {
+            /** @description metadata of a ticker */
+            metadata: components["schemas"]["TickerMetadata"];
+            /**
+             * Datas
+             * @description news
+             */
+            datas: components["schemas"]["RelevantNewsPoint"][];
+        };
+        /** RiskTolerancePart */
+        RiskTolerancePart: {
+            /**
+             * Risk Appetite
+             * @description Overall risk tolerance
+             * @enum {string}
+             */
+            risk_appetite: "very_conservative" | "conservative" | "moderate" | "aggressive" | "very_aggressive";
+            /**
+             * Loss Reaction
+             * @description Typical reaction when the market drops sharply.
+             * @enum {string}
+             */
+            loss_reaction: "panic_sell" | "reduce_exposure" | "hold_and_wait" | "buy_the_dip";
         };
         /**
          * RuleResponse
@@ -1031,8 +1253,8 @@ export interface components {
              */
             resistances: components["schemas"]["SRIdentifyLevelObj"][];
         };
-        /** SectorMetadata */
-        SectorMetadata: {
+        /** SectorMetadataResponse */
+        SectorMetadataResponse: {
             /** Sector Code */
             sector_code: string;
             /** Sector Name */
@@ -1125,6 +1347,20 @@ export interface components {
         };
         /** TechnicalReport */
         TechnicalReport: {
+            /**
+             * Report Type
+             * @description Decide which analysis type will be chosen
+             * @default all
+             * @enum {string}
+             */
+            report_type: "daily" | "intraday" | "all";
+            /** @description Daily Analysis Report */
+            daily_report: components["schemas"]["DailyAnalysisReport"] | null;
+            /** @description Intraday Analysis Report */
+            intraday_report: components["schemas"]["IntradayAnalysisReport"] | null;
+        };
+        /** TechnicalReportResponse */
+        TechnicalReportResponse: {
             /**
              * Report Type
              * @description Decide which analysis type will be chosen
@@ -1257,14 +1493,6 @@ export interface components {
              */
             sl_pct: number;
         };
-        /** UniversalNews */
-        UniversalNews: {
-            /**
-             * Datas
-             * @description universal news
-             */
-            datas: components["schemas"]["UniversalNewsPoint"][];
-        };
         /** UniversalNewsPoint */
         UniversalNewsPoint: {
             /** News Uuid */
@@ -1286,8 +1514,16 @@ export interface components {
             /** Title Hash */
             title_hash: string;
         };
-        /** UserEntity */
-        UserEntity: {
+        /** UniversalNewsResponse */
+        UniversalNewsResponse: {
+            /**
+             * Datas
+             * @description universal news
+             */
+            datas: components["schemas"]["UniversalNewsPoint"][];
+        };
+        /** UserResponse */
+        UserResponse: {
             /**
              * Email
              * Format: email
@@ -1342,7 +1578,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Price"];
+                    "application/json": components["schemas"]["PriceResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1376,7 +1612,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Price"][];
+                    "application/json": components["schemas"]["PriceResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -1409,7 +1645,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Price"];
+                    "application/json": components["schemas"]["PriceResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1443,7 +1679,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RelevantNews"];
+                    "application/json": components["schemas"]["RelevantNewsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1476,7 +1712,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UniversalNews"];
+                    "application/json": components["schemas"]["UniversalNewsResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1505,7 +1741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SectorMetadata"][];
+                    "application/json": components["schemas"]["SectorMetadataResponse"][];
                 };
             };
         };
@@ -1530,7 +1766,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["QuickCheckAnalysisReport"];
+                    "application/json": components["schemas"]["QuickCheckReportResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1564,7 +1800,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TechnicalReport"];
+                    "application/json": components["schemas"]["TechnicalReportResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1595,7 +1831,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ForecastingReport"];
+                    "application/json": components["schemas"]["ForecastingReportResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1626,7 +1862,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NewsAnalysisReport"];
+                    "application/json": components["schemas"]["NewsReportResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1694,7 +1930,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AdvisorReportSchema"];
+                    "application/json": components["schemas"]["AdvisorResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1821,7 +2057,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["NodeSpecEntity"][];
+                    "application/json": components["schemas"]["NodeResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -1850,7 +2086,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuthorizationURL"];
+                    "application/json": components["schemas"]["AuthorizationURLResponse"];
                 };
             };
         };
@@ -1886,38 +2122,7 @@ export interface operations {
             };
         };
     };
-    get_users_by_google_id_api_v1_users__google_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                google_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserEntity"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_me_api_v1users_me_get: {
+    get_me_api_v1_users_me_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1932,7 +2137,157 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserEntity"];
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    get_user_profiles_api_v1_profiles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileResponse"][];
+                };
+            };
+        };
+    };
+    create_user_profile_api_v1_profiles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_profile_details_api_v1_profiles__profile_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_user_profile_api_v1_profiles__profile_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_user_profile_api_v1_profiles__profile_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

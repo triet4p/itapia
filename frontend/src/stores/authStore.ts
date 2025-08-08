@@ -1,11 +1,11 @@
 // src/stores/authStore.ts
 
 import { defineStore } from 'pinia';
-import axios from 'axios';
+import axios from '@/plugins/axios';
 import router from '@/router'; // Import trực tiếp router instance
 import type { components } from '@/types/api';
 
-type UserInfo = components['schemas']['UserEntity'];
+type UserInfo = components['schemas']['UserResponse'];
 
 interface AuthState {
   user: UserInfo | null;
@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
       if (this.isLoading) return;
       this.isLoading = true;
       try {
-        const response = await axios.get('http://localhost:8000/api/v1/auth/google/login');
+        const response = await axios.get('/auth/google/login');
         window.location.href = response.data.authorization_url;
       } catch (error) {
         console.error("Failed to get Google authorization URL", error);
@@ -61,7 +61,7 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         // Cấu hình Axios để gửi token trong header
-        const response = await axios.get('http://localhost:8000/api/v1/users/me', {
+        const response = await axios.get('/users/me', {
           headers: {
             Authorization: `Bearer ${this.token}`,
           },

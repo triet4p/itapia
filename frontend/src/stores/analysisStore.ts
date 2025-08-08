@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
-import axios from "axios";
+import axios from "@/plugins/axios";
 import type { components } from "@/types/api";
 
-type AnalysisReport = components['schemas']['QuickCheckAnalysisReport']
+type AnalysisReport = components['schemas']['QuickCheckReportResponse']
 
 interface State {
   report: AnalysisReport | null;
@@ -23,9 +23,9 @@ export const useAnalysisStore = defineStore('analysis', {
       this.$reset(); // Reset state trước mỗi lần gọi mới
       this.isLoading = true;
       try {
-        const baseUrl = `http://localhost:8000/api/v1/analysis/quick/${ticker}`;
-        const jsonPromise = axios.get(`${baseUrl}/full`, { params: queryParams });
-        const textPromise = axios.get(`${baseUrl}/explain`, { params: queryParams });
+        const baseUrl = `/api/v1/analysis/quick/${ticker}`;
+        const jsonPromise = axios.get(`/analysis/quick/${ticker}/full`, { params: queryParams });
+        const textPromise = axios.get(`/analysis/quick/${ticker}/explain`, { params: queryParams });
         const [jsonResponse, textResponse] = await Promise.all([jsonPromise, textPromise]);
         this.report = jsonResponse.data;
         this.explaination = textResponse.data;

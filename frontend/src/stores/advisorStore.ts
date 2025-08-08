@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
+import axios from '@/plugins/axios';
 import type { components } from '@/types/api';
 
-type AdvisorReport = components['schemas']['AdvisorReportSchema'];
+type AdvisorReport = components['schemas']['AdvisorResponse'];
 
 interface State {
   report: AdvisorReport | null;
@@ -23,10 +23,9 @@ export const useAdvisorStore = defineStore('advisor', {
       this.$reset();
       this.isLoading = true;
       try {
-        const baseUrl = `http://localhost:8000/api/v1/advisor/quick/${ticker}`;
         const apiParams = { user_id: userId };
-        const jsonPromise = axios.get(`${baseUrl}/full`, { params: apiParams });
-        const textPromise = axios.get(`${baseUrl}/explain`, { params: apiParams });
+        const jsonPromise = axios.get(`/advisor/quick/${ticker}/full`, { params: apiParams });
+        const textPromise = axios.get(`/advisor/quick/${ticker}/explain`, { params: apiParams });
         const [jsonResponse, textResponse] = await Promise.all([jsonPromise, textPromise]);
         this.report = jsonResponse.data;
         this.explaination = textResponse.data;

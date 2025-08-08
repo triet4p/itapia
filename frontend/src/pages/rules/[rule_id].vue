@@ -11,7 +11,7 @@ const rulesStore = useRulesStore();
 const { currentRule, nodeDictionary, isLoadingDetails, error } = storeToRefs(rulesStore);
 
 // --- TYPE DEFINITIONS ---
-type NodeSpec = components['schemas']['NodeSpecEntity'];
+type NodeSpec = components['schemas']['NodeResponse'];
 
 // --- REACTIVE STATE ---
 const dialogVisible = ref(false);
