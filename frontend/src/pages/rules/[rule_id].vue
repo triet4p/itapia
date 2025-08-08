@@ -21,24 +21,6 @@ const selectedNodeDetails = ref<NodeSpec | null>(null);
 const route = useRoute('/rules/[rule_id]');
 const ruleId = route.params.rule_id as string;
 
-// --- DATA FETCHING ---
-async function fetchData() {
-  try {
-    isLoadingDetails.value = true;
-    const rulePromise = axios.get(`http://localhost:8000/api/v1/rules/${ruleId}/explain`);
-    const nodesPromise = axios.get('http://localhost:8000/api/v1/rules/nodes');
-    
-    const [ruleResponse, nodesResponse] = await Promise.all([rulePromise, nodesPromise]);
-    
-    currentRule.value = ruleResponse.data;
-    nodeDictionary.value = nodesResponse.data;
-  } catch (e: any) {
-    error.value = `Could not fetch data for rule ${ruleId}. Error: ${e.message}`;
-  } finally {
-    isLoadingDetails.value = false;
-  }
-}
-
 // --- LOGIC ---
 function handleNodeClick(nodeName: string) {
   const foundNode = nodeDictionary.value.find(n => n.node_name === nodeName);
@@ -50,7 +32,7 @@ function handleNodeClick(nodeName: string) {
 
 // --- LIFECYCLE HOOK ---
 onMounted(() => {
-  fetchData();
+  rulesStore.fetchRuleExplanation(ruleId);
 });
 </script>
 

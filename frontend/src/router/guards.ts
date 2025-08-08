@@ -8,7 +8,7 @@ export function setupNavigationGuards(router: Router) {
         const authStore = useAuthStore();
         const isLoggedIn = authStore.isLoggedIn;
 
-        const requiresAuth = protectedRoutes.includes(to.path);
+        const requiresAuth = protectedRoutes.some(path => to.path.startsWith(path));
 
         //Quy tắc 1: Cố gắng truy cập vào trang được bảo vệ khi đang đăng nhập
         if (requiresAuth && !isLoggedIn) {

@@ -1,80 +1,86 @@
 <script setup lang="ts">
-  import { ref, reactive, watch } from 'vue';
-  import { useRouter } from 'vue-router';
+import { useNotificationStore } from '@/stores/notificationStore';
+import { ref, reactive, watch } from 'vue';
+import { useRouter } from 'vue-router';
 
-  // --- STATE MANAGEMENT ---
+// --- STATE MANAGEMENT ---
 
-  // Loại quy trình phân tích
-  type ProcessType = 'quick' | 'deep' | null;
-  const selectedProcess = ref<ProcessType>(null);
+const notificationStore = useNotificationStore();
 
-  // Dữ liệu chung cho form
-  const ticker = ref('');
+// Loại quy trình phân tích
+type ProcessType = 'quick' | 'deep' | null;
+const selectedProcess = ref<ProcessType>(null);
 
-  // Các tùy chọn cho Quick Analysis
-  const quickOptions = reactive({
-    daily_analysis_type: 'medium',
-    required_type: 'all',
-    showKeyIndicators: true,
-    showTopPatterns: true,
-    // Dùng mảng để lưu các lựa chọn forecasting
-    selectedForecasts: [0, 1, 2], // Mặc định chọn cả 3
-    showTopNews: true,
-    showSummary: true,
-  });
+// Dữ liệu chung cho form
+const ticker = ref('');
+const isNavigating = ref<boolean>(false);
 
-  // (Tương lai) Các tùy chọn cho Deep Analysis
-  // const deepOptions = reactive({ ... });
+// Các tùy chọn cho Quick Analysis
+const quickOptions = reactive({
+  daily_analysis_type: 'medium',
+  required_type: 'all',
+  showKeyIndicators: true,
+  showTopPatterns: true,
+  // Dùng mảng để lưu các lựa chọn forecasting
+  selectedForecasts: [0, 1, 2], // Mặc định chọn cả 3
+  showTopNews: true,
+  showSummary: true,
+});
 
-  const router = useRouter();
+// (Tương lai) Các tùy chọn cho Deep Analysis
+// const deepOptions = reactive({ ... });
 
-  // --- LOGIC & METHODS ---
+const router = useRouter();
 
-  function startAnalysis() {
-    if (!ticker.value) {
-      alert('Vui lòng nhập mã cổ phiếu.');
-      return;
-    }
-    if (!selectedProcess.value) {
-      alert('Vui lòng chọn một quy trình phân tích.');
-      return;
-    }
+// --- LOGIC & METHODS ---
 
-    // Tập hợp các query params
-    let query: Record<string, any> = {
-      processType: selectedProcess.value,
-    };
-
-    if (selectedProcess.value === 'quick') {
-      query = {
-        ...query,
-        daily_analysis_type: quickOptions.daily_analysis_type,
-        required_type: quickOptions.required_type,
-        showKeyIndicators: quickOptions.showKeyIndicators,
-        showTopPatterns: quickOptions.showTopPatterns,
-        // Chuyển mảng forecasting thành chuỗi để truyền qua URL
-        forecasts: quickOptions.selectedForecasts.join(','),
-        showTopNews: quickOptions.showTopNews,
-        showSummary: quickOptions.showSummary
-      };
-    } else if (selectedProcess.value === 'deep') {
-      // (Tương lai) Thêm logic cho Deep Dive ở đây
-      // query = { ...query, ...deepOptions };
-    }
-    
-    // Điều hướng đến trang kết quả
-    router.push({
-      name: '/analysis/[ticker]',
-      params: { ticker: ticker.value.toUpperCase() },
-      query: query,
-    });
+function startAnalysis() {
+  if (!ticker.value) {
+    notificationStore.showNotification({ message: 'Please input a ticker symbol.', color: 'error' });
+    return;
   }
+  if (!selectedProcess.value) {
+    notificationStore.showNotification({ message: 'Please select an analysis process.', color: 'error' });
+    return;
+  }
+  
+  isNavigating.value = true;
 
-  // Theo dõi sự thay đổi của quy trình để reset các tùy chọn nếu cần
-  watch(selectedProcess, (newValue, oldValue) => {
-    console.log(`Đã chuyển từ quy trình ${oldValue} sang ${newValue}`);
-    // Có thể thêm logic reset các form ở đây trong tương lai
+  // Tập hợp các query params
+  let query: Record<string, any> = {
+    processType: selectedProcess.value,
+  };
+
+  if (selectedProcess.value === 'quick') {
+    query = {
+      ...query,
+      daily_analysis_type: quickOptions.daily_analysis_type,
+      required_type: quickOptions.required_type,
+      showKeyIndicators: quickOptions.showKeyIndicators,
+      showTopPatterns: quickOptions.showTopPatterns,
+      // Chuyển mảng forecasting thành chuỗi để truyền qua URL
+      forecasts: quickOptions.selectedForecasts.join(','),
+      showTopNews: quickOptions.showTopNews,
+      showSummary: quickOptions.showSummary
+    };
+  } else if (selectedProcess.value === 'deep') {
+    // (Tương lai) Thêm logic cho Deep Dive ở đây
+    // query = { ...query, ...deepOptions };
+  }
+  
+  // Điều hướng đến trang kết quả
+  router.push({
+    name: '/analysis/[ticker]',
+    params: { ticker: ticker.value.toUpperCase() },
+    query: query,
   });
+}
+
+// Theo dõi sự thay đổi của quy trình để reset các tùy chọn nếu cần
+watch(selectedProcess, (newValue, oldValue) => {
+  console.log(`Đã chuyển từ quy trình ${oldValue} sang ${newValue}`);
+  // Có thể thêm logic reset các form ở đây trong tương lai
+});
 
 </script>
 
@@ -175,7 +181,8 @@
               color="primary"
               size="large"
               @click="startAnalysis"
-              :disabled="!selectedProcess || !ticker"
+              :disabled="!selectedProcess || !ticker || isNavigating"
+              :loading="isNavigating"
             >
               Run Analysis
             </v-btn>

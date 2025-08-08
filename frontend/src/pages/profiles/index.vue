@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useProfileStore } from '@/stores/profilesStore';
 import type { components } from '@/types/api';
+import { useNotificationStore } from '@/stores/notificationStore';
 
 // --- TYPE DEFINITIONS ---
 type ProfileCreate = components['schemas']['ProfileCreateRequest'];
@@ -11,6 +12,8 @@ type Profile = components['schemas']['ProfileResponse'];
 // --- STORE & STATE ---
 const profileStore = useProfileStore();
 const { profiles, isLoadingList, error } = storeToRefs(profileStore);
+
+const notificationStore = useNotificationStore();
 
 const dialogCreate = ref(false);
 const wizardStep = ref(1);
@@ -52,7 +55,10 @@ async function handleCreateProfile() {
     // Không cần reset form ở đây vì đã reset khi mở
   } else {
     // TODO: Hiển thị lỗi bằng snackbar
-    alert('Creation failed! Please check the console for details.');
+    notificationStore.showNotification({
+      message: 'Creation failed! Please check the console for details.',
+      color: 'error',
+    })
   }
 }
 </script>

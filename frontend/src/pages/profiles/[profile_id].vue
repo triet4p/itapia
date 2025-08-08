@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useProfileStore } from '@/stores/profilesStore';
 import type { components } from '@/types/api';
+import { useNotificationStore } from '@/stores/notificationStore';
 
 // --- TYPE DEFINITIONS ---
 type Profile = components['schemas']['ProfileResponse'];
@@ -15,6 +16,8 @@ const { currentProfile, isLoadingDetails, error } = storeToRefs(profileStore);
 const route = useRoute('/profiles/[profile_id]');
 const router = useRouter();
 const profileId = route.params.profile_id as string;
+
+const notificationStore = useNotificationStore();
 
 // --- LOCAL STATE ---
 // Thay đổi kiểu dữ liệu ở đây: editableProfile sẽ luôn có cấu trúc đầy đủ
@@ -57,10 +60,16 @@ async function handleUpdateProfile() {
   isSaving.value = false;
 
   if (success) {
-    alert("Profile updated successfully!");
-    router.push('/profiles');
+    notificationStore.showNotification({
+      message: "Profile updated successfully!",
+      color: 'info',
+    });
+    //router.push('/profiles');
   } else {
-    alert("Failed to update profile.");
+    notificationStore.showNotification({
+      message: "Failed to update profile.",
+      color: 'error',
+    });
   }
 }
 
@@ -70,10 +79,16 @@ async function handleDeleteProfile() {
     const success = await profileStore.deleteProfile(profileId);
     isDeleting.value = false;
     if (success) {
-      alert("Profile deleted successfully!");
+      notificationStore.showNotification({
+        message: "Profile delete successfully!",
+        color: 'info',
+      });
       router.push('/profiles');
     } else {
-      alert("Failed to delete profile.");
+        notificationStore.showNotification({
+        message: "Failed to update profile.",
+        color: 'error',
+      });
     }
   }
 }

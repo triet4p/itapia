@@ -25,7 +25,6 @@ class ProfileService:
             # Nếu value là một object Pydantic (như RiskTolerancePart),
             # chuyển nó thành một chuỗi JSON.
             if isinstance(value, dict):
-                print(key)
                 dump[key] = json.dumps(value)
         return dump
 
@@ -64,9 +63,6 @@ class ProfileService:
         # Thêm các ID cần thiết
         profile_data_to_db["profile_id"] = profile_id
         profile_data_to_db["user_id"] = user_id
-        
-        print(profile_data_to_db)
-        print(type(profile_data_to_db['risk_tolerance']))
         
         created_row = profile_crud.create(self.db, profile_data=profile_data_to_db)
         

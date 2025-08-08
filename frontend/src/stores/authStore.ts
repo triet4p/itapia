@@ -61,11 +61,7 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         // Cấu hình Axios để gửi token trong header
-        const response = await axios.get('/users/me', {
-          headers: {
-            Authorization: `Bearer ${this.token}`,
-          },
-        });
+        const response = await axios.get('/users/me');
         this.user = response.data;
       } catch (error) {
         console.error("Failed to fetch user info. Token might be invalid.", error);

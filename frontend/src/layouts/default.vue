@@ -3,9 +3,13 @@ import { RouterView } from 'vue-router';
 import { VApp } from 'vuetify/components';
 
 import { useAuthStore } from '@/stores/authStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 
 const authStore = useAuthStore();
 const { isLoggedIn, user } = storeToRefs(authStore);
+
+const notificationStore = useNotificationStore();
+const { message, color, visible, timeout } = storeToRefs(notificationStore);
 
 function handleLogout() {
   authStore.logout();
@@ -70,6 +74,18 @@ function handleLogout() {
     <v-footer app>
       <span>&copy; {{ new Date().getFullYear() }} - ITAPIA Project</span>
     </v-footer>
+
+    <VSnackbar v-model="notificationStore.visible"
+      :color="color"
+      :timeout="timeout"
+      location="bottom right">
+      {{ message }}
+      <template>
+        <VBtn variant="text" @click="notificationStore.visible = false">
+          Close
+        </VBtn>
+      </template>
+    </VSnackbar>
   </v-app>
 </template>
 

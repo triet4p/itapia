@@ -23,7 +23,6 @@ export const useAnalysisStore = defineStore('analysis', {
       this.$reset(); // Reset state trước mỗi lần gọi mới
       this.isLoading = true;
       try {
-        const baseUrl = `/api/v1/analysis/quick/${ticker}`;
         const jsonPromise = axios.get(`/analysis/quick/${ticker}/full`, { params: queryParams });
         const textPromise = axios.get(`/analysis/quick/${ticker}/explain`, { params: queryParams });
         const [jsonResponse, textResponse] = await Promise.all([jsonPromise, textPromise]);

@@ -2,7 +2,6 @@
 import { defineStore } from 'pinia';
 import axios from '@/plugins/axios'; // Import axios đã được cấu hình
 import type { components } from '@/types/api';
-import { useAuthStore } from './authStore'; // Import authStore
 
 type Profile = components['schemas']['ProfileResponse'];
 type ProfileCreate = components['schemas']['ProfileCreateRequest'];
@@ -27,9 +26,6 @@ export const useProfileStore = defineStore('profile', {
   actions: {
     // Lấy danh sách tất cả profile
     async fetchProfiles() {
-      // 1. Kiểm tra xem người dùng đã đăng nhập chưa từ authStore
-      const authStore = useAuthStore();
-      if (!authStore.isLoggedIn) return; // Không làm gì nếu chưa đăng nhập
 
       this.isLoadingList = true;
       this.error = null;

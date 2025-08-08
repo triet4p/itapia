@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useNotificationStore } from '@/stores/notificationStore';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -8,15 +9,22 @@ const selectedProcess = ref<ProcessType>('quick'); // Mặc định là 'quick'
 const ticker = ref('');
 
 const router = useRouter();
+const notificationStore = useNotificationStore();
 
 // --- LOGIC & METHODS ---
 function startAdvisory() {
   if (!ticker.value) {
-    alert('Please input a ticker symbol.');
+    notificationStore.showNotification({
+      message: 'Please input a ticker symbol.',
+      color: 'error'
+    })
     return;
   }
   if (!selectedProcess.value) {
-    alert('Please select an advisory process.');
+    notificationStore.showNotification({
+      message: 'Please select an advisory process.',
+      color: 'error'
+    })
     return;
   }
 

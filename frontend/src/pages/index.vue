@@ -1,9 +1,11 @@
 <script lang="ts" setup>
+import { useNotificationStore } from '@/stores/notificationStore';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const tickerSym = ref('');
 const router = useRouter();
+const notificationStore = useNotificationStore();
 
 function startQuickAnalysis() {
   if (tickerSym.value) {
@@ -16,7 +18,10 @@ function startQuickAnalysis() {
       params: { ticker: upperTickerSym },
     });
   } else {
-    alert("Please input a valid ticker symbol.");
+    notificationStore.showNotification({
+      message: 'Please input a valid ticker symbol',
+      color: 'error'
+    });
   }
 }
 

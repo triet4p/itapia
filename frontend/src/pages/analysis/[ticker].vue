@@ -62,10 +62,12 @@ const displayOptions = computed(() => {
 const keyIndicatorsList = computed(() => {
   if (!report.value?.technical_report.daily_report?.key_indicators) return [];
   const indicators = report.value.technical_report.daily_report.key_indicators;
-  return Object.entries(indicators).map(([key, value]) => ({
-    name: key.toUpperCase(),
-    value: typeof value === 'number' ? value.toFixed(2) : 'Can not compute'
-  }));
+  return Object.entries(indicators)
+    .filter(([key, value]) => typeof value === 'number') // Chỉ lấy các chỉ số là số
+    .map(([key, value]) => ({
+      name: key.toUpperCase(),
+      value: (value as number).toFixed(2)
+    }));
 });
 
 const topPatterns = computed(() => report.value?.technical_report.daily_report?.pattern_report.top_patterns?.slice(0, 3) || []);
@@ -86,6 +88,7 @@ const newsSummary = computed(() => report.value?.news_report.summary);
     <div v-if="isLoading" class="text-center pa-10">
       <v-progress-circular indeterminate color="primary" :size="70" :width="7"></v-progress-circular>
       <h2 class="mt-4">Analyzing {{ ticker }}...</h2>
+      <p class="text-body-1">Please wait a moment while we gather and process the data.</p>
     </div>
     <v-alert type="error" v-else-if="error" title="Analysis Error" :text="error" variant="tonal"></v-alert>
 
