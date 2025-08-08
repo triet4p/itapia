@@ -28,7 +28,7 @@ def _extract_news_data(tickers: list[str],
         
         if len(new_data) == 0:
             continue
-        data.extend(new_data)
+        data.extend(new_data)        
         
     return data
 

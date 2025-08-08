@@ -1,0 +1,1 @@
+from ._service import get_current_user

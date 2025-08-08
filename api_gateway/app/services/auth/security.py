@@ -3,8 +3,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Union
 from urllib.parse import urlencode
 from jose import jwt, JWTError
-from fastapi import HTTPException, status
 from app.core.config import JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, GOOGLE_CLIENT_ID, BACKEND_CALLBACK_URL
+from app.core.exceptions import ServerCredError
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
     if expires_delta:
@@ -17,10 +17,9 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     return encoded_jwt
 
 def verify_access_token(token: str) -> dict:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
+    credentials_exception = ServerCredError(
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
+        header={"WWW-Authenticate": "Bearer"},
     )
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
@@ -33,10 +32,7 @@ def get_authorized_url():
     Tạo và trả về URL để người dùng bắt đầu luồng đăng nhập với Google.
     """
     if not GOOGLE_CLIENT_ID:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Google Client ID is not configured."
-        )
+        raise ServerCredError(detail="Google Client ID is not configured.", header=None)
 
     scopes = [
         "https://www.googleapis.com/auth/userinfo.email",

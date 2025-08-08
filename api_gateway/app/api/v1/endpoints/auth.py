@@ -2,22 +2,22 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 from app.services.auth.security import get_authorized_url, create_access_token
 from app.services.users import UserService
-from app.schemas.auth import AuthorizationURL
-from app.schemas.users import UserCreate, UserEntity
 from app.dependencies import get_users_service
 import app.services.auth.google as google
-
+from app.core.exceptions import AuthError, NoDataError, DBError, ServerCredError
 from app.core.config import FRONTEND_CALLBACK_URL, FRONTEND_LOGIN_ERR_URL
+
+from itapia_common.schemas.api.auth import AuthorizationURLResponse
 
 router = APIRouter()
 
-@router.get('/auth/google/login', response_model=AuthorizationURL, tags=['Auth'])
+@router.get('/auth/google/login', response_model=AuthorizationURLResponse, tags=['Auth'])
 def google_login():
     try:
         url = get_authorized_url()
-        return AuthorizationURL(authorization_url=url)
-    except HTTPException as e:
-        raise e
+        return AuthorizationURLResponse(authorization_url=url)
+    except ServerCredError as e:
+        raise HTTPException(status_code=401, detail=e.detail, headers=e.header)
     except Exception as ex:
         raise HTTPException(status_code=500, detail='Unknown Error occured in servers')
 
@@ -49,7 +49,9 @@ async def google_callback(code: str,
         frontend_callback_url = f'{FRONTEND_CALLBACK_URL}?token={access_token}'
         return RedirectResponse(url=frontend_callback_url)
 
-    except HTTPException as e:
+    except ServerCredError as e:
         # Nếu có lỗi trong quá trình giao tiếp với Google, redirect về trang login của frontend với thông báo lỗi
         # TODO: Đưa URL này vào biến môi trường
         return RedirectResponse(url=f"{FRONTEND_LOGIN_ERR_URL}?error={e.detail}")
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail='Unknown Error occured in servers')

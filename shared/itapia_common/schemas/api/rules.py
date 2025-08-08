@@ -4,7 +4,8 @@ from typing import Dict, Any, Literal
 from itapia_common.schemas.enums import SemanticType
 from itapia_common.schemas.entities.rules import NodeEntity, NodeSpecEntity
 
-NodeResponse = NodeSpecEntity
+class NodeResponse(NodeSpecEntity):
+    pass
 
 class RuleCreateRequest(BaseModel):
     """Schema cho dữ liệu ĐI VÀO khi tạo một Rule mới."""

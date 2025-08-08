@@ -126,3 +126,51 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Tạo một index trên google_id để tăng tốc độ tìm kiếm
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+
+
+CREATE TABLE IF NOT EXISTS investment_profiles (
+    profile_id VARCHAR(32) PRIMARY KEY,
+    user_id VARCHAR(32) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    
+    profile_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    
+    -- 5 cột JSONB để lưu trữ các "part"
+    risk_tolerance JSONB NOT NULL,
+    invest_goal JSONB NOT NULL,
+    knowledge_exp JSONB NOT NULL,
+    capital_income JSONB NOT NULL,
+    personal_prefer JSONB NOT NULL,
+    
+    -- Các trường config được tách ra để truy vấn hiệu quả
+    use_in_advisor BOOLEAN NOT NULL DEFAULT TRUE,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    
+    -- Đảm bảo tên hồ sơ là duy nhất cho mỗi người dùng
+    UNIQUE (user_id, profile_name)
+);
+
+-- Index trên khóa ngoại để tăng tốc độ truy vấn theo user
+CREATE INDEX IF NOT EXISTS idx_investment_profiles_user_id ON investment_profiles(user_id);
+
+-- Trigger để giới hạn 10 hồ sơ mỗi người dùng (giữ nguyên)
+-- Lưu ý: Function check_profile_limit() cần được tạo trước trigger này.
+CREATE OR REPLACE FUNCTION check_profile_limit()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (SELECT count(*) FROM investment_profiles WHERE user_id = NEW.user_id) >= 10 THEN
+        RAISE EXCEPTION 'User cannot have more than 10 investment profiles.';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Xóa trigger cũ nếu tồn tại để tránh lỗi
+DROP TRIGGER IF EXISTS enforce_profile_limit ON investment_profiles;
+
+CREATE TRIGGER enforce_profile_limit
+BEFORE INSERT ON investment_profiles
+FOR EACH ROW EXECUTE FUNCTION check_profile_limit();

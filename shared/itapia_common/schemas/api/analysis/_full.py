@@ -3,5 +3,6 @@ from typing import Optional, Any
 
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 
-QuickCheckReportResponse = QuickCheckAnalysisReport
+class QuickCheckReportResponse(QuickCheckAnalysisReport):
+    pass
     

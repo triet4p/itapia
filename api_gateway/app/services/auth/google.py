@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from app.core.config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BACKEND_CALLBACK_URL, \
     GOOGLE_TOKEN_URL, GOOGLE_USERINFO_URL
     
-from app.schemas.users import UserCreate
+from itapia_common.schemas.entities.users import UserCreate
 
 async def get_google_tokens(*, code: str) -> dict:
     """
