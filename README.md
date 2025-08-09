@@ -141,9 +141,9 @@ itapia/
 ### 🗺️ Lộ trình Phát triển
 
 -   ✅ **Giai đoạn 1: MVP Cốt lõi** (Analysis, Advisor, Rules, Auth)
--   ▶️ **Giai đoạn 2: Hoàn thiện Giao diện & Cá nhân hóa** (UX Polish, Profile Management)
--   **Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
--   **Giai đoạn 4: Phân tích Sâu (`Deep Dive`) & Tích hợp LLM**
+-   ✅ **Giai đoạn 2: Hoàn thiện Giao diện & Cá nhân hóa** (UX Polish, Profile Management)
+-   ▶️ **Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
+-   ▶️ **Giai đoạn 4: Phân tích Sâu (`Deep Dive`) & Tích hợp LLM**
 
 ---
 

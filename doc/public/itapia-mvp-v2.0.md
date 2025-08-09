@@ -1,10 +1,10 @@
 
 ---
 
-# **Tài liệu Kiến trúc & Kỹ thuật - ITAPIA Quick Check (MVP v1.0)**
+# **Tài liệu Kiến trúc & Kỹ thuật - ITAPIA Quick Check (MVP v2.0)**
 
-**Ngày cập nhật:** [Ngày hiện tại]
-**Phiên bản:** 1.0
+**Ngày cập nhật:** 09/08/2025
+**Phiên bản:** 2.0
 
 ---
 
@@ -12,94 +12,98 @@
 
 **Phần I: Tổng quan và Triết lý**
 1.  **Giới thiệu (Introduction)**
-    1.1. Tên dự án: ITAPIA - Trợ lý Đầu tư Cá nhân Thông minh và Minh bạch.
-    1.2. Sứ mệnh & Tầm nhìn: Dân chủ hóa công cụ hỗ trợ đầu tư, tập trung vào sự minh bạch, trao quyền và học hỏi.
-    1.3. Vấn đề cần giải quyết: "Hộp đen" vs. "Công cụ chuyên nghiệp", khoảng trống cho nhà đầu tư cá nhân.
-    1.4. Đối tượng mục tiêu: Nhà đầu tư cá nhân ưu tiên sự an toàn và hiểu biết.
+    1. Tên dự án: ITAPIA - Trợ lý Đầu tư Cá nhân Thông minh và Minh bạch.
+    2. Sứ mệnh & Tầm nhìn: Dân chủ hóa công cụ hỗ trợ đầu tư, tập trung vào sự minh bạch, trao quyền và học hỏi.
+    3. Vấn đề cần giải quyết: "Hộp đen" vs. "Công cụ chuyên nghiệp", khoảng trống cho nhà đầu tư cá nhân.
+    4. Đối tượng mục tiêu: Nhà đầu tư cá nhân ưu tiên sự an toàn và hiểu biết.
 
 2.  **Triết lý Thiết kế Cốt lõi**
-    2.1. **Minh bạch và Giải thích được (XAI):** "Hộp kính" thay vì "Hộp đen".
-    2.2. **Hệ thống có Kiểm soát:** Vai trò của AI là "cố vấn", không phải "nhà độc tài".
-    2.3. **Kiến trúc Thực dụng:** Cân bằng giữa lý thuyết và thực tế (ví dụ: `Quick Check` vs. `Deep Dive`).
-    2.4. **"Kết quả không phải là Mục tiêu Tối thượng":** Tập trung vào việc nâng cao năng lực và sự tự tin cho người dùng.
-    2.5. **Phát triển cùng Người dùng:** Giới thiệu về tầm nhìn cá nhân hóa và tiến hóa.
+    1. **Minh bạch và Giải thích được (XAI):** "Hộp kính" thay vì "Hộp đen".
+    2. **Hệ thống có Kiểm soát:** Vai trò của AI là "cố vấn", không phải "nhà độc tài".
+    3. **Kiến trúc Thực dụng:** Cân bằng giữa lý thuyết và thực tế (ví dụ: `Quick Check` vs. `Deep Dive`).
+    4. **"Kết quả không phải là Mục tiêu Tối thượng":** Tập trung vào việc nâng cao năng lực và sự tự tin cho người dùng.
+    5. **Phát triển cùng Người dùng:** Giới thiệu về tầm nhìn cá nhân hóa và tiến hóa.
 
 **Phần II: Kiến trúc Hệ thống Tổng thể**
 
 3.  **Kiến trúc Microservices & Luồng Dữ liệu**
-    3.1. Sơ đồ Kiến trúc Tổng thể (Sơ đồ bạn đã cung cấp).
-    3.2. Mô tả vai trò các Service chính:
+    1. Sơ đồ Kiến trúc Tổng thể (Sơ đồ bạn đã cung cấp).
+    2. Mô tả vai trò các Service chính:
         *   `API Gateway`: Cổng vào, định tuyến, xác thực.
         *   `AI Service Quick`: Bộ não xử lý nhanh trên CPU.
         *   `Data Processing`: Các pipeline thu thập dữ liệu.
         *   `PostgreSQL` & `Redis`: Vai trò của từng CSDL.
-    3.3. Luồng dữ liệu cho một yêu cầu `Quick Check` điển hình.
+    3. Luồng dữ liệu cho một yêu cầu `Quick Check` điển hình.
 
 4.  **Thư viện Chung (Shared Library)**
-    4.1. Giới thiệu về `itapia_common` - Nền tảng của hệ thống.
-    4.2. **`contracts`:** "Hiến pháp" của hệ thống.
+    1. Giới thiệu về `itapia_common` - Nền tảng của hệ thống.
+    2. **`contracts`:** "Hiến pháp" của hệ thống.
         *   `enums`: Định nghĩa `SemanticType`.
         *   `schemas`: Phân biệt vai trò của `entities` và `api`.
-    4.3. **`dblib`:** Lớp truy cập dữ liệu.
+    3. **`dblib`:** Lớp truy cập dữ liệu.
         *   Kiến trúc 2 tầng `CRUD` và `Service`.
         *   Tận dụng `JSONB` trong PostgreSQL.
-    4.4. **`rules`:** Trái tim của logic suy luận. (Sẽ được mô tả chi tiết ở Phần III).
+    4. **`rules`:** Trái tim của logic suy luận. (Sẽ được mô tả chi tiết ở Phần III).
+
+5.  **Quản lý Người dùng & Cá nhân hóa**
+    1. Luồng Xác thực với OAuth2 & JWT
+    2. Kiến trúc Dữ liệu cho Hồ sơ Đầu tư (Profiles)
 
 **Phần III: Kiến trúc Rule Engine - Trái tim của ITAPIA**
 
-5.  **Tổng quan về Rule Architecture**
-    5.1. Tại sao lại là Symbolic Rules thay vì Decision Tree?
-    5.2. Mô hình 3 trạng thái của một Quy tắc: In-memory, Persistence, API.
+6.  **Tổng quan về Rule Architecture**
+    1. Tại sao lại là Symbolic Rules thay vì Decision Tree?
+    2. Mô hình 3 trạng thái của một Quy tắc: In-memory, Persistence, API.
 
-6.  **Các Thành phần Cốt lõi**
-    6.1. Lớp `_TreeNode` và các lớp con (`Constant`, `Var`, `Operator`).
-    6.2. Hệ thống Định kiểu Ngữ nghĩa (STGP) với `SemanticType`.
-    6.3. `Registry` và `Node Factory`: "Từ điển" và "Nhà máy" sản xuất Node.
-    6.4. Các file `_builtin`: Nơi định nghĩa "vốn từ vựng" dựng sẵn.
-    6.5. `Parser` & `Serializer`: Cầu nối giữa trạng thái In-memory và Persistence.
-    6.6. Lớp `Rule`: Đóng gói một cây logic hoàn chỉnh.
+7.  **Các Thành phần Cốt lõi**
+    1. Lớp `_TreeNode` và các lớp con (`Constant`, `Var`, `Operator`).
+    2. Hệ thống Định kiểu Ngữ nghĩa (STGP) với `SemanticType`.
+    3. `Registry` và `Node Factory`: "Từ điển" và "Nhà máy" sản xuất Node.
+    4. Các file `_builtin`: Nơi định nghĩa "vốn từ vựng" dựng sẵn.
+    5. `Parser` & `Serializer`: Cầu nối giữa trạng thái In-memory và Persistence.
+    6. Lớp `Rule`: Đóng gói một cây logic hoàn chỉnh.
 
 **Phần IV: Chi tiết Triển khai `AI Service Quick` (MVP)**
 
-7.  **Cấu trúc Orchestrator Phân cấp**
-    7.1. **`CEO` (`AIServiceQuickOrchestrator`):** Vai trò điều phối cấp cao.
-    7.2. **"Phó CEO" `AnalysisOrchestrator`:** Trách nhiệm và các "Trưởng phòng" (`Technical`, `News`, `Forecasting`).
-    7.3. **"Phó CEO" `RulesOrchestrator`:** Trách nhiệm và luồng hoạt động.
-    7.4. **"Phó CEO" `AdvisorOrchestrator`:** Trách nhiệm và các "Trưởng phòng" (`Aggregation`, `Explainer`).
+8.  **Cấu trúc Orchestrator Phân cấp**
+    1. **`CEO` (`AIServiceQuickOrchestrator`):** Vai trò điều phối cấp cao.
+    2. **"Phó CEO" `AnalysisOrchestrator`:** Trách nhiệm và các "Trưởng phòng" (`Technical`, `News`, `Forecasting`).
+    3. **"Phó CEO" `RulesOrchestrator`:** Trách nhiệm và luồng hoạt động.
+    4. **"Phó CEO" `AdvisorOrchestrator`:** Trách nhiệm và các "Trưởng phòng" (`Aggregation`, `Explainer`).
 
-8.  **Chi tiết Luồng xử lý của `Advisor`**
-    8.1. Sơ đồ luồng: `Analysis` -> `Rules Execution` -> `Aggregation` -> `Meta-Synthesis` -> `Mapping`.
-    8.2. **`ScoreAggregator`:** Các phương thức tổng hợp điểm thô.
-    8.3. **`Meta-Synthesis`:** Logic tổng hợp có trọng số (hiện tại là placeholder).
-    8.4. **`ScoreFinalMapper` và `final_thresholds.py`:** Logic diễn giải điểm số cuối cùng.
+9.  **Chi tiết Luồng xử lý của `Advisor`**
+    1. Sơ đồ luồng: `Analysis` -> `Rules Execution` -> `Aggregation` -> `Meta-Synthesis` -> `Mapping`.
+    2. **`ScoreAggregator`:** Các phương thức tổng hợp điểm thô.
+    3. **`Meta-Synthesis`:** Logic tổng hợp có trọng số (hiện tại là placeholder).
+    4. **`ScoreFinalMapper` và `final_thresholds.py`:** Logic diễn giải điểm số cuối cùng.
 
-9.  **Hệ thống Giải thích (Explainer Framework)**
-    9.1. Kiến trúc Explainer phân cấp: `AnalysisExplainer` và `AdvisorExplainer`.
-    9.2. `RuleExplainer`: Khả năng "dịch" một quy tắc đơn lẻ.
-    9.3. Luồng tạo ra một bản giải thích end-to-end.
+10.  **Hệ thống Giải thích (Explainer Framework)**
+    1. Kiến trúc Explainer phân cấp: `AnalysisExplainer` và `AdvisorExplainer`.
+    2. `RuleExplainer`: Khả năng "dịch" một quy tắc đơn lẻ.
+    3. Luồng tạo ra một bản giải thích end-to-end.
 
 **Phần V: Hướng dẫn và Lộ trình Tương lai**
 
-10. **Hướng dẫn Sử dụng API**
-    10.1. Danh sách các API Endpoint chính (đã được tái cấu trúc).
-    10.2. Ví dụ về một request và response cho `GET /advisor/quick/{ticker}`.
+11. **Hướng dẫn Sử dụng API**
+    1. Danh sách các API Endpoint chính (đã được tái cấu trúc).
+    2. Ví dụ về một request và response cho `GET /advisor/quick/{ticker}`.
 
-11. **Tình trạng Dự án và Các Thành phần Đã hoàn thành (Cột mốc MVP)**
-    11.1. Hoàn thành toàn bộ `Rule Architecture` và `sharedlib`.
-    11.2. Hoàn thành các module `Analysis` (Technical, News, Forecasting).
-    11.3. Hoàn thành `Advisor Module` với bộ quy tắc dựng sẵn.
-    11.4. Hoàn thành hệ thống `Explainer` end-to-end.
+12. **Tình trạng Dự án và Các Thành phần Đã hoàn thành (Cột mốc MVP)**
+    1. Hoàn thành toàn bộ `Rule Architecture` và `sharedlib`.
+    2. Hoàn thành các module `Analysis` (Technical, News, Forecasting).
+    3. Hoàn thành `Advisor Module` với bộ quy tắc dựng sẵn.
+    4. Hoàn thành hệ thống `Explainer` end-to-end.
 
-12. **Lộ trình Phát triển Dự kiến (Roadmap)**
-    12.1. **Giai đoạn 2: Giao diện và Cá nhân hóa**
+13. **Lộ trình Phát triển Dự kiến (Roadmap)**
+    1. **Giai đoạn 2: Giao diện và Cá nhân hóa**
         *   Xây dựng Web UI đơn giản (React/Vue).
         *   Tích hợp Authentication.
         *   Triển khai `PersonalAnalysisOrchestrator` (hoàn thiện placeholder).
-    12.2. **Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
+    2. **Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
         *   Xây dựng Backtester.
         *   Triển khai các thuật toán tiến hóa (DEAP) tuân thủ STGP.
         *   Tiến hóa các `Rule` và `MetaRule` weights.
-    12.3. **Giai đoạn 4 (Tầm nhìn xa): `Deep Dive`**
+    3. **Giai đoạn 4 (Tầm nhìn xa): `Deep Dive`**
         *   Tích hợp LLM có kiểm soát cho các tác vụ phân tích sâu hơn.
 
 ---
@@ -247,6 +251,40 @@ Trái tim của Rule Engine. Đây là module chịu trách nhiệm về biểu 
 *   **`final_thresholds.py`:** Chứa các hằng số dữ liệu để diễn giải điểm số cuối cùng thành các nhãn có ý nghĩa.
 *   **`score.py`:** Chứa logic tổng hợp (`ScoreAggregator`, `ScoreFinalMapper`).
 
+---
+
+### **5. Quản lý Người dùng & Cá nhân hóa**
+
+Để hỗ trợ các tính năng cá nhân hóa và bảo mật, ITAPIA triển khai một hệ thống quản lý người dùng mạnh mẽ, được tích hợp hoàn toàn vào `API Gateway`.
+
+#### **5.1. Luồng Xác thực với OAuth2 & JWT**
+
+Hệ thống sử dụng luồng xác thực OAuth 2.0 với Google làm nhà cung cấp danh tính, kết hợp với JSON Web Tokens (JWT) để quản lý phiên làm việc.
+
+
+1.  **Bắt đầu:** Frontend gọi đến `GET /auth/google/login` của `API Gateway`.
+2.  **Chuyển hướng đến Google:** `API Gateway` trả về một URL xác thực của Google. Frontend điều hướng người dùng đến URL này.
+3.  **Xác thực & Ủy quyền:** Người dùng đăng nhập và đồng ý cấp quyền cho ITAPIA trên trang của Google.
+4.  **Callback về Backend:** Google điều hướng người dùng trở lại `GET /auth/google/callback` trên `API Gateway`, kèm theo một `authorization_code`.
+5.  **Xác minh & Tạo User:** `API Gateway` dùng `code` để trao đổi lấy thông tin người dùng từ Google. Sau đó, nó sẽ tìm kiếm người dùng trong CSDL bằng `google_id`, hoặc tạo một người dùng mới nếu chưa tồn tại.
+6.  **Tạo JWT:** Một JWT chứa `user_id` và thời gian hết hạn được tạo ra và ký bằng một `JWT_SECRET_KEY`.
+7.  **Callback về Frontend:** `API Gateway` thực hiện một redirect về trang callback của Frontend (ví dụ: `/auth/callback`), đính kèm JWT vào URL.
+8.  **Lưu Token & Phiên làm việc:** Frontend nhận token, lưu nó vào `localStorage`, và từ đó đính kèm nó (`Authorization: Bearer <token>`) vào header của tất cả các yêu cầu cần được xác thực sau này.
+
+Toàn bộ logic này (ngoại trừ việc tạo JWT) đều được đóng gói trong các service và router cục bộ của `API Gateway` để đảm bảo an toàn, không chia sẻ qua `sharedlib`.
+
+#### **5.2. Kiến trúc Dữ liệu cho Hồ sơ Đầu tư (Profiles)**
+
+Tính năng cá nhân hóa của ITAPIA xoay quanh các Hồ sơ Đầu tư, cho phép người dùng tạo và thử nghiệm nhiều "persona" khác nhau.
+
+**Thiết kế CSDL:**
+*   Một bảng `investment_profiles` được tạo ra với khóa ngoại `user_id` trỏ đến bảng `users`.
+*   Để tối ưu cho sự linh hoạt và khả năng mở rộng, các nhóm thuộc tính của một hồ sơ (như `Risk Tolerance`, `Investment Goals`) được lưu trữ trong các cột có kiểu dữ liệu **`JSONB`**.
+*   Các trường thường được dùng để lọc (như `is_default`) được tách ra thành các cột `BOOLEAN` riêng biệt để tăng hiệu suất truy vấn.
+
+**Tách biệt Logic:**
+*   **Schemas (`sharedlib`):** Các Pydantic schema (`ProfileEntity`, `ProfileCreate`, v.v.) được định nghĩa trong `sharedlib` để đóng vai trò là "hợp đồng" dữ liệu chung. Điều này cho phép các service khác (như `Evo-worker`) có thể nhận và hiểu được cấu trúc của một đối tượng hồ sơ.
+*   **CRUD & Service (cục bộ trong `api-gateway`):** Tuy nhiên, toàn bộ logic nghiệp vụ và thao tác CSDL (CRUD, Service) để tạo, sửa, xóa hồ sơ đều được triển khai **độc quyền** bên trong `API Gateway`. Các service khác không có khả năng và không được phép thay đổi dữ liệu hồ sơ, đảm bảo tính toàn vẹn và bảo mật.
 
 ---
 
@@ -258,11 +296,11 @@ Nếu `AI Service Quick` là bộ não của hệ thống, thì `Rule Engine` ch
 
 ---
 
-### 5. Tổng quan về Rule Architecture
+### 6. Tổng quan về Rule Architecture
 
 Kiến trúc của Rule Engine được xây dựng dựa trên các nguyên tắc nền tảng nhằm đảm bảo sự linh hoạt, mạnh mẽ và minh bạch.
 
-#### **5.1. Tại sao lại là Symbolic Rules thay vì Decision Tree?**
+#### **6.1. Tại sao lại là Symbolic Rules thay vì Decision Tree?**
 
 Mặc dù Cây Quyết định (Decision Tree) là một công cụ mạnh mẽ và cũng có thể được tiến hóa, ITAPIA đã lựa chọn một hướng tiếp cận cao cấp hơn: **Symbolic Rules** dưới dạng **Cây Biểu thức (Expression Tree)**. Lựa chọn này mang lại những lợi thế vượt trội cho bài toán tài chính:
 
@@ -272,7 +310,7 @@ Mặc dù Cây Quyết định (Decision Tree) là một công cụ mạnh mẽ 
 
 3.  **Không gian Tìm kiếm Rộng lớn:** Bằng cách cung cấp các "nguyên tử" là Biến, Hằng số và các Phép toán, `Evo-worker` có một sân chơi sáng tạo hơn rất nhiều. Nó có thể tự do kết hợp, đột biến và lai ghép các biểu thức để tạo ra các quy tắc thực sự độc đáo.
 
-#### **5.2. Mô hình 3 Trạng thái của một Quy tắc**
+#### **6.2. Mô hình 3 Trạng thái của một Quy tắc**
 
 Để quản lý sự phức tạp, một "Quy tắc" trong ITAPIA tồn tại ở ba trạng thái khác nhau, với các đối tượng đại diện riêng biệt cho từng trạng thái:
 
@@ -282,11 +320,11 @@ Mặc dù Cây Quyết định (Decision Tree) là một công cụ mạnh mẽ 
 
 ---
 
-### 6. Các Thành phần Cốt lõi
+### 7. Các Thành phần Cốt lõi
 
 Rule Engine được cấu thành từ các module được thiết kế cẩn thận, mỗi module có một trách nhiệm duy nhất.
 
-#### **6.1. Lớp `_TreeNode` và các lớp con**
+#### **7.1. Lớp `_TreeNode` và các lớp con**
 
 Nền tảng của mọi quy tắc là Cây Biểu thức, được xây dựng từ ba loại Node cơ bản, kế thừa từ lớp trừu tượng `_TreeNode`:
 
@@ -294,31 +332,31 @@ Nền tảng của mọi quy tắc là Cây Biểu thức, được xây dựng 
 *   **`VarNode`:** Đại diện cho một điểm dữ liệu được trích xuất từ `QuickCheckAnalysisReport`. Nó chứa thông tin về `path` để lấy dữ liệu và logic `encode` để chuyển đổi dữ liệu thô (số hoặc hạng mục) thành một giá trị số thống nhất.
 *   **`OperatorNode`:** Đại diện cho một phép toán hoặc hàm. Các lớp con như `FunctionalOperatorNode` và `BranchOperatorNode` đóng gói các hành vi tính toán, so sánh, logic (`AND`, `OR`), và điều kiện (`IF-THEN-ELSE`).
 
-#### **6.2. Hệ thống Định kiểu Ngữ nghĩa (STGP) với `SemanticType`**
+#### **7.2. Hệ thống Định kiểu Ngữ nghĩa (STGP) với `SemanticType`**
 
 Để ngăn chặn `Evo-worker` tạo ra các quy tắc vô nghĩa (ví dụ: so sánh giá cổ phiếu với chỉ báo RSI), ITAPIA triển khai một hệ thống **Lập trình Di truyền Định kiểu Mạnh (Strongly Typed Genetic Programming - STGP)**. Trái tim của hệ thống này là `SemanticType` Enum, định nghĩa các "kiểu" dữ liệu nghiệp vụ như `MOMENTUM`, `TREND`, `PRICE`, `DECISION_SIGNAL`... Mỗi `_TreeNode` đều có một thuộc tính `return_type`, và các `OperatorNode` có thể có một danh sách `args_type`. Điều này cho phép các thuật toán tiến hóa thực hiện các phép lai ghép và đột biến một cách "thông minh", đảm bảo các cây quy tắc mới được tạo ra luôn hợp lệ về mặt ngữ nghĩa.
 
-#### **6.3. `Registry` và `Node Factory`**
+#### **7.3. `Registry` và `Node Factory`**
 
 Thay vì mã hóa cứng việc tạo Node, hệ thống sử dụng một **Node Factory** mạnh mẽ.
 *   **`registry.py`:** Chứa một `_NODE_REGISTRY` trung tâm. Đây là nơi tất cả các "bản thiết kế" (`NodeSpec`) cho các Node dựng sẵn được đăng ký khi ứng dụng khởi động.
 *   **`NodeSpec`:** Một `NamedTuple` định nghĩa mọi thứ về một Node: lớp Python của nó (`node_class`), các tham số mặc định (`params`), kiểu trả về (`return_type`), v.v.
 *   **`create_node()`:** Một hàm "nhà máy" duy nhất, nhận vào tên của một Node và các tham số động (như `children`), sau đó tự động tra cứu registry và khởi tạo đúng đối tượng Node. Kiến trúc này làm cho hệ thống cực kỳ linh hoạt và dễ mở rộng.
 
-#### **6.4. Các file `_builtin`**
+#### **7.4. Các file `_builtin`**
 
 Toàn bộ "vốn từ vựng" dựng sẵn của Rule Engine được định nghĩa trong các file riêng biệt trong package `rules/builtin/`.
 *   **`_constant_builtin.py`, `_variable_builtin.py`, `_operator_builtin.py`:** Các file này chứa logic đăng ký hàng chục hằng số, biến và toán tử dựng sẵn vào `Registry` khi ứng dụng khởi động.
 *   **`_rules_builtin.py`:** Sử dụng các "từ vựng" đã được đăng ký để "lắp ráp" nên các quy tắc nghiệp vụ hoàn chỉnh, đóng vai trò là bộ não ban đầu cho `Advisor`.
 *   **`names.py`:** Tập trung tất cả các chuỗi định danh của Node vào một nơi duy nhất, tránh "magic strings" và tăng khả năng bảo trì.
 
-#### **6.5. `Parser` & `Serializer`**
+#### **7.5. `Parser` & `Serializer`**
 
 Đây là cặp công cụ đóng vai trò "cầu nối" giữa các trạng thái của một Quy tắc.
 *   **`serialize_tree_to_dict()`:** Duyệt đệ quy một cây `_TreeNode` (trạng thái In-memory) và chuyển nó thành một cấu trúc `dictionary` đơn giản, phù hợp để lưu dưới dạng JSON (trạng thái Persistence).
 *   **`parse_tree_from_dict()`:** Nhận một `dictionary` (đọc từ CSDL) và sử dụng `Node Factory` để tái tạo lại một cây `_TreeNode` hoàn chỉnh trong bộ nhớ.
 
-#### **6.6. Lớp `Rule`**
+#### **7.6. Lớp `Rule`**
 
 Đây là đối tượng cấp cao nhất, đóng gói toàn bộ một quy tắc nghiệp vụ.
 *   Nó chứa các **siêu dữ liệu** (`rule_id`, `name`, `description`, `version`...) để quản lý.
@@ -332,7 +370,7 @@ Toàn bộ "vốn từ vựng" dựng sẵn của Rule Engine được định n
 
 Phần này đi sâu vào kiến trúc bên trong của `ai-service-quick`, là bộ não thực thi toàn bộ quy trình `Quick Check`. Hệ thống được xây dựng dựa trên nguyên tắc **Dependency Injection Phân cấp** và **Tách biệt Trách nhiệm**, tạo ra một cấu trúc mô-đun hóa, dễ kiểm thử và dễ mở rộng.
 
-### 7. Cấu trúc Orchestrator Phân cấp
+### 8. Cấu trúc Orchestrator Phân cấp
 
 Kiến trúc của `ai-service-quick` được mô phỏng theo một sơ đồ tổ chức công ty, với các cấp bậc rõ ràng từ `CEO` (điều phối viên cấp cao nhất) xuống các "Phó CEO" và "Trưởng phòng", mỗi cấp chỉ chịu trách nhiệm về lĩnh vực của mình.
 
@@ -340,7 +378,7 @@ Kiến trúc của `ai-service-quick` được mô phỏng theo một sơ đồ 
 
 *Sơ đồ trên minh họa cấu trúc phân cấp của các Orchestrator trong `ai-service-quick`. `CEO` ở cấp cao nhất điều phối bốn "Phó CEO" độc lập: `Analysis`, `Rules`, `Advisor`, và `Personal`. Mỗi "Phó CEO" lại quản lý các "Trưởng phòng" (các engine hoặc sub-module) của riêng mình, tạo ra một sự phân tách trách nhiệm rõ ràng trong toàn bộ hệ thống.*
 
-#### **7.1. "CEO" (`AIServiceQuickOrchestrator`)**
+#### **8.1. "CEO" (`AIServiceQuickOrchestrator`)**
 
 *   **Vị trí:** `app/orchestrator.py`
 *   **Vai trò:** Là điểm điều phối trung tâm và cao nhất của toàn bộ service. Nó không chứa logic nghiệp vụ phức tạp. Thay vào đó, trách nhiệm chính của nó là điều phối luồng công việc giữa các "Phó CEO" cấp dưới. Trong `app/main.py`, `CEO` được khởi tạo bằng cách "tiêm" (inject) tất cả các "Phó CEO" vào, thể hiện rõ sự phụ thuộc cấp cao của nó.
@@ -350,7 +388,7 @@ Kiến trúc của `ai-service-quick` được mô phỏng theo một sơ đồ 
     3.  **Gọi `RulesOrchestrator`:** Yêu cầu thực thi song song các bộ quy tắc (Decision, Risk, Opportunity) dựa trên báo cáo phân tích và các cấu hình cá nhân hóa, nhận về các điểm số thô.
     4.  **Gọi `AdvisorOrchestrator`:** Truyền tất cả các kết quả này vào để tổng hợp, diễn giải, và tạo ra một báo cáo khuyến nghị cuối cùng (`AdvisorReportSchema`).
 
-#### **7.2. "Phó CEO" `AnalysisOrchestrator`**
+#### **8.2. "Phó CEO" `AnalysisOrchestrator`**
 
 *   **Vị trí:** `app/analysis/orchestrator.py`
 *   **Vai trò:** Chuyên trách toàn bộ quy trình **Phân tích**, chịu trách nhiệm tạo ra `QuickCheckAnalysisReport`. Nó là "cỗ máy" biến dữ liệu thô thành các tín hiệu có cấu trúc.
@@ -361,7 +399,7 @@ Kiến trúc của `ai-service-quick` được mô phỏng theo một sơ đồ 
     *   **`ForecastingOrchestrator`:** Quản lý vòng đời của các mô hình Machine Learning. Nó chịu trách nhiệm tải các mô hình (`.pkl`) từ cache hoặc Kaggle, thực hiện dự báo, và tạo ra các giải thích SHAP.
 *   **Luồng hoạt động:** Sử dụng `asyncio.gather` để thực thi đồng thời các tác vụ phân tích, đặc biệt là các tác vụ nặng như `News` và `Forecasting`, giúp tối ưu hóa đáng kể thời gian xử lý.
 
-#### **7.3. "Phó CEO" `RulesOrchestrator`**
+#### **8.3. "Phó CEO" `RulesOrchestrator`**
 
 *   **Vị trí:** `app/rules/orchestrator.py`
 *   **Vai trò:** Là "Người Gác đền của Thư viện Quy tắc". Nó là giao diện duy nhất để tương tác với các quy tắc nghiệp vụ.
@@ -372,7 +410,7 @@ Kiến trúc của `ai-service-quick` được mô phỏng theo một sơ đồ 
     4.  Áp dụng hàm `rule_selector` để lọc ra danh sách các quy tắc cuối cùng sẽ được thực thi.
     5.  Thực thi các quy tắc song song (sử dụng `asyncio.run_in_executor` để các tác vụ CPU-bound không làm block event loop) và trả về danh sách điểm số cùng thông tin về các quy tắc đã được kích hoạt.
 
-#### **7.4. "Phó CEO" `AdvisorOrchestrator`**
+#### **8.4. "Phó CEO" `AdvisorOrchestrator`**
 
 *   **Vị trí:** `app/advisor/orchestrator.py`
 *   **Vai trò:** "Chiến lược gia" cuối cùng. Nó không phân tích dữ liệu thô hay chạy quy tắc, mà chỉ nhận vào các **kết quả đã được diễn giải** và tổng hợp chúng thành một lời khuyên hoàn chỉnh.
@@ -380,43 +418,43 @@ Kiến trúc của `ai-service-quick` được mô phỏng theo một sơ đồ 
     *   **`AggregationOrchestrator`:** Chứa logic toán học thuần túy để tổng hợp và ánh xạ điểm số.
     *   **`AdvisorExplainerOrchestrator`:** Chịu trách nhiệm tạo ra các bản giải thích bằng ngôn ngữ tự nhiên cho báo cáo cuối cùng.
 
-### 8. Chi tiết Luồng xử lý của `Advisor`
+### 9. Chi tiết Luồng xử lý của `Advisor`
 
 Luồng xử lý bên trong `Advisor` là một quy trình đa tầng, biến đổi các điểm số thô từ hàng chục quy tắc thành một vài khuyến nghị súc tích và có thể hành động được.
 
-#### **8.1. Sơ đồ luồng: `Rules Execution` -> `Aggregation` -> `Meta-Synthesis` -> `Mapping`**
+#### **9.1. Sơ đồ luồng: `Rules Execution` -> `Aggregation` -> `Meta-Synthesis` -> `Mapping`**
 
 1.  **Rules Execution:** Giai đoạn này được thực hiện bởi `RulesOrchestrator` theo yêu cầu của `CEO`, tạo ra ba bộ kết quả.
 2.  **Aggregation (Tổng hợp Thô):** `CEO` truyền các kết quả này vào `AdvisorOrchestrator`. `Advisor` sử dụng `AggregationOrchestrator` để áp dụng các phương pháp tổng hợp khác nhau (ví dụ: `average` cho Decision, `get_highest_score` cho Risk/Opportunity) để tạo ra `AggregatedScoreInfo`.
 3.  **Meta-Synthesis (Tổng hợp Cuối cùng):** `AggregationOrchestrator` tiếp tục áp dụng một công thức tổng hợp có trọng số (lấy từ `PersonalAnalysisOrchestrator` thông qua `CEO`) lên ba điểm số thô để tính toán ra `final_decision_score`. Các điểm `final_risk` và `final_opportunity` trong MVP được giữ nguyên từ điểm số thô để đảm bảo tính cảnh báo không bị suy giảm.
 4.  **Mapping (ánh xạ):** Cuối cùng, `AggregationOrchestrator` sử dụng `ScoreFinalMapper` và các ngưỡng trong `final_thresholds.py` để ánh xạ ba điểm số cuối cùng thành các nhãn khuyến nghị mà con người có thể đọc được.
 
-#### **8.2. `AggregationOrchestrator`**
+#### **9.2. `AggregationOrchestrator`**
 
 *   **Vị trí:** `app/advisor/aggeration.py`
 *   **Vai trò:** Đóng gói toàn bộ logic toán học của tầng tổng hợp, bao gồm các instance của `ScoreAggregator` và `ScoreFinalMapper`. Nó cung cấp các phương thức cấp cao có tên gọi rõ ràng như `aggregate_raw_scores`, `run_meta_synthesis`, và `map_final_scores`, giúp cho code của `AdvisorOrchestrator` trở nên sạch sẽ và dễ đọc.
 
-#### **8.3. `PersonalAnalysisOrchestrator` (Placeholder)**
+#### **9.3. `PersonalAnalysisOrchestrator` (Placeholder)**
 
 *   **Vị trí:** `app/personal/orchestrator.py`
 *   **Vai trò:** Là một "Phó CEO" placeholder trong MVP, chịu trách nhiệm về logic cá nhân hóa. Trong tương lai, nó sẽ đọc hồ sơ người dùng để cung cấp các cấu hình động (trọng số, bộ lọc quy tắc) cho `CEO`. Hiện tại, nó trả về các giá trị mặc định.
 
-### 9. Hệ thống Giải thích (Explainer Framework)
+### 10. Hệ thống Giải thích (Explainer Framework)
 
 Triết lý "Hộp kính" của ITAPIA được hiện thực hóa thông qua một hệ thống `Explainer` phân cấp, được tích hợp chặt chẽ vào từng module chức năng.
 
-#### **9.1. Kiến trúc Explainer Phân cấp và Gắn kết**
+#### **10.1. Kiến trúc Explainer Phân cấp và Gắn kết**
 
 Logic giải thích được đặt ngay bên cạnh module mà nó chịu trách nhiệm giải thích, đảm bảo tính gắn kết cao.
 *   **`analysis/explainer/`:** Chứa `AnalysisExplainerOrchestrator`, người điều phối việc giải thích `QuickCheckAnalysisReport`. Bên trong nó là các "nhân viên" chuyên giải thích cho từng lĩnh vực (`Technical`, `News`, `Forecasting`), và kiến trúc này tiếp tục được phân rã sâu hơn nữa (ví dụ: `technical/explainer` có các sub-explainer cho `daily` và `intraday`).
 *   **`advisor/explainer/`:** Chứa `AdvisorExplainerOrchestrator`, chịu trách nhiệm giải thích báo cáo `AdvisorReportSchema` cấp cao.
 
-#### **9.2. `RuleExplainer`**
+#### **10.2. `RuleExplainer`**
 
 *   **Vị trí:** `app/rules/explainer/orchestrator.py`
 *   **Vai trò:** Một thành phần đặc biệt, có khả năng "dịch" một `Rule` object phức tạp thành một chuỗi văn bản logic. Nó được `RulesOrchestrator` sử dụng để cung cấp các API giải thích quy tắc đơn lẻ, cho phép người dùng "đào sâu" vào tận cùng của logic hệ thống.
 
-#### **9.3. Luồng tạo ra một bản giải thích End-to-End**
+#### **10.3. Luồng tạo ra một bản giải thích End-to-End**
 
 Khi người dùng yêu cầu một bản giải thích đầy đủ, `CEO` sẽ điều phối một quy trình hai bước:
 1.  **Tạo Báo cáo Dữ liệu:** `CEO` thực hiện toàn bộ quy trình `get_full_advisor_report` để tạo ra cả `QuickCheckAnalysisReport` và `AdvisorReportSchema`.
@@ -430,11 +468,11 @@ Chắc chắn rồi. Đây là phần cuối cùng của tài liệu kỹ thuậ
 
 ## Phần V: Hướng dẫn và Lộ trình Tương lai
 
-### 10. Hướng dẫn Sử dụng API
+### 11. Hướng dẫn Sử dụng API
 
 Tất cả các tương tác với hệ thống ITAPIA đều được thực hiện thông qua `API Gateway`. Dưới đây là danh sách các endpoint chính đã được triển khai trong phiên bản MVP.
 
-#### **10.1. Danh sách các API Endpoint chính**
+#### **11.1. Danh sách các API Endpoint chính**
 *(Tất cả các endpoint đều có prefix `/api/v1`)*
 
 *   **Nhóm Advisor (Dành cho người dùng cuối):**
@@ -452,7 +490,19 @@ Tất cả các tương tác với hệ thống ITAPIA đều được thực hi
     *   `GET /rules/{rule_id}`: Lấy chi tiết cấu trúc (cây logic JSON) của một quy tắc cụ thể.
     *   `GET /rules/{rule_id}/explain`: Lấy bản giải thích bằng ngôn ngữ tự nhiên về logic của một quy tắc.
 
-#### **10.2. Ví dụ về một Request và Response**
+*   **Nhóm Authentication (Dành cho luồng đăng nhập):**
+    *   `GET /auth/google/login`: Lấy URL để bắt đầu luồng đăng nhập với Google.
+    *   `GET /auth/google/callback`: Endpoint callback mà Google sẽ gọi lại (Backend-only).
+    *   `GET /users/me`: [Được bảo vệ] Lấy thông tin của người dùng hiện tại.
+
+*   **Nhóm Profiles (Quản lý Hồ sơ Đầu tư):**
+    *   `GET /profiles`: [Được bảo vệ] Lấy danh sách tất cả các hồ sơ của người dùng.
+    *   `POST /profiles`: [Được bảo vệ] Tạo một hồ sơ mới.
+    *   `GET /profiles/{profile_id}`: [Được bảo vệ] Lấy chi tiết một hồ sơ.
+    *   `PUT /profiles/{profile_id}`: [Được bảo vệ] Cập nhật một hồ sơ.
+    *   `DELETE /profiles/{profile_id}`: [Được bảo vệ] Xóa một hồ sơ.
+
+#### **11.2. Ví dụ về một Request và Response**
 
 *   **Request:**
     ```
@@ -487,38 +537,39 @@ Tất cả các tương tác với hệ thống ITAPIA đều được thực hi
     }
     ```
 
-### 11. Tình trạng Dự án và Các Thành phần Đã hoàn thành (Cột mốc MVP)
+### 12. Tình trạng Dự án và Các Thành phần Đã hoàn thành (Cột mốc MVP)
 
 Cột mốc MVP của quy trình `Quick Check` đã được hoàn thành, cung cấp một hệ thống phân tích và tư vấn end-to-end. Các thành tựu chính bao gồm:
 
-#### **11.1. Hoàn thành toàn bộ `Rule Architecture` và `sharedlib`:**
+#### **12.1. Hoàn thành toàn bộ `Rule Architecture` và `sharedlib`:**
 *   Xây dựng thành công một "ngôn ngữ" quy tắc mạnh mẽ dựa trên Cây Biểu thức và Hệ thống Định kiểu Ngữ nghĩa (STGP).
 *   Hoàn thiện một `Node Factory` linh hoạt và một `Registry` trung tâm.
 *   Thiết lập một kiến trúc `sharedlib` sạch sẽ với các package độc lập (`contracts`, `dblib`, `rules`).
 
-#### **11.2. Hoàn thành các module `Analysis`:**
+#### **12.2. Hoàn thành các module `Analysis`:**
 *   Tích hợp đầy đủ các module Phân tích Kỹ thuật (Daily & Intraday), Dự báo Machine Learning (với giải thích SHAP), và Phân tích Tin tức (Sentiment, NER, Impact).
 *   Xây dựng `AnalysisOrchestrator` có khả năng thực thi các tác vụ song song để tối ưu hóa hiệu năng.
 
-#### **11.3. Hoàn thành `Advisor Module` với bộ quy tắc dựng sẵn:**
+#### **12.3. Hoàn thành `Advisor Module` với bộ quy tắc dựng sẵn:**
 *   Triển khai kiến trúc `Advisor` phân cấp, bao gồm `RulesOrchestrator` và `AggregationOrchestrator`.
 *   Mã hóa và "seed" thành công một bộ quy tắc chuyên gia ban đầu cho các mục đích Decision, Risk, và Opportunity.
 *   Xây dựng logic tổng hợp và `Meta-Synthesis` (dưới dạng placeholder) để đưa ra khuyến nghị cuối cùng.
 
-#### **11.4. Hoàn thành hệ thống `Explainer` end-to-end:**
+#### **12.4. Hoàn thành hệ thống `Explainer` end-to-end:**
 *   Xây dựng một framework `Explainer` phân cấp, có khả năng tạo ra các bản giải thích bằng ngôn ngữ tự nhiên cho cả báo cáo `Analysis` và báo cáo `Advisor`.
 *   Cung cấp API cho phép người dùng "đào sâu" vào logic của từng quy tắc riêng lẻ.
 
-### 12. Lộ trình Phát triển Dự kiến (Roadmap)
+#### **12.5. Hoàn thành Frontend, xác thực và Profiles**
+*   **Xây dựng Web UI:** Phát triển một giao diện người dùng đơn giản (sử dụng Vue.js/React) để người dùng có thể tương tác với hệ thống một cách trực quan, bao gồm các trang đăng nhập, trang tổng quan và trang xem chi tiết phân tích.
+*   **Tích hợp Authentication:** Triển khai luồng xác thực người dùng (ví dụ: OAuth2 với Google) để quản lý các phiên làm việc và làm nền tảng cho các tính năng cá nhân.
+### 13. Lộ trình Phát triển Dự kiến (Roadmap)
 
 Với nền tảng MVP vững chắc, ITAPIA đã sẵn sàng cho các giai đoạn phát triển tiếp theo, tập trung vào việc nâng cao trải nghiệm người dùng và trí thông minh của hệ thống.
 
-#### **12.1. Giai đoạn 2: Giao diện và Cá nhân hóa**
-*   **Xây dựng Web UI:** Phát triển một giao diện người dùng đơn giản (sử dụng Vue.js/React) để người dùng có thể tương tác với hệ thống một cách trực quan, bao gồm các trang đăng nhập, trang tổng quan và trang xem chi tiết phân tích.
-*   **Tích hợp Authentication:** Triển khai luồng xác thực người dùng (ví dụ: OAuth2 với Google) để quản lý các phiên làm việc và làm nền tảng cho các tính năng cá nhân.
+#### **13.1. Giai đoạn 2: Xây dựng PersonalAnalysis**
 *   **Hoàn thiện `PersonalAnalysisOrchestrator`:** Xây dựng logic để tạo hồ sơ rủi ro cho người dùng (qua bảng câu hỏi) và sử dụng hồ sơ đó để điều chỉnh các trọng số trong tầng `Meta-Synthesis`, cung cấp các khuyến nghị phù hợp hơn với từng cá nhân.
 
-#### **12.2. Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
+#### **13.2. Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
 *   **Xây dựng Backtester:** Phát triển một engine backtesting hiệu quả (dựa trên vector) để có thể đánh giá hiệu suất của các quy tắc trên dữ liệu lịch sử.
 *   **Triển khai Thuật toán Tiến hóa:** Sử dụng thư viện DEAP để xây dựng `Evo-worker`. Triển khai các toán tử di truyền (crossover, mutation) "thông minh", tuân thủ chặt chẽ các quy tắc của Hệ thống Định kiểu Ngữ nghĩa (STGP).
 *   **Tiến hóa `Rule` và `MetaRule`:**
