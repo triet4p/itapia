@@ -1,181 +1,165 @@
+# ITAPIA
+### Intelligent & Transparent AI-Powered Personal Investment Assistant
+
+![Project Status: In Development](https://img.shields.io/badge/status-in_development-yellowgreen) ![Tech Stack: Python & Vue.js](https://img.shields.io/badge/tech-Python|Vue.js|FastAPI|ScikitLearn|BERT|TALib-blue) ![License: Academic Use](https://img.shields.io/badge/license-Academic_Use-lightgrey)
+
+ITAPIA là một nền tảng hỗ trợ đầu tư chứng khoán thông minh, được xây dựng với triết lý cốt lõi là **sự minh bạch** và **khả năng giải thích (Explainability - XAI)**. Dự án này không chỉ cung cấp các khuyến nghị, mà còn cho phép người dùng hiểu rõ "tại sao" đằng sau mỗi quyết định.
 
 ---
 
-# **ITAPIA - Trợ lý Đầu tư Cá nhân Thông minh và Minh bạch dựa trên AI**
+### Vấn đề & Giải pháp của ITAPIA
 
-ITAPIA (Intelligent and Transparent AI-Powered Personal Investment Assistant) là một dự án đồ án tốt nghiệp với mục tiêu xây dựng một nền tảng hỗ trợ đầu tư chứng khoán thông minh, được thiết kế đặc biệt cho các nhà đầu tư cá nhân.
-
-Khác với các công cụ "hộp đen" truyền thống, ITAPIA tập trung vào **Khả năng Giải thích (Explainability - XAI)**, cung cấp các khuyến nghị minh bạch, và có một tầm nhìn dài hạn về khả năng **học hỏi và đồng tiến hóa** cùng người dùng.
-
-**Tài liệu Kiến trúc & Kỹ thuật chi tiết**: **[itapia-mvp-v1.0.md](./doc/public/itapia-mvp-v1.0.md)**
-
-**English version of README**: [README-en.md](./README-en.md)
+*   **Vấn đề:** Thị trường hiện nay, các công cụ đầu tư "hộp đen" (black box), đưa ra các tín hiệu mua/bán bí ẩn, làm xói mòn niềm tin và biến việc đầu tư thành một trò chơi may rủi.
+*   **Giải pháp của ITAPIA:** Chúng tôi xây dựng một "hộp kính" (glass box). Bằng cách kết hợp các mô hình AI/ML truyền thống và một Rule Engine mạnh mẽ, mọi lời khuyên đều được truy vết ngược lại đến các "bằng chứng" và "quy tắc" đã kích hoạt nó, trao toàn quyền kiểm soát và sự tự tin cho người dùng.
 
 ---
 
-## 🏗️ Kiến trúc Hệ thống
-
-Hệ thống được xây dựng theo kiến trúc microservices, dựa trên một nền tảng `sharedlib` mạnh mẽ và một cấu trúc điều phối (Orchestrator) phân cấp rõ ràng.
-
--   **API Gateway** (`api_gateway`): Cổng giao tiếp duy nhất (Single Entry Point), xử lý định tuyến và điều phối request đến dịch vụ nội bộ.
--   **AI Service Quick** (`ai_service_quick`): Bộ não của hệ thống, chạy trên hạ tầng CPU. Nó chứa các module AI cốt lõi và chịu trách nhiệm cho toàn bộ quy trình `Quick Check` để tạo ra các báo cáo phân tích và khuyến nghị.
--   **Data Processing** (`data_processing`): Các service độc lập để thu thập và xử lý dữ liệu (ETL) theo lịch trình (batch) và thời gian thực (real-time).
--   **Data Seeds** (`data_seeds`): Một service chạy một lần để khởi tạo CSDL với schema và dữ liệu ban đầu (bao gồm các quy tắc dựng sẵn).
--   **Databases**: PostgreSQL (với `JSONB`) để lưu trữ dữ liệu có cấu trúc, bền vững (giá, tin tức, quy tắc) và Redis để lưu cache và dữ liệu streaming thời gian thực.
-
-### Sơ đồ Triển khai
-
-![Deployment Architecture](doc/diagram/UML-deployment.png)
-
-*Trong phạm vi đồ án, tất cả các thành phần được triển khai bằng Docker và Docker Compose.*
+### Demo
+<!-- Chèn ảnh chụp màn hình hoặc GIF demo tại đây -->
+![ITAPIA Demo](./doc/public/itapia-demo.gif)
+*(Giao diện Advisor)*
 
 ---
 
-## 🚀 Bắt đầu Nhanh (Quick Start)
+### 📈 Các Tính năng Chính
 
-### Yêu cầu Hệ thống
-- **Docker & Docker Compose**
-- **Python 3.11+**
-- **Git**
+*   🧠 **Kiến trúc AI Lai (Hybrid AI):** Kết hợp sức mạnh của các mô hình Machine Learning truyền thống (Forecasting), Xử lý Ngôn ngữ Tự nhiên (NLP), và một hệ thống Rule Engine suy luận tượng trưng.
+*   🔍 **Khuyến nghị Giải thích được (XAI):** Mọi lời khuyên về Quyết định, Rủi ro, và Cơ hội đều đi kèm với một danh sách các quy tắc đã được kích hoạt làm bằng chứng.
+*   🧬 **Rule Engine có khả năng Tiến hóa:** Được xây dựng trên nền tảng Cây Biểu thức Tượng trưng (Symbolic Expression Trees), sẵn sàng cho việc áp dụng các thuật toán di truyền để tự động khám phá ra các chiến lược mới.
+*   👤 **Hồ sơ Đầu tư Cá nhân hóa:** Cho phép người dùng tạo và thử nghiệm nhiều "persona" đầu tư khác nhau, mỗi persona có các tham số về khẩu vị rủi ro, mục tiêu, và kinh nghiệm riêng.
+*   ⚙️ **Hệ thống Full-stack Hiện đại:** Được xây dựng hoàn chỉnh với Backend (Python, FastAPI, Docker) và Frontend (Vue.js, TypeScript, Vuetify), mang lại trải nghiệm mượt mà và chuyên nghiệp.
 
-### Quy trình Cài đặt & Chạy
+---
 
-**Bước 1: Clone Repository và Cấu hình Môi trường**
+### 🏗️ Kiến trúc Tổng quan
+
+ITAPIA được thiết kế theo kiến trúc microservices, đảm bảo tính độc lập, khả năng mở rộng và bảo trì.
+
+![Deployment Architecture](./doc/diagram/UML-deployment.png)
+
+> Dive deeper into our system design in the **[Architecture Documentation](./doc/public/itapia-mvp-v1.0.md)**.
+
+---
+
+### 🚀 Bắt đầu Nhanh (Quick Start)
+
+**Yêu cầu:**
+*   Git
+*   Docker & Docker Compose
+*   Python (Python 3.11 phù hợp nhất)
+*   npm
+*   OpenSSL
+
+#### 1. Cài đặt
+
 ```bash
-git clone https://github.com/triet4p/itapia.git
+# Clone the repository
+git clone https://github.com/your-username/itapia.git
 cd itapia
-# Tạo file .env từ file mẫu và điền thông tin Kaggle của bạn
-cp .env.template .env
 ```
 
-**Bước 2: Build tất cả các Docker Image**
-*Lệnh này sẽ build image cho `data-processing`, `data-seeds`, `ai-service-quick`, và `api-gateway`.*
+#### 2. Cài đặt Môi trường & Lấy Credentials
+
+Trước khi chạy dự án, bạn cần chuẩn bị các thông tin bí mật sau:
+
+**a. Lấy Kaggle API Key:**
+*   Đăng nhập vào [Kaggle](https://www.kaggle.com/).
+*   Đi đến trang tài khoản của bạn (click vào avatar -> Account).
+*   Trong phần "API", click vào **"Create New API Token"**.
+*   Một file `kaggle.json` sẽ được tải về. Mở nó ra, bạn sẽ cần giá trị của `username` và `key`.
+
+**b. Lấy Google OAuth 2.0 Credentials:**
+*   Truy cập [Google Cloud Console](https://console.cloud.google.com/) và tạo một dự án mới.
+*   Vào **APIs & Services** -> **OAuth consent screen**, chọn **External** và điền các thông tin cần thiết cho ứng dụng. Thêm các scope `.../auth/userinfo.email` và `.../auth/userinfo.profile`.
+*   Vào **Credentials**, click **+ CREATE CREDENTIALS** -> **OAuth client ID**.
+*   Chọn **Web application** và cấu hình:
+    *   **Authorized JavaScript origins:** `http://localhost:3000`
+    *   **Authorized redirect URIs:** `http://localhost:8000/api/v1/auth/google/callback`
+*   Sau khi tạo, copy lại **Client ID** và **Client Secret**.
+
+**c. Tạo JWT Secret Key:**
+*   Mở terminal và chạy lệnh sau:
+    ```bash
+    openssl rand -hex 32
+    ```
+*   Copy chuỗi ký tự ngẫu nhiên được tạo ra.
+
+**d. Cấu hình các file `.env`:**
+Copy các file cấu hình theo template có sẵn và điền vào các giá trị cần thiết.
 ```bash
-docker-compose build
+# Backend
+cp ./backend/.env.template ./backend/.env
+
+# Frontend
+cp ./frontend/.env.template ./frontend/.env
 ```
 
-**Bước 3: Khởi tạo và "Seed" Cơ sở dữ liệu**
-*Lệnh này sẽ khởi động CSDL, tạo các bảng, và nạp vào các quy tắc dựng sẵn.*
+#### 3. Chạy Backend
+
 ```bash
-# Khởi động CSDL và chờ chúng sẵn sàng
-docker-compose up -d stocks_postgre_db realtime_redis_db
+# Navigate to the backend directory
+cd backend
 
-# Chờ khoảng 10-15 giây để CSDL khởi động hoàn toàn
-sleep 15 
-
-# Chạy service seeding, nó sẽ tự thoát sau khi hoàn thành
-docker-compose up data-seeds
+# Build and run all backend services in detached mode
+docker-compose up --build -d api-gateway
 ```
 
-**Bước 4: Khởi động Toàn bộ Hệ thống**
+#### 4. Chạy Frontend
+
 ```bash
-# Khởi động các service xử lý dữ liệu nền và các service ứng dụng
-docker-compose up -d
-```
-*Lưu ý: `ai-service-quick` có thể mất vài phút ở lần khởi động đầu tiên để tải về và cache các mô hình AI từ Kaggle/Hugging Face.*
+# Navigate to the frontend directory from the root
+cd frontend
 
-**Bước 5: Truy cập Hệ thống**
-- **API Gateway (Tài liệu API Công khai)**: **http://localhost:8000/docs**
-- **AI Service Quick (Tài liệu API Nội bộ)**: http://localhost:8001/docs
+# Install dependencies
+npm install
+
+# Sync schemas if neccessary
+npm run sync:schemas
+
+# Run the development server
+npm run dev
+```
+
+#### 5. Truy cập Hệ thống
+*   **Frontend Application:** [http://localhost:5173](http://localhost:3000)
+*   **Backend API Docs (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-## 🗺️ Danh sách API
+### 📁 Cấu trúc Dự án
 
-Tất cả các tương tác bên ngoài đều thông qua **API Gateway**. Dưới đây là các nhóm endpoint chính.
-
-*(Prefix `/api/v1` được áp dụng cho tất cả)*
-
-### **Advisor - Khuyến nghị & Suy luận (Cấp cao nhất)**
-*   `GET /advisor/quick/{ticker}`: Lấy báo cáo khuyến nghị **đầy đủ** (JSON). **Đây là endpoint chính.**
-*   `GET /advisor/quick/{ticker}/explain`: Lấy bản giải thích bằng **ngôn ngữ tự nhiên** cho báo cáo khuyến nghị.
-
-### **Analysis - Dữ liệu Phân tích Chi tiết**
-*   `GET /analysis/quick/{ticker}`: Lấy báo cáo phân tích tổng hợp (Technical, Forecasting, News).
-*   `GET /analysis/quick/{ticker}/technical`: Chỉ lấy báo cáo Phân tích Kỹ thuật.
-*   `GET /analysis/quick/{ticker}/forecasting`: Chỉ lấy báo cáo Dự báo.
-*   `GET /analysis/quick/{ticker}/news`: Chỉ lấy báo cáo Phân tích Tin tức.
-
-### **Rules - Quản lý & Giải thích Quy tắc**
-*   `GET /rules`: Lấy danh sách tóm tắt tất cả các quy tắc dựng sẵn.
-*   `GET /rules/{rule_id}`: Lấy chi tiết cấu trúc (cây logic JSON) của một quy tắc.
-*   `GET /rules/{rule_id}/explain`: Lấy bản giải thích logic của một quy tắc bằng ngôn ngữ tự nhiên.
-
-### **Market Data - Dữ liệu Thị trường Thô**
-*   `GET /market/tickers/{ticker}/prices/daily`: Lấy dữ liệu giá lịch sử hàng ngày.
-*   `GET /market/tickers/{ticker}/prices/intraday?latest_only=True/False`: Lấy điểm dữ liệu giá mới nhất trong ngày.
-*   `GET /market/tickers/{ticker}/news`: Lấy các tin tức liên quan đến một cổ phiếu.
-*   ... và các endpoint dữ liệu khác.
-
-### **Metadata - Dữ liệu Nền**
-*   `GET /metadata/sectors`: Lấy danh sách tất cả các nhóm ngành được hỗ trợ.
-
----
-
-## 📈 Quy trình Huấn luyện Mô hình
-
-Do giới hạn tài nguyên, các quy trình huấn luyện được thực hiện trên Kaggle/Colab.
-`ai-service-quick` có một cơ chế để xuất dữ liệu đã được làm giàu, sẵn sàng cho việc huấn luyện.
-
-**Cách xuất dữ liệu cho ngành 'TECH':**
-```bash
-docker-compose exec ai-service-quick conda run -n itapia python -m app.analysis.orchestrator TECH
-```
-*File CSV sẽ được lưu trong thư mục `ai_service_quick/local/`.*
-
-Chi tiết về quy trình huấn luyện có thể xem tại [Local Training Notebook](./notebooks/itapia-training.ipynb).
-
----
-
-## 🔧 Cấu trúc Dự án
 ```
 itapia/
-├── api_gateway/        # Dịch vụ API Gateway (FastAPI)
-├── ai_service_quick/   # Dịch vụ AI cho Quick Check (FastAPI, CPU)
-├── data_processing/    # Các pipeline thu thập dữ liệu (ETL)
-├── data_seeds/         # Các script khởi tạo CSDL
-├── doc/                # Tài liệu chi tiết của dự án
-├── shared/             # Thư viện chung (shared library)
-├── docker-compose.yml  # Cấu hình các dịch vụ Docker
-└── README.md
+├── backend/            # Chứa tất cả các microservices, Docker config, và .env cho backend
+├── frontend/           # Ứng dụng Vue.js SPA, chứa .env riêng cho frontend
+├── .gitignore
+└── README.md           # Bạn đang ở đây
 ```
 
 ---
 
-## 📈 Các Tính năng Chính (MVP v1.0)
+### 🗺️ Lộ trình Phát triển
 
-- **AI Giải thích được (XAI)**: Mọi khuyến nghị đều đi kèm với "bằng chứng" là danh sách các quy tắc đã được kích hoạt, cung cấp sự minh bạch tuyệt đối.
-- **Kiến trúc Điều phối Phân cấp**: Một kiến trúc backend rõ ràng (`CEO` -> `Phó CEO` -> `Trưởng phòng`), giúp hệ thống dễ bảo trì và mở rộng.
-- **Rule Engine Mạnh mẽ**: Một "ngôn ngữ" quy tắc nội bộ dựa trên Cây Biểu thức Tượng trưng và Định kiểu Ngữ nghĩa (STGP), làm nền tảng cho cả các quy tắc chuyên gia và thuật toán tiến hóa trong tương lai.
-- **Phân tích Đa luồng**: Kết hợp tín hiệu từ Phân tích Kỹ thuật, Dự báo Machine Learning, và Phân tích Tin tức vào một báo cáo tổng hợp duy nhất.
-- **Hệ thống API Toàn diện**: Cung cấp các endpoint từ cấp cao (khuyến nghị) đến cấp thấp (dữ liệu thô), phục vụ cho nhiều mục đích sử dụng.
-
----
-
-## 🤝 Đóng góp & Trích dẫn
-Đây là một dự án đồ án tốt nghiệp. Mọi câu hỏi hoặc gợi ý, xin vui lòng tham khảo **[Tài liệu Kiến trúc & Kỹ thuật chi tiết](./doc/public/itapia-mvp-v1.0.md)**.
-
-### Trích dẫn
-
-Nếu bạn sử dụng công trình này trong nghiên cứu của mình, xin vui lòng trích dẫn:
-```txt
-[Lê Minh Triết]. (2025). ITAPIA: Trợ lý Đầu tư Cá nhân Thông minh và Minh bạch dựa trên Trí tuệ Nhân tạo. 
-Đồ án Tốt nghiệp, Đại học Bách khoa Hà Nội, Việt Nam.
-```
-**Trích dẫn Mô hình:**
-Dự án này sử dụng mô hình phân tích tình cảm tài chính đã được fine-tune, cung cấp bởi Ankit Aglawe.
-```bibtex
-@misc{AnkitAI_2024_financial_sentiment_model,
-  title={DistilBERT Fine-Tuned for Financial Sentiment Analysis},
-  author={Ankit Aglawe},
-  year={2024},
-  howpublished={\url{https://huggingface.co/AnkitAI/distilbert-base-uncased-financial-news-sentiment-analysis}},
-}
-```
-Đối với mục đích thương mại hoặc hợp tác, xin vui lòng liên hệ `trietlm0306@gmail.com`.
+-   ✅ **Giai đoạn 1: MVP Cốt lõi** (Analysis, Advisor, Rules, Auth)
+-   ▶️ **Giai đoạn 2: Hoàn thiện Giao diện & Cá nhân hóa** (UX Polish, Profile Management)
+-   **Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
+-   **Giai đoạn 4: Phân tích Sâu (`Deep Dive`) & Tích hợp LLM**
 
 ---
 
-## 📄 Giấy phép
+### 📚 Tài liệu Chi tiết
 
-Dự án này được phát triển như một phần của đồ án tốt nghiệp. Mã nguồn có sẵn cho các mục đích học thuật và giáo dục.
+*   **[Kiến trúc Hệ thống](./doc/public/itapia-mvp-v1.0.md):** Giải thích sâu về các microservices, luồng dữ liệu, và các quyết định thiết kế.
+*   **[Tham khảo API](./doc/public/API-doc-v1.pdf):** Danh sách và mô tả chi tiết tất cả các API endpoint.
+*   **[Kiến trúc Rule Engine](./doc/public/rule-architecture.pdf):** Giải thích về thiết kế Cây Biểu thức Tượng trưng.
+
+---
+
+### 🤝 Đóng góp & Trích dẫn
+
+Đây là một dự án đồ án tốt nghiệp. Mọi ý kiến đóng góp hoặc câu hỏi đều được chào đón. Vui lòng tạo một Issue để thảo luận.
+
+Nếu bạn sử dụng công trình này, xin vui lòng trích dẫn:
+```
+[Lê Minh Triết]. (2025). ITAPIA: Trợ lý Đầu tư Cá nhân Thông minh và Minh bạch dựa trên Trí tuệ Nhân tạo. Đồ án Tốt nghiệp, Đại học Bách khoa Hà Nội, Việt Nam.
+```
