@@ -183,10 +183,6 @@ class ForecastingModel(ABC):
                 print(f"  - Successfully loaded main kernel model: {type(self.kernel_model)}")
             else:
                 raise FileNotFoundError(f"Main model file '{cfg.MODEL_MAIN_MODEL_FILE}' not found in downloaded artifacts.")
-
-            # Tải các mô hình snapshot
-            if load_snapshot_on_mem:
-                self.load_all_snapshot_from_disk()
             
             metadata_path = os.path.join(model_cache_path, cfg.MODEL_METADATA_FILE)
             if os.path.exists(metadata_path):
@@ -208,6 +204,10 @@ class ForecastingModel(ABC):
                 self.snapshot_registry = full_metadata.get('snapshots', {}).get('details', {})
             else:
                 print("Warning: metadata.json not found. Task state not restored.")
+                
+            # Tải các mô hình snapshot
+            if load_snapshot_on_mem:
+                self.load_all_snapshot_from_disk()
 
             print(f"[{self.name}] Model loading complete with task {self.task.task_id}.")
 
