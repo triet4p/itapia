@@ -1,3 +1,4 @@
+from typing import List, Literal
 import kagglehub
 from datetime import datetime
 import shutil
@@ -31,9 +32,12 @@ class ForecastingModel(ABC):
         self.task: ForecastingTask = None
         
         self.snapshot_models = {}
+        self.snapshot_registry = {}
         self.metrics = []
         
         self.post_processors = post_processors
+        
+        self.model_cache_path: str = ""
         
     def assign_task(self, task: ForecastingTask):
         self.task = task
@@ -55,7 +59,7 @@ class ForecastingModel(ABC):
             'task': self.task.get_metadata(),
             'snapshots': {
                 'cnt': len(self.snapshot_models.keys()),
-                'details': list(self.snapshot_models.keys())
+                'details': self.snapshot_registry
             },
             'metrics': self.metrics
         }
@@ -138,7 +142,8 @@ class ForecastingModel(ABC):
         kaggle_username: str,
         task_template: AvailableTaskTemplate,
         task_id: str,
-        version: int = None
+        version: int = None,
+        load_snapshot_on_mem: bool = False
     ):
         """
         Tải về các artifacts từ Kaggle Hub và khôi phục trạng thái của ForecastingModel.
@@ -152,14 +157,6 @@ class ForecastingModel(ABC):
         model_slug = self.get_model_slug(task_id)
         framework = self.framework
         variation = self.variation
-        
-        # 1. Tạo thư mục tạm để tải về
-        #download_dir = f"./{model_slug}_download"
-        #if os.path.exists(download_dir):
-        #    shutil.rmtree(download_dir)
-        #os.makedirs(download_dir)
-        
-        #unzip_path = os.path.join(download_dir, "unzipped")
 
         try:
             # 2. Xây dựng handle và tải về file ZIP
@@ -173,7 +170,7 @@ class ForecastingModel(ABC):
             print(f"[{self.name}] Downloading model from handle: {handle}...")
             model_cache_path = kagglehub.model_download(handle)
             print(f"  - Model downloaded to cache path: {model_cache_path}")
-
+            self.model_cache_path = model_cache_path
             # 3. Tải các artifacts vào các thuộc tính của instance
             print("  - Loading artifacts into model object...")
 
@@ -188,23 +185,13 @@ class ForecastingModel(ABC):
                 raise FileNotFoundError(f"Main model file '{cfg.MODEL_MAIN_MODEL_FILE}' not found in downloaded artifacts.")
 
             # Tải các mô hình snapshot
-            self.snapshot_models = {}  # Xóa các snapshot cũ nếu có
-            snapshot_dir = os.path.join(model_cache_path, "snapshots")
-            if os.path.exists(snapshot_dir):
-                print("  - Loading snapshot models from folds...")
-                snapshot_files = [f for f in os.listdir(snapshot_dir) if f.endswith(".pkl")]
-                for filename in snapshot_files:
-                    snapshot_key = os.path.splitext(filename)[0]  # Lấy tên file không có .pkl
-                    with open(os.path.join(snapshot_dir, filename), "rb") as f:
-                        self.snapshot_models[snapshot_key] = pickle.load(f)
-                print(f"  - Successfully loaded {len(self.snapshot_models)} snapshot models.")
-            else:
-                print("  - No snapshots directory found, skipping snapshot loading.")
-                
+            if load_snapshot_on_mem:
+                self.load_all_snapshot_from_disk()
+            
             metadata_path = os.path.join(model_cache_path, cfg.MODEL_METADATA_FILE)
             if os.path.exists(metadata_path):
                 with open(metadata_path, "r") as f:
-                    full_metadata = json.load(f)
+                    full_metadata: dict = json.load(f)
                 
                 # Load metrics
                 self.metrics = full_metadata.get("metrics", [])
@@ -217,6 +204,8 @@ class ForecastingModel(ABC):
                     self.task = ForecastingTaskFactory.create_task(task_template, task_id, task_metadata)
                 else:
                     print("Warning: 'task' key not found in metadata.json. Task state not restored.")
+                    
+                self.snapshot_registry = full_metadata.get('snapshots', {}).get('details', {})
             else:
                 print("Warning: metadata.json not found. Task state not restored.")
 
@@ -265,6 +254,43 @@ class ForecastingModel(ABC):
                 prediction = processor.apply(prediction)
                 
         return prediction
+    
+    def register_snapshot(self, snapshot_id: str, available_test_time: datetime):
+        available_test_ts = int(available_test_time.timestamp())
+        self.snapshot_registry[snapshot_id] = available_test_ts
+        
+    def get_snapshot_by_test_time(self, test_time: datetime,
+                                  match_type: Literal['first', 'last'] = 'last') -> str:
+        test_ts = int(test_time.timestamp())
+        found_ids = []
+        
+        for snapshot_id, av_test_ts in self.snapshot_registry.items():
+            if test_ts >= av_test_ts:
+                found_ids.append(snapshot_id)
+            
+        if len(found_ids) == 0:
+            raise ValueError('Not found any snapshot model.')
+        
+        return found_ids[0] if match_type == 'first' else found_ids[-1]
+        
+    def load_all_snapshot_from_disk(self):
+        # Tải các mô hình snapshot
+        if self.model_cache_path is None:
+            raise FileNotFoundError("  - No snapshots directory found, skipping snapshot loading.")
+        self.snapshot_models = {}  # Xóa các snapshot cũ nếu có
+        snapshot_keys = list(self.snapshot_registry.keys())
+        snapshot_dir = os.path.join(self.model_cache_path, "snapshots")
+        if os.path.exists(snapshot_dir):
+            print("  - Loading snapshot models from folds...")
+            for snapshot_key in snapshot_keys:
+                with open(os.path.join(snapshot_dir, f'{snapshot_key}.pkl'), "rb") as f:
+                    self.snapshot_models[snapshot_key] = pickle.load(f)
+            print(f"  - Successfully loaded {len(self.snapshot_models)} snapshot models.")
+        else:
+            raise FileNotFoundError("  - No snapshots directory found, skipping snapshot loading.")
+        
+    def clear_all_snapshot(self):
+        self.snapshot_models.clear()
     
 class ScikitLearnForecastingModel(ForecastingModel):
     def __init__(self, name, kernel_model_template = None, variation = 'original',

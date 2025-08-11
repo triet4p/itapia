@@ -117,6 +117,8 @@ class TrainingOrchestrator:
                                                 max_train_months=max_train_months)
 
             for i, (train_fold_df, valid_fold_df) in enumerate(generator):
+                av_test_time = pd.to_datetime(valid_fold_df.index)[0].to_pydatetime()
+                
                 X_train = train_fold_df[task.selected_features]
                 y_train_df = train_fold_df[task.targets]
                 X_valid = valid_fold_df[task.selected_features]
@@ -126,6 +128,7 @@ class TrainingOrchestrator:
                 y_valid = y_valid_df.values.ravel() if task.task_type == 'clf' else y_valid_df.values
 
                 snapshot_id = f'model-fold-{i+1}'
+                model.register_snapshot(snapshot_id, available_test_time=av_test_time)
                 model.fit(X_train, y_train, snapshot_id)
                 
                 preds = model.predict(X_valid, snapshot_id)
