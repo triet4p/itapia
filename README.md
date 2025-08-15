@@ -3,37 +3,37 @@
 
 ![Project Status: In Development](https://img.shields.io/badge/status-in_development-yellowgreen) ![Tech Stack: Python & Vue.js](https://img.shields.io/badge/tech-Python|Vue.js|FastAPI|ScikitLearn|BERT|TALib-blue) ![License: Academic Use](https://img.shields.io/badge/license-Academic_Use-lightgrey)
 
-ITAPIA là một nền tảng hỗ trợ đầu tư chứng khoán thông minh, được xây dựng với triết lý cốt lõi là **sự minh bạch** và **khả năng giải thích (Explainability - XAI)**. Dự án này không chỉ cung cấp các khuyến nghị, mà còn cho phép người dùng hiểu rõ "tại sao" đằng sau mỗi quyết định.
+ITAPIA is an intelligent stock investment assistant platform, built with the core philosophies of **transparency** and **Explainability (XAI)**. This project does not just provide recommendations, but also empowers users to understand the "why" behind each decision.
 
 ---
 
-### Vấn đề & Giải pháp của ITAPIA
+### The Problem & ITAPIA's Solution
 
-*   **Vấn đề:** Thị trường hiện nay, các công cụ đầu tư "hộp đen" (black box), đưa ra các tín hiệu mua/bán bí ẩn, làm xói mòn niềm tin và biến việc đầu tư thành một trò chơi may rủi.
-*   **Giải pháp của ITAPIA:** Chúng tôi xây dựng một "hộp kính" (glass box). Bằng cách kết hợp các mô hình AI/ML truyền thống và một Rule Engine mạnh mẽ, mọi lời khuyên đều được truy vết ngược lại đến các "bằng chứng" và "quy tắc" đã kích hoạt nó, trao toàn quyền kiểm soát và sự tự tin cho người dùng.
+*   **The Problem:** The current market is flooded with "black box" investment tools that issue cryptic buy/sell signals, eroding trust and turning investing into a game of chance.
+*   **Our Solution:** We built a "glass box". By combining traditional AI/ML models with a powerful Rule Engine, every piece of advice is traced back to the "evidence" and "rules" that triggered it, giving users full control and confidence.
 
 ---
 
 ### Demo
-<!-- Chèn ảnh chụp màn hình hoặc GIF demo tại đây -->
+<!-- Insert screenshot or GIF demo here -->
 ![ITAPIA Demo](./doc/public/itapia-demo.gif)
-*(Giao diện Advisor)*
+*(The Advisor Interface)*
 
 ---
 
-### 📈 Các Tính năng Chính
+### 📈 Key Features
 
-*   🧠 **Kiến trúc AI Lai (Hybrid AI):** Kết hợp sức mạnh của các mô hình Machine Learning truyền thống (Forecasting), Xử lý Ngôn ngữ Tự nhiên (NLP), và một hệ thống Rule Engine suy luận tượng trưng.
-*   🔍 **Khuyến nghị Giải thích được (XAI):** Mọi lời khuyên về Quyết định, Rủi ro, và Cơ hội đều đi kèm với một danh sách các quy tắc đã được kích hoạt làm bằng chứng.
-*   🧬 **Rule Engine có khả năng Tiến hóa:** Được xây dựng trên nền tảng Cây Biểu thức Tượng trưng (Symbolic Expression Trees), sẵn sàng cho việc áp dụng các thuật toán di truyền để tự động khám phá ra các chiến lược mới.
-*   👤 **Hồ sơ Đầu tư Cá nhân hóa:** Cho phép người dùng tạo và thử nghiệm nhiều "persona" đầu tư khác nhau, mỗi persona có các tham số về khẩu vị rủi ro, mục tiêu, và kinh nghiệm riêng.
-*   ⚙️ **Hệ thống Full-stack Hiện đại:** Được xây dựng hoàn chỉnh với Backend (Python, FastAPI, Docker) và Frontend (Vue.js, TypeScript, Vuetify), mang lại trải nghiệm mượt mà và chuyên nghiệp.
+*   🧠 **Hybrid AI Architecture:** Combines the strengths of traditional Machine Learning models (Forecasting), Natural Language Processing (NLP), and a symbolic Rule Engine for reasoning.
+*   🔍 **Explainable Recommendations (XAI):** Every piece of advice on Decisions, Risks, and Opportunities is accompanied by a list of triggered rules as evidence.
+*   🧬 **Evolvable Rule Engine:** Built on a foundation of Symbolic Expression Trees, ready for the application of genetic algorithms to automatically discover new strategies.
+*   👤 **Personalized Investment Profiles:** Allows users to create and experiment with multiple investment "personas," each with unique parameters for risk appetite, goals, and experience.
+*   ⚙️ **Modern Full-Stack System:** Fully built with a Backend (Python, FastAPI, Docker) and Frontend (Vue.js, TypeScript, Vuetify), delivering a smooth and professional user experience.
 
 ---
 
-### 🏗️ Kiến trúc Tổng quan
+### 🏗️ Architecture Overview
 
-ITAPIA được thiết kế theo kiến trúc microservices, đảm bảo tính độc lập, khả năng mở rộng và bảo trì.
+ITAPIA is designed with a microservices architecture, ensuring modularity, scalability, and maintainability.
 
 ![Deployment Architecture](./doc/diagram/UML-deployment.png)
 
@@ -41,16 +41,16 @@ ITAPIA được thiết kế theo kiến trúc microservices, đảm bảo tính
 
 ---
 
-### 🚀 Bắt đầu Nhanh (Quick Start)
+### 🚀 Quick Start
 
-**Yêu cầu:**
+**Prerequisites:**
 *   Git
 *   Docker & Docker Compose
-*   Python (Python 3.11 phù hợp nhất)
+*   Python (Python 3.11 is recommended)
 *   npm
 *   OpenSSL
 
-#### 1. Cài đặt
+#### 1. Initial Setup
 
 ```bash
 # Clone the repository
@@ -58,34 +58,34 @@ git clone https://github.com/your-username/itapia.git
 cd itapia
 ```
 
-#### 2. Cài đặt Môi trường & Lấy Credentials
+#### 2. Environment Setup & Credentials
 
-Trước khi chạy dự án, bạn cần chuẩn bị các thông tin bí mật sau:
+Before running the project, you need to prepare the following secrets:
 
-**a. Lấy Kaggle API Key:**
-*   Đăng nhập vào [Kaggle](https://www.kaggle.com/).
-*   Đi đến trang tài khoản của bạn (click vào avatar -> Account).
-*   Trong phần "API", click vào **"Create New API Token"**.
-*   Một file `kaggle.json` sẽ được tải về. Mở nó ra, bạn sẽ cần giá trị của `username` và `key`.
+**a. Get Kaggle API Key:**
+*   Log in to [Kaggle](https://www.kaggle.com/).
+*   Go to your account page (click your avatar -> Account).
+*   In the "API" section, click **"Create New API Token"**.
+*   A `kaggle.json` file will be downloaded. Open it; you will need the `username` and `key` values.
 
-**b. Lấy Google OAuth 2.0 Credentials:**
-*   Truy cập [Google Cloud Console](https://console.cloud.google.com/) và tạo một dự án mới.
-*   Vào **APIs & Services** -> **OAuth consent screen**, chọn **External** và điền các thông tin cần thiết cho ứng dụng. Thêm các scope `.../auth/userinfo.email` và `.../auth/userinfo.profile`.
-*   Vào **Credentials**, click **+ CREATE CREDENTIALS** -> **OAuth client ID**.
-*   Chọn **Web application** và cấu hình:
+**b. Get Google OAuth 2.0 Credentials:**
+*   Go to the [Google Cloud Console](https://console.cloud.google.com/) and create a new project.
+*   Navigate to **APIs & Services** -> **OAuth consent screen**, select **External**, and fill in the required application details. Add the `.../auth/userinfo.email` and `.../auth/userinfo.profile` scopes.
+*   Go to **Credentials**, click **+ CREATE CREDENTIALS** -> **OAuth client ID**.
+*   Select **Web application** and configure the following:
     *   **Authorized JavaScript origins:** `http://localhost:3000`
     *   **Authorized redirect URIs:** `http://localhost:8000/api/v1/auth/google/callback`
-*   Sau khi tạo, copy lại **Client ID** và **Client Secret**.
+*   After creation, copy the **Client ID** and **Client Secret**.
 
-**c. Tạo JWT Secret Key:**
-*   Mở terminal và chạy lệnh sau:
+**c. Generate JWT Secret Key:**
+*   Open your terminal and run the following command:
     ```bash
     openssl rand -hex 32
     ```
-*   Copy chuỗi ký tự ngẫu nhiên được tạo ra.
+*   Copy the generated random string.
 
-**d. Cấu hình các file `.env`:**
-Copy các file cấu hình theo template có sẵn và điền vào các giá trị cần thiết.
+**d. Configure `.env` files:**
+Copy the configuration files from the provided templates and fill in the necessary values.
 ```bash
 # Backend
 cp ./backend/.env.template ./backend/.env
@@ -94,7 +94,7 @@ cp ./backend/.env.template ./backend/.env
 cp ./frontend/.env.template ./frontend/.env
 ```
 
-#### 3. Chạy Backend
+#### 3. Run the Backend
 
 ```bash
 # Navigate to the backend directory
@@ -104,7 +104,7 @@ cd backend
 docker-compose up --build -d api-gateway
 ```
 
-#### 4. Chạy Frontend
+#### 4. Run the Frontend
 
 ```bash
 # Navigate to the frontend directory from the root
@@ -113,53 +113,61 @@ cd frontend
 # Install dependencies
 npm install
 
-# Sync schemas if neccessary
+# Sync schemas if necessary
 npm run sync:schemas
 
 # Run the development server
 npm run dev
 ```
 
-#### 5. Truy cập Hệ thống
-*   **Frontend Application:** [http://localhost:5173](http://localhost:3000)
+#### 5. Access the System
+*   **Frontend Application:** [http://localhost:3000](http://localhost:3000)
 *   **Backend API Docs (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-### 📁 Cấu trúc Dự án
+### 📁 Project Structure
 
 ```
 itapia/
-├── backend/            # Chứa tất cả các microservices, Docker config, và .env cho backend
-├── frontend/           # Ứng dụng Vue.js SPA, chứa .env riêng cho frontend
+├── backend/            # Contains all microservices, Docker config, and the .env for the backend
+├── frontend/           # The Vue.js SPA, contains its own .env for the frontend
 ├── .gitignore
-└── README.md           # Bạn đang ở đây
+└── README.md           # You are here
 ```
 
 ---
 
-### 🗺️ Lộ trình Phát triển
+### 🗺️ Development Roadmap
 
--   ✅ **Giai đoạn 1: MVP Cốt lõi** (Analysis, Advisor, Rules, Auth)
--   ✅ **Giai đoạn 2: Hoàn thiện Giao diện & Cá nhân hóa** (UX Polish, Profile Management)
--   ▶️ **Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
--   ▶️ **Giai đoạn 4: Phân tích Sâu (`Deep Dive`) & Tích hợp LLM**
-
----
-
-### 📚 Tài liệu Chi tiết
-
-*   **[Kiến trúc Hệ thống](./doc/public/itapia-mvp-v1.0.md):** Giải thích sâu về các microservices, luồng dữ liệu, và các quyết định thiết kế.
-*   **[Tham khảo API](./doc/public/API-doc-v1.pdf):** Danh sách và mô tả chi tiết tất cả các API endpoint.
-*   **[Kiến trúc Rule Engine](./doc/public/rule-architecture.pdf):** Giải thích về thiết kế Cây Biểu thức Tượng trưng.
+-   ✅ **Phase 1: Core MVP** (Analysis, Advisor, Rules, Auth)
+-   ✅ **Phase 2: UI/UX Polish & Personalization** (UX Polish, Profile Management)
+-   ▶️ **Phase 3: Automatic Optimization (`Evo-worker`)**
+-   ▶️ **Phase 4: Deep Dive & LLM Integration**
 
 ---
 
-### 🤝 Đóng góp & Trích dẫn
+### 📚 Detailed Documentation
 
-Đây là một dự án đồ án tốt nghiệp. Mọi ý kiến đóng góp hoặc câu hỏi đều được chào đón. Vui lòng tạo một Issue để thảo luận.
+*   **[System Architecture](./doc/public/itapia-mv-p-v1.0.md):** A deep dive into the microservices, data flow, and design decisions.
+*   **[API Reference](./doc/public/API-doc-v1.pdf):** A detailed list and description of all API endpoints.
+*   **[Rule Engine Architecture](./doc/public/rule-architecture.pdf):** An explanation of the Symbolic Expression Tree design.
 
-Nếu bạn sử dụng công trình này, xin vui lòng trích dẫn:
+---
+
+### Tutorials
+To understand the development process, roles, and responsibilities of each component, you can read the:
+*   **[Tutorials](./doc/tutorials/index.md)**
+
+
+---
+
+### 🤝 Contributing & Citation
+
+This is a graduate thesis project. All contributions or questions are welcome. Please create an Issue to discuss.
+
+If you use this work, please cite it as:
 ```
-[Lê Minh Triết]. (2025). ITAPIA: Trợ lý Đầu tư Cá nhân Thông minh và Minh bạch dựa trên Trí tuệ Nhân tạo. Đồ án Tốt nghiệp, Đại học Bách khoa Hà Nội, Việt Nam.
+[Le, Minh Triet]. (2025). ITAPIA: An Intelligent and Transparent AI-Powered Personal Investment Assistant. 
+Graduate Thesis, Hanoi University of Science and Technology, Vietnam.
 ```
