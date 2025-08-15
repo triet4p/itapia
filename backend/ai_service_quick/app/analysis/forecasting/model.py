@@ -289,6 +289,14 @@ class ForecastingModel(ABC):
         else:
             raise FileNotFoundError("  - No snapshots directory found, skipping snapshot loading.")
         
+    def is_loaded_snapshots(self):
+        if not self.snapshot_models:
+            return False
+        if set(self.snapshot_models.keys()) != set(self.snapshot_registry.keys()):
+            return False
+        
+        return True
+        
     def clear_all_snapshot(self):
         self.snapshot_models.clear()
     

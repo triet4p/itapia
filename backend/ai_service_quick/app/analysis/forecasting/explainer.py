@@ -9,11 +9,17 @@ from itapia_common.schemas.entities.analysis.forecasting import TopFeature, Base
 from abc import ABC, abstractmethod
 
 class SHAPExplainer(ABC):
-    def __init__(self, model: ForecastingModel):
+    def __init__(self, model: ForecastingModel,
+                 snapshot_id: str|None = None):
         if model.kernel_model is None:
             raise ValueError("Kernel model has not been loaded")
         self.model = model
         self.task = model.task
+        
+        if snapshot_id is None:
+            self._to_explain_kernel = self.model.kernel_model
+        else:
+            self._to_explain_kernel = self.model.snapshot_models[snapshot_id]
     
     @abstractmethod
     def explain_prediction(self, X_instance: pd.DataFrame) -> List[SHAPExplaination]:
@@ -54,19 +60,19 @@ class SHAPExplainer(ABC):
     
 class TreeSHAPExplainer(SHAPExplainer):
     """Explainer cho các mô hình cây đơn mục tiêu (phân loại)."""
-    def __init__(self, model: ForecastingModel):
-        super().__init__(model)
+    def __init__(self, model: ForecastingModel, snapshot_id: str|None=None):
+        super().__init__(model, snapshot_id)
         if self.task.task_type != 'clf':
             raise TypeError("TreeSHAPExplainer is intended for classification tasks.")
-        if not hasattr(self.model.kernel_model, 'classes_'):
+        if not hasattr(self._to_explain_kernel, 'classes_'):
             raise TypeError("Model for TreeSHAPExplainer must have a 'classes_' attribute.")
 
-        self.explainer = shap.TreeExplainer(self.model.kernel_model)
-        self.class_map = {label: i for i, label in enumerate(self.model.kernel_model.classes_)}
+        self.explainer = shap.TreeExplainer(self._to_explain_kernel)
+        self.class_map = {label: i for i, label in enumerate(self._to_explain_kernel.classes_)}
         
     def explain_prediction(self, X_instance: pd.DataFrame) -> List[SHAPExplaination]:
         shap_values_3d = self.explainer.shap_values(X_instance)
-        prediction = self.model.predict(X_instance)[0]
+        prediction = self.model.predict_kernel_model(self._to_explain_kernel, X_instance)[0]
         
         predicted_class_index = self.class_map[prediction]
         shap_values_for_prediction = shap_values_3d[0, :, predicted_class_index]
@@ -90,17 +96,17 @@ class MultiOutputTreeSHAPExplainer(SHAPExplainer):
     Explainer chuyên dụng cho các mô hình cây đa mục tiêu, được bọc bởi
     sklearn.multioutput.MultiOutputRegressor.
     """
-    def __init__(self, model: ForecastingModel):
-        super().__init__(model)
+    def __init__(self, model: ForecastingModel, snapshot_id: str|None = None):
+        super().__init__(model, snapshot_id)
         if self.task.task_type != 'reg':
             raise TypeError("MultiOutputTreeSHAPExplainer is intended for regression tasks.")
-        if not isinstance(self.model.kernel_model, MultiOutputRegressor):
+        if not isinstance(self._to_explain_kernel, MultiOutputRegressor):
             raise TypeError("The kernel model must be an instance of MultiOutputRegressor.")
 
         # Tạo một dictionary chứa các TreeExplainer, mỗi cái cho một model con (estimator)
         self.explainers = {
             target_name: shap.TreeExplainer(estimator)
-            for target_name, estimator in zip(self.task.targets, self.model.kernel_model.estimators_)
+            for target_name, estimator in zip(self.task.targets, self._to_explain_kernel.estimators_)
         }
 
     def explain_prediction(self, X_instance: pd.DataFrame) -> List[SHAPExplaination]:

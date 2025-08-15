@@ -31,6 +31,7 @@ class AIServiceQuickOrchestrator:
         self.advisor = advisor_orchestrator
         self.rules = rule_orchestrator
         self.personal = personal_orchestrator
+        self.success_event = asyncio.Event()
         logger.info("CEO Orchestrator initialized with Analysis and Advisor deputies.")
 
     # === CÁC HÀM DELEGATE CHO ANALYSIS ORCHESTRATOR ===
@@ -144,4 +145,15 @@ class AIServiceQuickOrchestrator:
     async def preload_all_caches(self):
         """Khởi động song song tất cả các quy trình nền."""
         # Hiện tại chỉ có Analysis Orchestrator có quy trình preload
-        await self.analysis.preload_all_caches()
+        try:
+            await self.analysis.preload_all_caches()
+        finally:
+            logger.info("CEO -> Preloading all caches finished.")
+            self.success_event.set()
+        
+    async def generate_backtest_reports(self):
+        logger.info('Waiting for preload caches')
+        await self.success_event.wait()
+        logger.info('Preload caches finished')
+        tickers = self.analysis.get_all_tickers()
+        await self.analysis.generate_backtest_data(tickers)

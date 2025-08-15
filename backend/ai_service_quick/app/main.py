@@ -15,10 +15,11 @@ from app.rules.explainer import RuleExplainerOrchestrator
 from app.personal import PersonalAnalysisOrchestrator
 from app.analysis.data_prepare import DataPrepareOrchestrator
 from app.analysis.explainer import AnalysisExplainerOrchestrator
+from app.analysis.backtest import BacktestOrchestrator
 from app.advisor.explainer import AdvisorExplainerOrchestrator
 
 from itapia_common.dblib.session import get_rdbms_session, get_redis_connection
-from itapia_common.dblib.services import APIMetadataService, APIPricesService, APINewsService, RuleService
+from itapia_common.dblib.services import APIMetadataService, APIPricesService, APINewsService, RuleService, BacktestReportService
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
         prices_service = APIPricesService(rdbms_session=db, redis_client=redis, metadata_service=metadata_service)
         news_service = APINewsService(rdbms_session=db, metadata_service=metadata_service)
         rule_service = RuleService(db_session=db)
+        backtest_report_service = BacktestReportService(db_session=db)
         # --- KHỞI TẠO CÁC TRƯỞNG PHÒNG VÀ PHÓ CEO CHẮC CHẮN PHẢI TỒN TẠI ---
         
         data_prepare_orc = DataPrepareOrchestrator(
@@ -49,13 +51,15 @@ async def lifespan(app: FastAPI):
         forecasting_orc = ForecastingOrchestrator()
         
         analysis_explaine_orc = AnalysisExplainerOrchestrator()
+        backtest_orc = BacktestOrchestrator(backtest_report_service)
         
         analysis_orc = AnalysisOrchestrator(
             data_preparer=data_prepare_orc,
             tech_analyzer=technical_orc,
             forecaster=forecasting_orc,
             news_analyzer=news_orc,
-            explainer=analysis_explaine_orc
+            explainer=analysis_explaine_orc,
+            backtest_orchestrator=backtest_orc
         )
         
         aggeration_orc = AggregationOrchestrator()
@@ -86,6 +90,7 @@ async def lifespan(app: FastAPI):
     # --- CHẠY TÁC VỤ "LÀM NÓNG" Ở CHẾ ĐỘ NỀN ---
     print("Scheduling pre-warming task to run in the background...")
     asyncio.create_task(app.state.ceo_orchestrator.preload_all_caches())
+    #asyncio.create_task(app.state.ceo_orchestrator.generate_backtest_reports())
     
     yield
     

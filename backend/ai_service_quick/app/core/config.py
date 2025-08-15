@@ -12,7 +12,7 @@ AI_QUICK_V1_BASE_ROUTE = os.getenv("AI_QUICK_V1_BASE_ROUTE", "/api/v1")
 KAGGLE_KEY = os.getenv("KAGGLE_KEY")
 KAGGLE_USERNAME = os.getenv("KAGGLE_USERNAME")
 MODEL_FRAMEWORK = 'scikitLearn'
-MODEL_VARIATION = 'production'
+MODEL_VARIATION = 'original'
 MODEL_HANDLE_TEMPLATE = '{kaggle_username}/{model_slug}/{framework}/{variation}'
 MODEL_SLUG_TEMPLATE = 'itapia-final-{id}'
 MODEL_MAIN_MODEL_FILE = 'final-model.pkl'
@@ -23,6 +23,22 @@ TASK_ID_SECTOR_TEMPLATE = '{problem}-{sector}'
 TRIPLE_BARRIER_PROBLEM_ID = 'clf-triple-barrier'
 REG_5D_DIS_PROBLEM_ID = 'reg-5d-dis'
 REG_20D_DIS_PROBLEM_ID = 'reg-20d-dis'
+
+
+FORECASTING_TRAINING_BONUS_FEATURES = [
+    'open', 'high', 'low', 'close', 'volume',
+    'RSI_14', 'ATRr_14', 
+    'SMA_50', 'SMA_200',
+    'diff_from_sma_50', 'diff_from_sma_200',
+    'CDL_ENGULFING', 'CDL_3BLACKCROWS', 'CDL_3WHITESOLDIERS',
+    'CDL_MORNINGSTAR', 'CDL_EVENINGSTAR'
+]
+
+FORECASTING_TRAINING_SCORE_WEIGHTS = {
+    'lgbm': 0.4,
+    'rf': 0.3,
+    'mi': 0.3
+}
 
 LGBM_MODEL_BASE_NAME = 'LGBM'
 MULTIOUTPUT_LGBM_MODEL_BASE_NAME = 'Multi-LGBM'
@@ -41,3 +57,7 @@ NEWS_COUNT_RELEVANT = 10
 NEWS_COUNT_CONTEXTUAL = 4
 NEWS_COUNT_MACRO = 2
 NEWS_TOTAL_LIMIT = 17
+
+BACKTEST_DAY_OF_MONTH = 10
+BACKTEST_START_YEAR = 2020
+BACKTEST_END_YEAR = 2024

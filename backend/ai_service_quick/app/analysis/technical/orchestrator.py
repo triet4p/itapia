@@ -41,7 +41,8 @@ class TechnicalOrchestrator:
             engine = DailyAnalysisEngine(enriched_df, analysis_type=analysis_type)
             return engine.get_analysis_report()
         except (ValueError, TypeError) as e:
-            logger(f"Daily Analysis Engine: {e}. Returning error report.")
+            logger.err(f"Daily Analysis Engine: {e}. Returning error report.")
+            raise e
         
     def get_intraday_analysis(self, enriched_df: pd.DataFrame):
         logger.info("GENERATE DAILY ANALYSIS")

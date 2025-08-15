@@ -125,6 +125,7 @@ class DailyAnalysisEngine:
         
         logger.info("Pattern Recoginizer: Finding patterns ...")
         patterns_report = self.pattern_recognizer.find_patterns() # Thay thế placeholder
+        logger.info('Success')
 
         # --- NÂNG CẤP TRONG TƯƠNG LAI (v2) ---
         # Có thể truyền kết quả của recognizer vào sr_identifier để có S/R chính xác hơn

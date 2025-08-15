@@ -1,3 +1,4 @@
+from datetime import datetime
 from .data_transform import *
 
 import app.core.config as cfg
@@ -19,6 +20,14 @@ class DataPrepareOrchestrator:
         self.metadata_service = metadata_service
         self.prices_service = prices_service
         self.news_service = news_service
+        
+    def get_all_tickers(self) -> List[str]:
+        """
+        Lấy danh sách tất cả các tickers và trả về dưới dạng List các string.
+        """
+        logger.info(f"Preparing ticker list...")
+        ticker_lst = list(self.metadata_service.metadata_cache.keys())
+        return [ticker.upper() for ticker in ticker_lst]
 
     def get_daily_ohlcv_for_ticker(self, ticker: str, limit: int = 2000) -> pd.DataFrame:
         """
@@ -106,13 +115,14 @@ class DataPrepareOrchestrator:
             return True
         except ValueError as e:
             return False
+        
+    def _get_full_text_from_news(self, news):
+        text: str = news.title 
+        if news.summary is not None:
+            text += '.' + news.summary
+        return text
     
     def get_all_news_text_for_ticker(self, ticker: str) -> List[str]:
-        def _get_full_text_from_news(news):
-            text: str = news.title 
-            if news.summary is not None:
-                text += '.' + news.summary
-            return text
         
         logger.info(f"Preparing combined news feed for ticker: {ticker}")
         sector_list = self.metadata_service.get_all_sectors()
@@ -127,7 +137,7 @@ class DataPrepareOrchestrator:
         logger.info(f"Fetching L1 (Relevant) news...")
         relevant_news = self.news_service.get_relevant_news(ticker, skip=0, limit=cfg.NEWS_COUNT_RELEVANT)
         for news in relevant_news.datas:
-            all_news_text_with_time.append((_get_full_text_from_news(news), news.publish_ts))
+            all_news_text_with_time.append((self._get_full_text_from_news(news), news.publish_ts))
             
         universal_news_hash = set()
             
@@ -138,7 +148,7 @@ class DataPrepareOrchestrator:
         for news in contextual_news.datas:
             if news.title_hash not in universal_news_hash:
                 universal_news_hash.add(news.title_hash)
-                all_news_text_with_time.append((_get_full_text_from_news(news), news.publish_ts))
+                all_news_text_with_time.append((self._get_full_text_from_news(news), news.publish_ts))
                 
         logger.info(f"Fetching L3 (Macro) universal news...")
         macro_search_terms_lst = ["Federal Reserve policy", "US inflation report CPI", "S&P 500"]
@@ -148,8 +158,47 @@ class DataPrepareOrchestrator:
             for news in macro_news.datas:
                 if news.title_hash not in universal_news_hash:
                     universal_news_hash.add(news.title_hash)
-                    all_news_text_with_time.append((_get_full_text_from_news(news), news.publish_ts))
+                    all_news_text_with_time.append((self._get_full_text_from_news(news), news.publish_ts))
         
         all_news_text_with_time.sort(key=lambda x: x[1], reverse=True)
         
         return [x[0] for x in all_news_text_with_time[:cfg.NEWS_TOTAL_LIMIT]]
+    
+    def get_history_news_for_ticker(self, ticker: str, before_date: datetime) -> List[str]:
+        logger.info(f"Preparing combined news feed for ticker: {ticker}")
+        sector_list = self.metadata_service.get_all_sectors()
+        sector_code = self.get_sector_code_of(ticker)
+        for x in sector_list:
+            if x.sector_code == sector_code:
+                sector = x.sector_name
+                break
+        
+        all_news_text_with_time = []
+        universal_news_hash = set()
+        
+        logger.info(f"Fetching L2 (Contextual) universal news...")
+        contextual_search_terms = f'{sector}' 
+        contextual_news = self.news_service.get_universal_news(contextual_search_terms, 
+                                                               skip=0, limit=cfg.NEWS_COUNT_CONTEXTUAL,
+                                                               before_date=before_date)
+        for news in contextual_news.datas:
+            if news.title_hash not in universal_news_hash:
+                universal_news_hash.add(news.title_hash)
+                all_news_text_with_time.append((self._get_full_text_from_news(news), news.publish_ts))
+                
+        logger.info(f"Fetching L3 (Macro) universal news...")
+        macro_search_terms_lst = ["Federal Reserve policy", "US inflation report CPI", "S&P 500"]
+        for macro_search_terms in macro_search_terms_lst:
+            macro_news = self.news_service.get_universal_news(macro_search_terms, 
+                                                            skip=0, limit=cfg.NEWS_COUNT_MACRO,
+                                                            before_date=before_date)
+            for news in macro_news.datas:
+                if news.title_hash not in universal_news_hash:
+                    universal_news_hash.add(news.title_hash)
+                    all_news_text_with_time.append((self._get_full_text_from_news(news), news.publish_ts))
+        
+        all_news_text_with_time.sort(key=lambda x: x[1], reverse=True)
+        
+        return [x[0] for x in all_news_text_with_time[:cfg.NEWS_TOTAL_LIMIT]]
+    
+    
