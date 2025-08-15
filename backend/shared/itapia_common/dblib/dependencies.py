@@ -3,7 +3,7 @@ Module này cung cấp các Dependency để FastAPI sử dụng,
 giúp việc quản lý các kết nối và service tới CSDL trở nên sạch hơn.
 """
 
-from .services import APIMetadataService, APINewsService, APIPricesService
+from .services import APIMetadataService, APINewsService, APIPricesService, BacktestReportService
 from .session import get_rdbms_session, get_redis_connection
 
 from sqlalchemy.orm import Session
@@ -22,3 +22,6 @@ def get_prices_service(rdbms_session: Session = Depends(get_rdbms_session),
 def get_news_service(rdbms_session: Session = Depends(get_rdbms_session),
                      metadata_service: APIMetadataService = Depends(get_metadata_service)):
     return APINewsService(rdbms_session, metadata_service)
+
+def get_backtest_report_service(rdbms_session: Session = Depends(get_rdbms_session)):
+    return BacktestReportService(rdbms_session)

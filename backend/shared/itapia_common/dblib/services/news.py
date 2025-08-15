@@ -1,9 +1,10 @@
+from datetime import datetime
 from typing import List, Literal
 
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
-from itapia_common.dblib.crud.news import get_relevant_news, get_universal_news
+from itapia_common.dblib.crud.news import get_relevant_news, get_universal_news, get_universal_news_with_date
 from itapia_common.dblib.crud.general_update import bulk_insert
 from itapia_common.schemas.entities.news import RelevantNews, RelevantNewsPoint,\
     UniversalNews, UniversalNewsPoint
@@ -41,13 +42,21 @@ class APINewsService:
         return RelevantNews(metadata=metadata,
                                        datas=news_points) 
         
-    def get_universal_news(self, search_terms: str, skip: int, limit: int) -> UniversalNews:
+    def get_universal_news(self, search_terms: str, skip: int, limit: int,
+                           before_date: datetime|None = None) -> UniversalNews:
         """Lấy và đóng gói dữ liệu tin tức cho một ticker."""
         logger.info(f"SERVICE: Preparing {limit} universal news ...")
         
-        news_rows = get_universal_news(self.rdbms_session, dbcfg.UNIVERSAL_NEWS_TABLE_NAME,
-                                       search_terms=search_terms,
-                                       skip=skip, limit=limit)
+        if before_date is None:
+            news_rows = get_universal_news(self.rdbms_session, dbcfg.UNIVERSAL_NEWS_TABLE_NAME,
+                                        search_terms=search_terms,
+                                        skip=skip, limit=limit)
+        
+        else:
+            news_rows = get_universal_news_with_date(self.rdbms_session, dbcfg.UNIVERSAL_NEWS_TABLE_NAME,
+                                        search_terms=search_terms,
+                                        before_date=before_date,
+                                        skip=skip, limit=limit)
         
         news_points = [
             UniversalNewsPoint(

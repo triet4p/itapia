@@ -1,9 +1,10 @@
 # data_processing/scripts/fetch_universal_news.py
-
+import sys
 from datetime import datetime, timezone, timedelta
 import hashlib
 import re
 import time
+from typing import Optional
 from urllib.parse import urlparse, urlunparse
 import uuid
 from gnews import GNews
@@ -19,10 +20,18 @@ logger = ITAPIALogger('Universal News Processor')
 def _extract_news_data_by_keyword(keywords: list[str],
                        period_days: int = 5,
                        sleep_time: int = 5,
-                       max_results: int = 20) -> list[dict]:
+                       max_results: int = 2,
+                       end_date: Optional[datetime] = None) -> list[dict]:
     """Thực hiện thu thập dữ liệu tin tức cho một list các từ khóa."""
     all_news_data = []
-    gnews_client = GNews(language='en', country='US', max_results=max_results, period=f'{period_days}d')
+    
+    if end_date is None:
+        gnews_client = GNews(language='en', country='US', max_results=max_results, period=f'{period_days}d')
+    else:
+        start_date = end_date - timedelta(days=period_days)
+        print(start_date)
+        gnews_client = GNews(language='en', country='US', max_results=max_results, 
+                             start_date=start_date, end_date=end_date)
     
     for keyword in keywords:
         logger.info(f"Fetching news for keyword: '{keyword}'...")
@@ -47,10 +56,16 @@ def _extract_news_data_by_keyword(keywords: list[str],
 def _extract_news_data_by_topic(topics: list[str],
                        period_days: int = 5,
                        sleep_time: int = 5,
-                       max_results: int = 20) -> list[dict]:
+                       max_results: int = 20,
+                       end_date: Optional[datetime] = None) -> list[dict]:
     """Thực hiện thu thập dữ liệu tin tức cho một list các từ khóa."""
     all_news_data = []
-    gnews_client = GNews(language='en', country='US', max_results=max_results, period=f'{period_days}d')
+    if end_date is None:
+        gnews_client = GNews(language='en', country='US', max_results=max_results, period=f'{period_days}d')
+    else:
+        start_date = end_date - timedelta(days=period_days)
+        gnews_client = GNews(language='en', country='US', max_results=max_results, 
+                             start_date=start_date, end_date=end_date)
     
     for topic in topics:
         logger.info(f"Fetching news for topic: '{topic}'...")
@@ -180,16 +195,17 @@ def full_pipeline(news_service: DataNewsService,
                   topics: list[str],
                   period_days: int = 5,
                   max_results: int = 20,
-                  sleep_time: int = 5):
+                  sleep_time: int = 5,
+                  end_date: Optional[datetime] = None):
     """
     Thực thi pipeline hoàn chỉnh để thu thập tin tức universal.
     """
     try:
         logger.info(f'Getting universal news for {len(keywords)} keywords...')
-        raw_data1 = _extract_news_data_by_keyword(keywords, period_days, sleep_time, max_results)
+        raw_data1 = _extract_news_data_by_keyword(keywords, period_days, sleep_time, max_results, end_date)
         
         logger.info(f'Getting universal news for {len(topics)} topics...')
-        raw_data2 = _extract_news_data_by_topic(topics, period_days, sleep_time, max_results)
+        raw_data2 = _extract_news_data_by_topic(topics, period_days, sleep_time, max_results, end_date)
         
         raw_data = raw_data1 + raw_data2
         
@@ -208,6 +224,10 @@ def full_pipeline(news_service: DataNewsService,
         logger.err(f"An unknown exception occurred in the universal news pipeline: {e}")
 
 if __name__ == '__main__':
+    end_date = datetime.strptime(sys.argv[1], '%Y-%m-%d') if len(sys.argv) >= 2 else None
+    period_days = int(sys.argv[2]) if len(sys.argv) >= 3 else 7
+    
+    print(end_date)
     
     engine = get_singleton_rdbms_engine()
     news_service = DataNewsService(engine)
@@ -216,7 +236,8 @@ if __name__ == '__main__':
         news_service=news_service,
         keywords=UNIVERSAL_KEYWORDS_EN,
         topics=UNIVERSAL_TOPIC_EN,
-        period_days=7,
+        period_days=period_days,
         max_results=15, 
-        sleep_time=4
+        sleep_time=2,
+        end_date=end_date
     )

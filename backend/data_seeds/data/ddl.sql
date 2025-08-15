@@ -177,3 +177,16 @@ DROP TRIGGER IF EXISTS enforce_profile_limit ON investment_profiles;
 CREATE TRIGGER enforce_profile_limit
 BEFORE INSERT ON investment_profiles
 FOR EACH ROW EXECUTE FUNCTION check_profile_limit();
+
+-- Table for saving analysis reports
+CREATE TABLE IF NOT EXISTS public.backtest_reports (
+    report_id VARCHAR(256) PRIMARY KEY,
+    ticker VARCHAR(10) NOT NULL,
+    backtest_date TIMESTAMPTZ NOT NULL,
+    report JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    
+    FOREIGN KEY (ticker) REFERENCES tickers(ticker_sym)
+);
+
+CREATE INDEX IF NOT EXISTS idx_analysis_reports_ticker_date ON public.backtest_reports(ticker, backtest_date DESC);
