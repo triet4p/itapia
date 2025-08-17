@@ -36,7 +36,7 @@ class BacktestReportService:
         self.crud.save_report(data_to_save)
         return report_id
 
-    def get_quick_check_report(self, ticker: str, backtest_date: datetime) -> Optional[QuickCheckAnalysisReport]:
+    def get_backtest_report(self, ticker: str, backtest_date: datetime) -> Optional[QuickCheckAnalysisReport]:
         """
         Retrieves the latest QuickCheckAnalysisReport for a ticker on or before a given date.
         If no report is found for the exact date, it fetches the most recent one before it.
@@ -54,5 +54,18 @@ class BacktestReportService:
             return None
 
         # The 'report' column is a JSONB string, which needs to be parsed.
-        report_dict = json.loads(report_data['report'])
-        return QuickCheckAnalysisReport(**report_dict)
+        report_dict = report_data['report']
+
+        return QuickCheckAnalysisReport.model_validate(report_dict)
+    
+    def get_all_backtest_reports(self, ticker: str) -> list[QuickCheckAnalysisReport]:
+        report_datas = self.crud.get_reports_by_ticker(ticker)
+        reports = []
+        for report_data in report_datas:
+            # The 'report' column is a JSONB string, which needs to be parsed.
+            report_dict = report_data['report']
+            report = QuickCheckAnalysisReport.model_validate(report_dict)
+        
+            reports.append(report)
+            
+        return reports

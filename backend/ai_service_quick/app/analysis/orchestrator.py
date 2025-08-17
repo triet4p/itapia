@@ -63,29 +63,30 @@ class AnalysisOrchestrator:
 
     # === HÀM TIỆN ÍCH CHO TỪNG MODULE (ASYNC HELPERS) ===
 
-    def _prepare_and_run_technical_analysis(self, daily_df: pd.DataFrame, intraday_df: pd.DataFrame, 
+    def _prepare_and_run_technical_analysis(self, enriched_daily_df: pd.DataFrame, 
+                                            enriched_intraday_df: pd.DataFrame, 
                                             daily_analysis_type: str, required_type: str) -> TechnicalReport:
         """
         Giai đoạn Phân tích Kỹ thuật (đồng bộ vì các tác vụ rất nhanh).
         """
         logger.info("CEO -> TechAnalyzer: Performing technical analysis...")
+
         # Đây là tác vụ nhanh, có thể chạy đồng bộ.
         return self.tech_analyzer.get_full_analysis(
-            daily_df, 
-            intraday_df,
+            enriched_daily_df, 
+            enriched_intraday_df,
             required_type=required_type,
             daily_analysis_type=daily_analysis_type
         )
 
-    async def _prepare_and_run_forecasting(self, ticker: str, daily_df: pd.DataFrame) -> ForecastingReport:
+    async def _prepare_and_run_forecasting(self, ticker: str, enriched_daily_df: pd.DataFrame) -> ForecastingReport:
         """
         Giai đoạn Dự báo (bất đồng bộ).
         """
         logger.info("CEO -> Forecaster: Preparing data and running forecast...")
         # 1. Chuẩn bị dữ liệu đầu vào (nhanh, đồng bộ)
         sector = self.data_preparer.get_sector_code_of(ticker)
-        features_df = self.tech_analyzer.get_daily_features(daily_df)
-        latest_features = features_df.iloc[-1:]
+        latest_features = enriched_daily_df.iloc[-1:]
 
         # 2. Gọi hàm generate_report (nặng, bất đồng bộ)
         return await self.forecaster.generate_report(latest_features, ticker, sector)
@@ -129,10 +130,13 @@ class AnalysisOrchestrator:
             logger.err(f"No daily data available for ticker {ticker}.")
             raise NoDataError(f"No daily data available for ticker {ticker}.")
         
+        enriched_daily_df = self.tech_analyzer.get_daily_features(daily_df)
+        enriched_intraday_df = self.tech_analyzer.get_intraday_features(intraday_df)
+        
         loop = asyncio.get_running_loop()
         report = await loop.run_in_executor(
             None, self._prepare_and_run_technical_analysis, 
-            daily_df, intraday_df, daily_analysis_type, required_type
+            enriched_daily_df, enriched_intraday_df, daily_analysis_type, required_type
         )
         return report
     
@@ -150,7 +154,9 @@ class AnalysisOrchestrator:
             logger.err(f"No daily data available for ticker {ticker}.")
             raise NoDataError(f"No daily data available for ticker {ticker}.")
         
-        return await self._prepare_and_run_forecasting(ticker, daily_df)
+        
+        enriched_daily_df = self.tech_analyzer.get_daily_features(daily_df)
+        return await self._prepare_and_run_forecasting(ticker, enriched_daily_df)
     
     async def get_news_report(self, ticker: str) -> NewsAnalysisReport:
         self.check_service_health()
@@ -180,6 +186,9 @@ class AnalysisOrchestrator:
         if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
             logger.err(f"No daily data available for ticker {ticker}.")
             raise NoDataError(f"No daily data available for ticker {ticker}.")
+        
+        enriched_daily_df = self.tech_analyzer.get_daily_features(daily_df)
+        enriched_intraday_df = self.tech_analyzer.get_intraday_features(intraday_df)
 
         # --- BƯỚC 2: CHẠY TẤT CẢ CÁC MODULE SONG SONG ---
         logger.info("CEO: Dispatching all analysis modules to run in parallel...")
@@ -189,11 +198,11 @@ class AnalysisOrchestrator:
         loop = asyncio.get_running_loop()
         technical_task = loop.run_in_executor(
             None, self._prepare_and_run_technical_analysis, 
-            daily_df, intraday_df, daily_analysis_type, required_type
+            enriched_daily_df, enriched_intraday_df, daily_analysis_type, required_type
         )
 
         # Tạo các task cho các module nặng
-        forecasting_task = self._prepare_and_run_forecasting(ticker, daily_df)
+        forecasting_task = self._prepare_and_run_forecasting(ticker, enriched_daily_df)
         news_task = self._prepare_and_run_news_analysis(ticker)
 
         # Sử dụng gather để chờ tất cả hoàn thành
@@ -342,11 +351,11 @@ class AnalysisOrchestrator:
     # SECTION: BACKTESTING DATA GENERATION - ĐÃ TÁI CẤU TRÚC
     # =================================================================
 
-    async def _process_single_ticker_for_backtest(self, ticker: str, sector: str):
+    async def _process_single_ticker_for_backtest(self, ticker: str, sector: str, backtest_dates: list[datetime]):
         """
         Hàm hỗ trợ: Thực hiện toàn bộ quy trình tạo dữ liệu backtest cho MỘT ticker duy nhất.
         """
-        logger.info(f"  -> Processing Ticker: '{ticker}'")
+        logger.info(f"  -> Processing Ticker: '{ticker}' for {len(backtest_dates)} dates")
         loop = asyncio.get_running_loop()
 
         # 1. Lấy dữ liệu lịch sử và các điểm cần backtest
@@ -355,9 +364,21 @@ class AnalysisOrchestrator:
             logger.warn(f"  No daily data for '{ticker}'. Skipping ticker.")
             return
         
-        featured_df = self.tech_analyzer.get_daily_features(full_daily_df).copy()
+        enriched_daily_df = self.tech_analyzer.get_daily_features(full_daily_df).copy()
 
-        selected_datas = self.backtest_generator.select_backtest_datas(featured_df)
+        target_dates_ts = pd.to_datetime(backtest_dates, utc=True)
+        target_dates_iloc = enriched_daily_df.index.get_indexer(target_dates_ts, method='ffill')
+        
+        valid_target_ilocs = target_dates_iloc[(target_dates_iloc != -1) & (target_dates_iloc > 0)]
+        
+        if len(valid_target_ilocs) == 0:
+            logger.warn(f"  No valid historical data points for '{ticker}' that allow for i-1 slicing.")
+            return
+
+        forecasting_input_ilocs = valid_target_ilocs - 1
+        
+        selected_datas = enriched_daily_df.iloc[forecasting_input_ilocs].copy()
+
         if selected_datas.empty:
             logger.warn(f"  No valid historical data points for '{ticker}'. Skipping ticker.")
             return
@@ -372,20 +393,18 @@ class AnalysisOrchestrator:
 
         # 3. Chuẩn bị các tác vụ Technical và News để chạy song song
         tasks_to_gather = []
-        # Tạo DatetimeIndex một lần và lặp qua nó
-        backtest_timestamps = pd.to_datetime(selected_datas.index)
-        for backtest_date_idx in backtest_timestamps:
-            backtest_date = backtest_date_idx.to_pydatetime()
-            
+        for iloc_pos in valid_target_ilocs:
             # Chuẩn bị dữ liệu slice cho technical
-            historical_slice_df = full_daily_df[full_daily_df.index <= backtest_date_idx]
+            historical_slice_df = enriched_daily_df.iloc[:iloc_pos]
+            current_date_ohlcv = enriched_daily_df.iloc[iloc_pos]
             
             # Tạo task cho Technical Analysis (chạy trong executor vì là sync)
-            tech_task = loop.run_in_executor(None, self._prepare_and_run_technical_analysis, 
-                                             historical_slice_df, pd.DataFrame(), 'medium', 'daily')
+            tech_task = loop.run_in_executor(None, self.tech_analyzer.get_full_past_analysis, 
+                                             historical_slice_df, current_date_ohlcv)
             tasks_to_gather.append(tech_task)
 
             # Tạo task cho News Analysis (bản thân nó là async)
+            backtest_date = current_date_ohlcv.name.to_pydatetime()
             news_texts = self.data_preparer.get_history_news_for_ticker(ticker, backtest_date)
             news_task = self.news_analyzer.generate_report(ticker, news_texts)
             tasks_to_gather.append(news_task)
@@ -396,8 +415,8 @@ class AnalysisOrchestrator:
 
         # 5. Lắp ráp và lưu từng báo cáo
         logger.info(f"  Assembling and saving {len(selected_datas)} reports for '{ticker}'...")
-        for i, backtest_date_idx in enumerate(backtest_timestamps):
-            backtest_date = backtest_date_idx.to_pydatetime()
+        for i, iloc_pos in enumerate(valid_target_ilocs):
+            backtest_date: datetime = enriched_daily_df.iloc[iloc_pos].name.to_pydatetime()
             
             tech_report_result = other_reports[i * 2]
             news_report_result = other_reports[i * 2 + 1]
@@ -428,35 +447,21 @@ class AnalysisOrchestrator:
 
         logger.info(f"  -> SUCCESS: Finished processing reports for '{ticker}'.")
 
-    async def generate_backtest_data(self, tickers: list[str]):
+    async def generate_backtest_data(self, ticker: str, backtest_dates: list[datetime]):
         """
         Hàm chính: Điều phối toàn bộ quy trình tạo và lưu trữ dữ liệu backtest.
         """
         start = time.time()
         logger.info("====== STARTING BACKTEST DATA GENERATION PROCESS ======")
         self.check_service_health()
-        
-        self.backtest_generator.add_backtest_dates_from_cfg()
-        
-        tickers_by_sector = {}
-        for ticker in tickers:
-            try:
-                sector = self.data_preparer.get_sector_code_of(ticker)
-                if sector not in tickers_by_sector: 
-                    tickers_by_sector[sector] = []
-                tickers_by_sector[sector].append(ticker)
-            except (ValueError, NoDataError):
-                logger.warn(f"[Backtest] Could not find sector for ticker '{ticker}'. Skipping.")
-                continue
-
-        for sector, sector_tickers in tickers_by_sector.items():
-            logger.info(f"--- Processing Sector: '{sector}' ({len(sector_tickers)} tickers) ---")
-            for ticker in sector_tickers:
-                try:
-                    await self._process_single_ticker_for_backtest(ticker, sector)
-                except Exception as e:
-                    logger.err(f"  -> UNHANDLED EXCEPTION for ticker '{ticker}': {e}")
-                    continue
+    
+        try:
+            sector = self.data_preparer.get_sector_code_of(ticker)
+            await self._process_single_ticker_for_backtest(ticker, sector, backtest_dates)
+        except (ValueError, NoDataError):
+            logger.warn(f"[Backtest] Could not find sector for ticker '{ticker}'. Skipping.")
+        except Exception as e:
+            logger.err(f"  -> UNHANDLED EXCEPTION for ticker '{ticker}': {e}")
         
         end = time.time()
         logger.info(f"====== BACKTEST DATA GENERATION PROCESS COMPLETE IN {(end-start)/60} minutes  ======")

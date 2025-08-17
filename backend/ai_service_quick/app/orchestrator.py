@@ -1,6 +1,8 @@
 # ai_service_quick/app/orchestrator.py
 import asyncio
-from typing import Literal
+from datetime import datetime
+from typing import Dict, Literal
+import uuid
 
 from itapia_common.schemas.enums import NodeType, SemanticType
 
@@ -17,6 +19,7 @@ from itapia_common.schemas.entities.analysis.technical import TechnicalReport
 from itapia_common.schemas.entities.analysis.news import NewsAnalysisReport
 from itapia_common.schemas.entities.analysis.forecasting import ForecastingReport
 from itapia_common.schemas.entities.advisor import AdvisorReportSchema
+from itapia_common.schemas.entities.backtest import BACKTEST_GENERATION_STATUS
 
 logger = ITAPIALogger('AI Quick Orchestrator')
 
@@ -32,6 +35,7 @@ class AIServiceQuickOrchestrator:
         self.rules = rule_orchestrator
         self.personal = personal_orchestrator
         self.success_event = asyncio.Event()
+        self.backtest_jobs_status: Dict[str, BACKTEST_GENERATION_STATUS] = {}
         logger.info("CEO Orchestrator initialized with Analysis and Advisor deputies.")
 
     # === CÁC HÀM DELEGATE CHO ANALYSIS ORCHESTRATOR ===
@@ -151,9 +155,31 @@ class AIServiceQuickOrchestrator:
             logger.info("CEO -> Preloading all caches finished.")
             self.success_event.set()
         
-    async def generate_backtest_reports(self):
-        logger.info('Waiting for preload caches')
-        await self.success_event.wait()
-        logger.info('Preload caches finished')
-        tickers = self.analysis.get_all_tickers()
-        await self.analysis.generate_backtest_data(tickers)
+    async def generate_backtest_reports(self, job_id: str, ticker: str, backtest_dates: list[datetime]):
+        self.backtest_jobs_status[job_id] = 'IDLE'
+        logger.info(f"Backtest job '{job_id}' for ticker '{ticker}' set to IDLE.")
+        
+        try:
+            # 2. Chờ cho quá trình preload cache online hoàn tất
+            logger.info('Waiting for preload caches to complete...')
+            await self.success_event.wait()
+            logger.info('Preload caches finished, proceeding with backtest data generation.')
+            
+            self.backtest_jobs_status[job_id] = 'RUNNING'
+            logger.info(f"Backtest job '{job_id}' for ticker '{ticker}' set to RUNNING.")
+
+            await self.analysis.generate_backtest_data(
+                ticker=ticker,
+                backtest_dates=backtest_dates
+            )
+            
+            # 4. Nếu hoàn thành không có lỗi, đặt trạng thái là COMPLETED
+            self.backtest_jobs_status[job_id] = 'COMPLETED'
+            logger.info(f"Backtest job '{job_id}' for ticker '{ticker}' set to COMPLETED.")
+
+        except Exception as e:
+            # 5. Nếu có lỗi, đặt trạng thái là FAILED
+            logger.err(f"Backtest generation failed: {e}")
+            self.backtest_jobs_status[job_id] = 'FAILED'
+            # Ném lại lỗi để tác vụ nền có thể ghi nhận nó nếu cần
+            raise

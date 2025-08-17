@@ -112,3 +112,22 @@ class ScoreFinalMapper:
                 break
 
         return best_match.name, ScoreFinalMapper.FINAL_MAPPER_TEMPLATE.format(name=best_match.name, description=best_match.description)
+    
+    def match(self, score: float, purpose: SemanticType) -> FinalThreshold:
+        thresholds = self._threshold_map.get(purpose)
+        
+        if thresholds is None:
+            raise ValueError(f"Không tìm thấy bộ ngưỡng nào cho mục đích: {purpose.name}")
+
+        # Tìm ngưỡng phù hợp nhất
+        # Logic: Tìm ngưỡng gần nhất mà không vượt quá điểm số đó
+        best_match: FinalThreshold = thresholds[0] # Bắt đầu với giá trị thấp nhất
+        
+        for threshold in thresholds:
+            if score >= threshold.value:
+                best_match = threshold
+            else:
+                # Vì danh sách đã được sắp xếp, ta có thể dừng ngay khi gặp ngưỡng lớn hơn
+                break
+            
+        return best_match

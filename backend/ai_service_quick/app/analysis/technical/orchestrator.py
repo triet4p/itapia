@@ -53,26 +53,17 @@ class TechnicalOrchestrator:
         except (ValueError, TypeError) as e:
             logger.err(f"Daily Analysis Engine: {e}. Returning error report.")
     
-    def _get_full_daily_analysis(self, ohlcv_df: pd.DataFrame,
-                                 analysis_type: Literal['short', 'medium', 'long'] = 'medium'):
-        enriched_df = self.get_daily_features(ohlcv_df)
-        return self.get_daily_analysis(enriched_df, analysis_type)
-    
-    def _get_full_intraday_analysis(self, ohlcv_df: pd.DataFrame):
-        enriched_df = self.get_intraday_features(ohlcv_df)
-        return self.get_intraday_analysis(enriched_df)
-    
-    def get_full_analysis(self, ohlcv_daily_df: pd.DataFrame,
-                          ohlcv_intraday_df: pd.DataFrame,
+    def get_full_analysis(self, enriched_daily_df: pd.DataFrame,
+                          enriched_intraday_df: pd.DataFrame,
                           required_type: Literal['daily', 'intraday', 'all'] = 'all',
                           daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium'):
         daily_report = None
         intraday_report = None
         
         if required_type == 'daily' or required_type == 'all':
-            daily_report = self._get_full_daily_analysis(ohlcv_daily_df, daily_analysis_type)
+            daily_report = self.get_daily_analysis(enriched_daily_df, daily_analysis_type)
         if required_type == 'intraday' or required_type == 'all':
-            intraday_report = self._get_full_intraday_analysis(ohlcv_intraday_df)
+            intraday_report = self.get_intraday_analysis(enriched_intraday_df)
             
         return TechnicalReport(
             report_type=required_type,
@@ -80,3 +71,13 @@ class TechnicalOrchestrator:
             intraday_report=intraday_report
         )
              
+    def get_full_past_analysis(self, enriched_daily_df: pd.DataFrame,
+                               current_date_enriched: pd.Series):
+        daily_report = self.get_daily_analysis(enriched_df=enriched_daily_df, analysis_type='medium')
+        intraday_mock_report = IntradayAnalysisEngine.get_mock_report(current_date_enriched)
+        
+        return TechnicalReport(
+            report_type='all',
+            daily_report=daily_report,
+            intraday_report=intraday_mock_report
+        )

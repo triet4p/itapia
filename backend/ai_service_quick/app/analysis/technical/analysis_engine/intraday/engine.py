@@ -6,6 +6,7 @@ from .level_identifier import IntradayLevelIdentifier
 from .momentum_analyzer import IntradayMomentumAnalyzer
 
 from itapia_common.schemas.entities.analysis.technical import IntradayAnalysisReport
+from itapia_common.schemas.entities.analysis.technical.intraday import KeyLevelsReport, CurrentStatusReport, MomentumReport
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Intraday Analysis Engine')
@@ -49,3 +50,53 @@ class IntradayAnalysisEngine:
             key_levels=key_levels,
             momentum_report=momentum
         )
+        
+    @staticmethod
+    def get_mock_report(daily_ohlcv: pd.Series):
+        # === 1. Tạo KeyLevelsReport ===
+        # Đây là phần dễ nhất vì chúng ta có thể suy ra trực tiếp từ nến ngày.
+        key_levels = KeyLevelsReport(
+            day_high=daily_ohlcv['high'],
+            day_low=daily_ohlcv['low'],
+            open_price=daily_ohlcv['open'],
+            vwap=None,            # Không thể biết VWAP trong ngày, để là None (undefined).
+            or_30m_high=None,     # Không có dữ liệu 30 phút đầu, để là None.
+            or_30m_low=None       # Không có dữ liệu 30 phút đầu, để là None.
+        )
+
+        # === 2. Tạo CurrentStatusReport ===
+        # Giả định giá đóng cửa của ngày là "giá hiện tại" để so sánh.
+        current_status = CurrentStatusReport(
+            vwap_status='undefined', # Vì VWAP không xác định.
+            open_status='above' if daily_ohlcv['close'] >= daily_ohlcv['open'] else 'below',
+            rsi_status='neutral',    # Giả định RSI trong ngày là trung tính (50).
+            evidence={
+                "mock_reason": "Data simulated from daily candle.",
+                "last_price": daily_ohlcv['close'],
+                "open_price": daily_ohlcv['open'],
+                "rsi": 50.0
+            }
+        )
+        
+        # === 3. Tạo MomentumReport ===
+        # Chọn các giá trị an toàn nhất, không tạo ra tín hiệu mạnh.
+        momentum = MomentumReport(
+            macd_crossover='neutral', # Không có tín hiệu giao cắt MACD.
+            volume_status='normal',   # Giả định không có đột biến volume trong ngày.
+            opening_range_status='inside', # Giả định giá vẫn nằm trong vùng mở cửa.
+            evidence={
+                "mock_reason": "Data simulated from daily candle.",
+                "volume_ratio": 1.0, # Tỷ lệ volume trung bình.
+                "macd_signal_status": "No intraday data for comparison."
+            }
+        )
+
+        # === 4. Lắp ráp báo cáo cuối cùng ===
+        mock_report = IntradayAnalysisReport(
+            current_status_report=current_status,
+            momentum_report=momentum,
+            key_levels=key_levels
+        )
+        
+        return mock_report
+            

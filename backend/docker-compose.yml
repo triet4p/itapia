@@ -104,6 +104,24 @@ services:
       - itapia-network
     entrypoint: /ai-service-quick/entrypoint.sh
 
+  evo-worker:
+    image: itapia-evo-worker:latest
+    restart: unless-stopped
+    container_name: itapia-evo-worker
+    env_file:
+      - .env
+    depends_on:
+      - ai-service-quick
+      - stocks_postgre_db
+      - realtime_redis_db
+    volumes:
+      - ./evo_worker:/evo-worker
+    ports:
+      - "8002:8000"
+    networks:
+      - itapia-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
 volumes:
   # KHAI BÁO VOLUME LÀ EXTERNAL
   postgres_data:

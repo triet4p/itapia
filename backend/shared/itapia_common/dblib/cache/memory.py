@@ -1,82 +1,84 @@
+"""
+Providing Cache Classes to cache data.
+"""
 import asyncio
 from threading import RLock
 from typing import Callable, Coroutine, Dict, Any
-
+ 
 class SimpleInMemoryCache:
     """
-    Một lớp cache in-memory an toàn luồng (thread-safe) sử dụng
-    pattern Double-Checked Locking.
+    A thread-safe in-memory cache using the Double-Checked Locking pattern.
     """
     def __init__(self):
         self._cache: Dict[str, Any] = {}
         self._lock = RLock()
-
+ 
     def get(self, key: str) -> Any | None:
-        """Lấy một item từ cache."""
+        """Get an item from the cache."""
         return self._cache.get(key)
-
+ 
     def set(self, key: str, value: Any):
-        """Đặt một item vào cache."""
-        # Phép gán dictionary là atomic trong Python, nhưng lock vẫn cần thiết
-        # trong các pattern phức tạp hơn. Ở đây ta dùng để nhất quán.
+        """Set an item in the cache."""
+        # Dictionary assignment is atomic in Python, but locks are needed
+        # for consistency in more complex patterns.
         with self._lock:
             self._cache[key] = value
-
-    def get_or_set_with_lock(self, key: str, value_factory):
+ 
+    def get_or_set_with_lock(self, key: str, value_factory: Callable[[], Any]):
         """
-        Lấy item từ cache. Nếu không có, gọi `value_factory` để tạo mới,
-        lưu vào cache và trả về. Thao tác được bảo vệ bởi Lock.
-
+        Get an item from the cache. If not found, call `value_factory` to create,
+        store in cache, and return. Operation is protected by a lock.
+ 
         Args:
-            key (str): Khóa cache.
-            value_factory (callable): Một hàm (hoặc lambda) không có tham số,
-                                      sẽ được gọi để tạo giá trị nếu cache miss.
+            key (str): Cache key.
+            value_factory (callable): A function (or lambda) with no arguments
+                                      that will be called to create the value if cache miss occurs.
         """
         # Double-Checked Locking Pattern
         cached_value = self.get(key)
         if cached_value is not None:
             return cached_value
-        
+         
         with self._lock:
-            # Kiểm tra lại một lần nữa bên trong lock
+            # Check again inside the lock
             cached_value = self.get(key)
             if cached_value is not None:
                 return cached_value
-            
-            # Nếu vẫn không có, tạo giá trị mới
+             
+            # If still not found, create new value
             new_value = value_factory()
             self.set(key, new_value)
             return new_value
-
+ 
 class SingletonInMemoryCache:
     _instance = None
     _lock = RLock()
-
+ 
     def __new__(cls):
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super(SingletonInMemoryCache, cls).__new__(cls)
-                    # --- KHỞI TẠO CÁC THUỘC TÍNH INSTANCE Ở ĐÂY ---
+                    # --- INITIALIZE INSTANCE ATTRIBUTES HERE ---
                     cls._instance._cache = {}
-                    cls._instance._cache_lock = RLock() # Một lock riêng cho việc truy cập cache
+                    cls._instance._cache_lock = RLock() # A separate lock for cache access
         return cls._instance
-
+ 
     def get_or_set(self, cache_key: str, loader_func: Callable[[], Any]):
-        # Kiểm tra nhanh
+        # Quick check
         if cache_key in self._cache:
             return self._cache[cache_key]
-
-        # Sử dụng lock của instance
+ 
+        # Use instance lock
         with self._cache_lock:
             # Double-check
             if cache_key in self._cache:
                 return self._cache[cache_key]
-            
+             
             new_data = loader_func()
             self._cache[cache_key] = new_data
             return new_data
-        
+         
     def clean_cache(self, cache_key: str|None = None):
         with self._cache_lock:
             if cache_key:
@@ -84,40 +86,40 @@ class SingletonInMemoryCache:
                     del self._cache[cache_key]
             else:
                 self._cache.clear()
-        
+         
 class AsyncInMemoryCache:
     """
-    Một lớp cache in-memory an toàn cho môi trường asyncio.
+    An in-memory cache safe for asyncio environments.
     """
     def __init__(self):
         self._cache: dict[str, Any] = {}
-        self._lock = asyncio.Lock() # <-- SỬ DỤNG ASYNCIO.LOCK
-
+        self._lock = asyncio.Lock() # <-- USING ASYNCIO.LOCK
+ 
     def get(self, key: str) -> Any | None:
         return self._cache.get(key)
-
-    # set không cần phải là async vì gán dict là nhanh
+ 
+    # set doesn't need to be async since dict assignment is fast
     def set(self, key: str, value: Any):
         self._cache[key] = value
-
-    # Đây là phương thức chính và phải là async
+ 
+    # This is the main method and must be async
     async def get_or_set_with_lock(self, key: str, value_factory: Callable[[], Coroutine]):
         """
-        Lấy item từ cache. Nếu không có, gọi `value_factory` (một hàm async)
-        để tạo mới, lưu vào cache và trả về.
+        Get an item from the cache. If not found, call `value_factory` (an async function)
+        to create, store in cache, and return.
         """
         cached_value = self.get(key)
         if cached_value is not None:
             return cached_value
-        
-        # Sử dụng lock của asyncio
+         
+        # Use asyncio lock
         async with self._lock:
             # Double-check
             cached_value = self.get(key)
             if cached_value is not None:
                 return cached_value
-            
-            # Gọi hàm factory bất đồng bộ
+             
+            # Call async factory function
             new_value = await value_factory()
             self.set(key, new_value)
             return new_value
