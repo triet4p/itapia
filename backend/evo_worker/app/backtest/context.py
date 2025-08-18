@@ -70,7 +70,7 @@ class BacktestContext:
             
             if not timestamps_to_request:
                 logger.warn(f"No backtest points selected for ticker {self.ticker}. Marking as ready.")
-                self.status = 'READY'
+                self.status = 'READY_LOAD'
                 self.data_ready_event.set()
                 return
 
@@ -107,8 +107,8 @@ class BacktestContext:
                 
                 if response.status == 'COMPLETED':
                     logger.info("Task completed. Loading reports from database...")
-                    await self._load_reports_from_db()
-                    self.status = 'READY'
+                    #await self._load_reports_from_db()
+                    self.status = 'READY_LOAD'
                     self.data_ready_event.set()
                     break # Thoát khỏi vòng lặp
                 
@@ -127,40 +127,36 @@ class BacktestContext:
                 self.data_ready_event.set()
                 break
 
-    async def _load_reports_from_db(self):
+    async def load_data_into_memory(self):
         """
-        Tải tất cả các báo cáo lịch sử từ CSDL sau khi đã được xác nhận là hoàn thành.
+        Hàm mới: Tải tất cả dữ liệu cần thiết (OHLCV và reports) vào RAM.
+        Đây là một hàm async.
         """
-        # Đây là một tác vụ có thể liên quan đến I/O CSDL, nên chạy trong executor là tốt nhất
-        loop = asyncio.get_running_loop()
-        self.historical_reports = await loop.run_in_executor(
-            None, # Sử dụng executor mặc định
-            self.data_preparer.get_backtest_reports_for_ticker,
-            self.ticker
-        )
-        logger.info(f"Successfully loaded {len(self.historical_reports)} historical reports for {self.ticker}.")
-    
-    async def wait_for_data(self):
-        """
-        Cung cấp một cách để các module khác chờ cho đến khi dữ liệu sẵn sàng.
-        """
+        # Chờ để đảm bảo AI Quick đã tạo xong dữ liệu
         await self.data_ready_event.wait()
         
-    def get_reports(self) -> List[QuickCheckAnalysisReport]:
-        """
-        Getter an toàn để truy cập dữ liệu sau khi đã sẵn sàng.
-        """
-        if self.status != 'READY':
-            raise BacktestError(f"Data is not ready for ticker {self.ticker}. Current status: {self.status}")
-        return self.historical_reports
+        if self.status not in ['READY_LOAD', 'READY_SERVE']:
+            raise BacktestError(f"Data is not available to load for ticker {self.ticker}. Status: {self.status}")
 
-    def get_ohlcv(self) -> pd.DataFrame:
-        """
-        Getter an toàn để truy cập dữ liệu OHLCV.
-        """
-        if self.ohlcv_df is None:
-            raise BacktestError(f"OHLCV data has not been loaded for ticker {self.ticker}.")
-        return self.ohlcv_df
+        logger.info(f"Lazy loading data for ticker: {self.ticker}")
+        loop = asyncio.get_running_loop()
+
+        # Tải OHLCV và Reports song song
+        ohlcv_task = loop.run_in_executor(None, self.data_preparer.get_daily_ohlcv_for_ticker, self.ticker, 5000)
+        reports_task = loop.run_in_executor(None, self.data_preparer.get_backtest_reports_for_ticker, self.ticker)
+        
+        self.ohlcv_df, self.historical_reports = await asyncio.gather(ohlcv_task, reports_task)
+
+        logger.info(f"Successfully loaded {len(self.historical_reports)} reports and OHLCV data for {self.ticker}.")
+        self.status = 'READY_SERVE' # Trạng thái cuối cùng: dữ liệu đã nằm trong RAM
+
+    def clear_data_from_memory(self):
+        """Xóa dữ liệu nặng khỏi bộ nhớ để giải phóng RAM."""
+        logger.info(f"Clearing in-memory data for ticker: {self.ticker}")
+        self.historical_reports = []
+        self.ohlcv_df = None
+        if self.status == 'READY_SERVE':
+            self.status = 'READY_LOAD'
     
 
 class BacktestContextManager:
@@ -216,15 +212,15 @@ class BacktestContextManager:
 
     def get_ready_contexts(self) -> List[BacktestContext]:
         """
-        Trả về một danh sách tất cả các context đã ở trạng thái 'READY'.
+        Trả về một danh sách tất cả các context đã ở trạng thái 'READY_SERVE'.
         Đây là danh sách mà FitnessEvaluator sẽ làm việc.
         """
-        return [ctx for ctx in self.contexts.values() if ctx.status == 'READY']
+        return [ctx for ctx in self.contexts.values() if ctx.status == 'READY_SERVE']
 
     def log_summary(self):
         """Ghi log tóm tắt về trạng thái của tất cả các context."""
         total = len(self.contexts)
-        ready_count = len([ctx for ctx in self.contexts.values() if ctx.status == 'READY'])
+        ready_count = len([ctx for ctx in self.contexts.values() if ctx.status == 'READY_LOAD'])
         failed_count = len([ctx for ctx in self.contexts.values() if ctx.status == 'FAILED'])
         preparing_count = len([ctx for ctx in self.contexts.values() if ctx.status == 'PREPARING'])
         

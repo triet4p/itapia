@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from . import dependencies # Import module dependencies
+from .core import config as cfg
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,7 +14,8 @@ async def lifespan(app: FastAPI):
     
     # 2. Lấy manager đã được khởi tạo để chạy tác vụ nền
     manager = dependencies.get_backtest_context_manager()
-    asyncio.create_task(manager.prepare_all_contexts())
+    if cfg.EVO_REGEN_BACKTEST_DATA:
+        asyncio.create_task(manager.prepare_all_contexts())
     
     yield
     
