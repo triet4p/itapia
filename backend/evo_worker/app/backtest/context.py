@@ -23,7 +23,8 @@ class BacktestContext:
     và tải dữ liệu cuối cùng vào bộ nhớ.
     """
 
-    def __init__(self, ticker: str, data_preparer: BacktestDataPreparer):
+    def __init__(self, ticker: str, data_preparer: BacktestDataPreparer,
+                 is_ready: bool = False):
         self.ticker = ticker
         self.data_preparer = data_preparer
         
@@ -36,6 +37,10 @@ class BacktestContext:
         # Các biến quản lý trạng thái
         self.status: BACKTEST_CONTEXT_STATUS = 'IDLE'
         self.data_ready_event = asyncio.Event()
+        
+        if is_ready:
+            self.status = 'READY_LOAD'
+            self.data_ready_event.set()
 
     async def prepare_data_async(self):
         """
@@ -132,9 +137,8 @@ class BacktestContext:
         Hàm mới: Tải tất cả dữ liệu cần thiết (OHLCV và reports) vào RAM.
         Đây là một hàm async.
         """
-        # Chờ để đảm bảo AI Quick đã tạo xong dữ liệu
-        await self.data_ready_event.wait()
         
+        await self.data_ready_event.wait()
         if self.status not in ['READY_LOAD', 'READY_SERVE']:
             raise BacktestError(f"Data is not available to load for ticker {self.ticker}. Status: {self.status}")
 
@@ -167,6 +171,16 @@ class BacktestContextManager:
     def __init__(self, data_preparer: BacktestDataPreparer):
         self.data_preparer = data_preparer
         self.contexts: Dict[str, BacktestContext] = {}
+        
+    def init_ready_contexts(self):
+        tickers = self.data_preparer.get_all_tickers()
+        for ticker in tickers:
+            context = BacktestContext(
+                ticker=ticker,
+                data_preparer=self.data_preparer,
+                is_ready=True
+            )
+            self.contexts[ticker] = context
 
     async def _prepare_single_context(self, ticker: str, semaphore: asyncio.Semaphore):
         """
