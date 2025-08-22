@@ -1,7 +1,7 @@
 
 ---
 
-# **Tài liệu Kiến trúc & Kỹ thuật - ITAPIA Quick Check (MVP v2.0)**
+# **Tài liệu Kiến trúc & Kỹ thuật - ITAPIA Quick Check (MVP v2.5)**
 
 **Ngày cập nhật:** 09/08/2025
 **Phiên bản:** 2.0
@@ -82,29 +82,24 @@
     2. `RuleExplainer`: Khả năng "dịch" một quy tắc đơn lẻ.
     3. Luồng tạo ra một bản giải thích end-to-end.
 
-**Phần V: Hướng dẫn và Lộ trình Tương lai**
+**Phần VI: Kiến trúc Tiến hóa & Backtesting**
 
-11. **Hướng dẫn Sử dụng API**
-    1. Danh sách các API Endpoint chính (đã được tái cấu trúc).
-    2. Ví dụ về một request và response cho `GET /advisor/quick/{ticker}`.
-
-12. **Tình trạng Dự án và Các Thành phần Đã hoàn thành (Cột mốc MVP)**
-    1. Hoàn thành toàn bộ `Rule Architecture` và `sharedlib`.
-    2. Hoàn thành các module `Analysis` (Technical, News, Forecasting).
-    3. Hoàn thành `Advisor Module` với bộ quy tắc dựng sẵn.
-    4. Hoàn thành hệ thống `Explainer` end-to-end.
-
-13. **Lộ trình Phát triển Dự kiến (Roadmap)**
-    1. **Giai đoạn 2: Giao diện và Cá nhân hóa**
-        *   Xây dựng Web UI đơn giản (React/Vue).
-        *   Tích hợp Authentication.
-        *   Triển khai `PersonalAnalysisOrchestrator` (hoàn thiện placeholder).
-    2. **Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
-        *   Xây dựng Backtester.
-        *   Triển khai các thuật toán tiến hóa (DEAP) tuân thủ STGP.
-        *   Tiến hóa các `Rule` và `MetaRule` weights.
-    3. **Giai đoạn 4 (Tầm nhìn xa): `Deep Dive`**
-        *   Tích hợp LLM có kiểm soát cho các tác vụ phân tích sâu hơn.
+11. Giới thiệu Service `Evo-worker`
+    1. Vai trò và Trách nhiệm
+    2. Kiến trúc Tổng thể và Các thành phần
+12. Luồng Chuẩn bị Dữ liệu Backtest
+    1. Tương tác giữa Evo-worker và AI Service Quick
+    2. BacktestPointSelector: Cơ chế Chọn điểm Thông minh
+13. Kiến trúc Module Backtester
+    1. Sơ đồ các Lớp
+    2. ActionMapper: Diễn giải Tín hiệu thành Hành động
+    3. Trade và OpenPosition: Các Đối tượng Giao dịch
+    4. BacktestSimulator: Cỗ máy Mô phỏng
+    5. PerformanceMetrics: Nhà phân tích Hiệu suất
+14. FitnessEvaluator và Tối ưu hóa Đa mục tiêu (NSGA-II)
+    1. Vai trò của FitnessEvaluator
+    2. Trích xuất Mục tiêu cho NSGA-II
+    3. Tầm nhìn Kết nối với Personal Analysis
 
 ---
 
@@ -198,6 +193,7 @@ Hệ thống ITAPIA hiện tại bao gồm các service chính sau, được qu�
 *   **`data-processing` (Batch & Realtime):** Các service chạy nền, chịu trách nhiệm thu thập dữ liệu thô từ các nguồn bên ngoài (yfinance, GNews) và chuẩn hóa dữ liệu đó trước khi lưu trữ vào PostgreSQL và Redis.
 *   **`ai-service-quick`:** Trái tim của hệ thống. Một dịch vụ FastAPI chạy trên hạ tầng CPU (được tối ưu hóa cho tác vụ Quick Check), chịu trách nhiệm thực hiện các phân tích phức tạp (Technical, News, Forecasting) và đưa ra các khuyến nghị cuối cùng (`Advisor`).
 *   **`api-gateway`:** Cổng vào công khai duy nhất của hệ thống. Nó tiếp nhận các yêu cầu HTTP từ client, điều phối đến các dịch vụ nội bộ (hiện tại là `ai-service-quick`), và xử lý xác thực/ủy quyền (trong tương lai).
+*   `evo-worker` (Mới trong v2.5): Service chạy nền, chịu trách nhiệm cho các tác vụ tính toán nặng và dài hơi. Vai trò chính của nó là thực hiện các thuật toán tiến hóa để tự động khám phá và tối ưu hóa các chiến lược giao dịch (Rules). Nó hoạt động như một "phòng thí nghiệm R&D" tự động của hệ thống.
 
 #### **3.3. Luồng Dữ liệu cho Quy trình `Quick Check`**
 
@@ -465,117 +461,82 @@ Khi người dùng yêu cầu một bản giải thích đầy đủ, `CEO` sẽ
 Chắc chắn rồi. Đây là phần cuối cùng của tài liệu kỹ thuật, tổng kết lại những gì đã hoàn thành và vạch ra một lộ trình rõ ràng cho tương lai.
 
 ---
+## **Phần V: Kiến trúc Tiến hóa & Backtesting (v2.5)**
 
-## Phần V: Hướng dẫn và Lộ trình Tương lai
+Phần này mô tả kiến trúc của `Evo-worker`, service chịu trách nhiệm cho việc tự động tối ưu hóa các chiến lược giao dịch. Đây là nền tảng cho Giai đoạn 3 của dự án, hiện thực hóa khả năng "học hỏi" và "tiến hóa" của ITAPIA.
 
-### 11. Hướng dẫn Sử dụng API
+### **11. Giới thiệu Service `Evo-worker`**
 
-Tất cả các tương tác với hệ thống ITAPIA đều được thực hiện thông qua `API Gateway`. Dưới đây là danh sách các endpoint chính đã được triển khai trong phiên bản MVP.
+#### **11.1. Vai trò và Trách nhiệm**
+`Evo-worker` là một service FastAPI độc lập, được thiết kế để thực hiện các tác vụ tính toán dài hơi mà không ảnh hưởng đến hiệu năng của `AI Service Quick`. Trách nhiệm chính của nó bao gồm:
+1.  **Chuẩn bị Dữ liệu Backtest:** Chủ động yêu cầu `AI Service Quick` tạo ra các báo cáo phân tích (`QuickCheckAnalysisReport`) tại các thời điểm quan trọng trong quá khứ.
+2.  **Thực thi Thuật toán Tiến hóa:** Chạy các thuật toán di truyền (cụ thể là NSGA-II) để tiến hóa các `Rule` mới.
+3.  **Đánh giá Fitness:** Sử dụng bộ khung Backtester nội bộ để đánh giá hiệu suất của mỗi `Rule` trên dữ liệu lịch sử.
+4.  **Lưu trữ Kết quả:** Lưu trữ các `Rule` hiệu quả nhất (biên Pareto) vào CSDL để `Personal Analysis` có thể sử dụng.
 
-#### **11.1. Danh sách các API Endpoint chính**
-*(Tất cả các endpoint đều có prefix `/api/v1`)*
+#### **11.2. Kiến trúc Tổng thể và Các thành phần**
+`Evo-worker` được cấu thành từ các module chính sau:
+*   **`main.py` & `dependencies.py`:** Khởi tạo service, quản lý các đối tượng singleton (như `BacktestContextManager`) và vòng đời ứng dụng.
+*   **`backtest/`:** Chứa toàn bộ bộ khung backtesting.
+*   **`algorithms/`:** Chứa việc hiện thực hóa các thuật toán di truyền (NSGA-II, các toán tử lai ghép, đột biến, v.v.).
 
-*   **Nhóm Advisor (Dành cho người dùng cuối):**
-    *   `GET /advisor/quick/{ticker}`: Endpoint quan trọng nhất. Trả về báo cáo khuyến nghị đầy đủ (`AdvisorResponse`) cho một mã cổ phiếu.
-    *   `GET /advisor/quick/{ticker}/explain`: Trả về bản giải thích bằng ngôn ngữ tự nhiên cho báo cáo khuyến nghị.
+### **12. Luồng Chuẩn bị Dữ liệu Backtest**
 
-*   **Nhóm Analysis (Dành cho việc xem chi tiết):**
-    *   `GET /analysis/quick/{ticker}`: Trả về báo cáo phân tích tổng hợp (`QuickCheckReportResponse`).
-    *   `GET /analysis/quick/{ticker}/technical`: Chỉ trả về báo cáo Phân tích Kỹ thuật.
-    *   `GET /analysis/quick/{ticker}/forecasting`: Chỉ trả về báo cáo Dự báo.
-    *   `GET /analysis/quick/{ticker}/news`: Chỉ trả về báo cáo Phân tích Tin tức.
+#### **12.1. Tương tác giữa Evo-worker và AI Service Quick**
+Để tránh trùng lặp logic phân tích, `Evo-worker` không tự tính toán báo cáo. Thay vào đó, nó hoạt động như một client điều phối, ra lệnh cho `AI Service Quick` làm việc.
+1.  **`Evo-worker` Khởi xướng:** Khi một chiến dịch tiến hóa bắt đầu, `Evo-worker` tải dữ liệu OHLCV thô cho một ticker.
+2.  **`Evo-worker` Chọn điểm:** Nó sử dụng `BacktestPointSelector` để phân tích dữ liệu và chọn ra một danh sách các ngày quan trọng cần backtest.
+3.  **`Evo-worker` Gửi Yêu cầu:** Nó gửi một yêu cầu `POST` đến `AI Service Quick` qua API nội bộ, chứa ticker và danh sách các ngày đã chọn. `AI Service Quick` trả về một `job_id`.
+4.  **`AI Service Quick` Thực thi:** `AI Service Quick` nhận yêu cầu và tạo một tác vụ nền để tạo ra tất cả các báo cáo lịch sử được yêu cầu và lưu chúng vào CSDL.
+5.  **`Evo-worker` Theo dõi:** `Evo-worker` định kỳ gọi API `GET /backtest/status/{job_id}` để kiểm tra tiến trình.
+6.  **Hoàn thành:** Khi `AI Service Quick` báo cáo `COMPLETED`, `Evo-worker` biết rằng dữ liệu đã sẵn sàng trong CSDL để nó có thể bắt đầu quá trình đánh giá.
 
-*   **Nhóm Rules (Dành cho quản lý và XAI):**
-    *   `GET /rules`: Lấy danh sách tóm tắt tất cả các quy tắc có trong hệ thống.
-    *   `GET /rules/{rule_id}`: Lấy chi tiết cấu trúc (cây logic JSON) của một quy tắc cụ thể.
-    *   `GET /rules/{rule_id}/explain`: Lấy bản giải thích bằng ngôn ngữ tự nhiên về logic của một quy tắc.
+#### **12.2. BacktestPointSelector: Cơ chế Chọn điểm Thông minh**
+Thay vì backtest tại các khoảng thời gian cố định, `BacktestPointSelector` kết hợp hai phương pháp:
+*   **Điểm định kỳ:** Chọn các ngày cố định hàng tháng để đảm bảo việc kiểm tra bao quát theo thời gian.
+*   **Điểm đặc biệt:** Tự động phát hiện và chọn các ngày có sự kiện thị trường quan trọng (biến động giá lớn, thay đổi xu hướng, động lượng cực đoan) để "thử lửa" các rule trong những điều kiện khắc nghiệt nhất.
+*   **Ưu tiên Gần đây (Recency Bias):** Các sự kiện gần đây được gán một trọng số cao hơn, giúp các rule tiến hóa được phù hợp hơn với điều kiện thị trường hiện tại.
 
-*   **Nhóm Authentication (Dành cho luồng đăng nhập):**
-    *   `GET /auth/google/login`: Lấy URL để bắt đầu luồng đăng nhập với Google.
-    *   `GET /auth/google/callback`: Endpoint callback mà Google sẽ gọi lại (Backend-only).
-    *   `GET /users/me`: [Được bảo vệ] Lấy thông tin của người dùng hiện tại.
+### **13. Kiến trúc Module Backtester**
 
-*   **Nhóm Profiles (Quản lý Hồ sơ Đầu tư):**
-    *   `GET /profiles`: [Được bảo vệ] Lấy danh sách tất cả các hồ sơ của người dùng.
-    *   `POST /profiles`: [Được bảo vệ] Tạo một hồ sơ mới.
-    *   `GET /profiles/{profile_id}`: [Được bảo vệ] Lấy chi tiết một hồ sơ.
-    *   `PUT /profiles/{profile_id}`: [Được bảo vệ] Cập nhật một hồ sơ.
-    *   `DELETE /profiles/{profile_id}`: [Được bảo vệ] Xóa một hồ sơ.
+Module `backtest` là một hệ thống con hoàn chỉnh, được thiết kế theo các lớp có trách nhiệm đơn lẻ.
 
-#### **11.2. Ví dụ về một Request và Response**
+#### **13.1. ActionMapper: Diễn giải Tín hiệu thành Hành động**
+*   **Vai trò:** Dịch một điểm số do `Rule` tạo ra thành một hành động giao dịch cụ thể (`TradingAction`), có thể đo lường được (ví dụ: MUA 50% vốn, cắt lỗ 7%, chốt lời 15%).
+*   **Thiết kế:** Sử dụng kiến trúc hướng đối tượng với một lớp cơ sở (`_BaseActionMapper`) và các lớp con cho từng chiến lược (`ShortSwingActionMapper`, `MediumSwingActionMapper`), cho phép dễ dàng hoán đổi và thử nghiệm các chiến lược giao dịch khác nhau.
 
-*   **Request:**
-    ```
-    GET http://localhost:8000/api/v1/advisor/quick/AAPL
-    ```
-*   **Response (Cấu trúc `AdvisorResponse`):**
-    ```json
-    {
-      "final_decision": {
-        "final_score": 0.187,
-        "final_recommend": "Hold with positive outlook",
-        "triggered_rules": [...]
-      },
-      "final_risk": {
-        "final_score": 0.622,
-        "final_recommend": "Moderate, balanced risk/reward",
-        "triggered_rules": [...]
-      },
-      "final_opportunity": {
-        "final_score": 0.731,
-        "final_recommend": "Interesting, add to watchlist",
-        "triggered_rules": [...]
-      },
-      "aggregated_scores": {
-        "raw_decision_score": 0.187,
-        "raw_risk_score": 0.622,
-        "raw_opportunity_score": 0.731
-      },
-      "ticker": "AAPL",
-      "generated_at_utc": "2025-07-31T09:40:57.461507+00:00",
-      "generated_timestamp": 1753954857
-    }
-    ```
+#### **13.2. Trade và OpenPosition: Các Đối tượng Giao dịch**
+*   **`Trade`:** Một `NamedTuple` bất biến, lưu trữ thông tin của một giao dịch đã hoàn thành. Hỗ trợ cả giao dịch `LONG` và `SHORT`.
+*   **`OpenPosition`:** Một `NamedTuple` nội bộ của `Simulator`, lưu trữ trạng thái của một giao dịch đang mở, bao gồm các mức giá cắt lỗ/chốt lời.
 
-### 12. Tình trạng Dự án và Các Thành phần Đã hoàn thành (Cột mốc MVP)
+#### **13.3. BacktestSimulator: Cỗ máy Mô phỏng**
+*   **Vai trò:** Trái tim của backtester. Nó lặp qua dữ liệu giá lịch sử ngày qua ngày.
+*   **Logic:**
+    1.  Ưu tiên quản lý vị thế đang mở: Kiểm tra các điều kiện thoát lệnh (Take Profit, Stop Loss, Time Stop) trước.
+    2.  Xem xét tín hiệu mới: Nếu không có hành động nào được thực hiện, nó mới xem xét tín hiệu từ `ActionMapper` để quyết định vào lệnh mới hoặc đảo chiều vị thế.
+    3.  Hỗ trợ cả `LONG` và `SHORT`, mô phỏng chính xác logic thoát lệnh cho cả hai chiều.
+    4.  Đầu ra là một nhật ký giao dịch (`trade_log`) chứa danh sách các đối tượng `Trade`.
 
-Cột mốc MVP của quy trình `Quick Check` đã được hoàn thành, cung cấp một hệ thống phân tích và tư vấn end-to-end. Các thành tựu chính bao gồm:
+#### **13.4. PerformanceMetrics: Nhà phân tích Hiệu suất**
+*   **Vai trò:** Nhận vào `trade_log` và tính toán một bộ các chỉ số hiệu suất và rủi ro tiêu chuẩn ngành.
+*   **Các chỉ số chính:** Total Return, Max Drawdown, Sharpe Ratio, Win Rate, Profit Factor.
+*   **Triển khai:** Sử dụng các phép toán vector hóa của Pandas để tính toán hiệu quả trên toàn bộ nhật ký giao dịch.
 
-#### **12.1. Hoàn thành toàn bộ `Rule Architecture` và `sharedlib`:**
-*   Xây dựng thành công một "ngôn ngữ" quy tắc mạnh mẽ dựa trên Cây Biểu thức và Hệ thống Định kiểu Ngữ nghĩa (STGP).
-*   Hoàn thiện một `Node Factory` linh hoạt và một `Registry` trung tâm.
-*   Thiết lập một kiến trúc `sharedlib` sạch sẽ với các package độc lập (`contracts`, `dblib`, `rules`).
+### **14. FitnessEvaluator và Tối ưu hóa Đa mục tiêu (NSGA-II)**
 
-#### **12.2. Hoàn thành các module `Analysis`:**
-*   Tích hợp đầy đủ các module Phân tích Kỹ thuật (Daily & Intraday), Dự báo Machine Learning (với giải thích SHAP), và Phân tích Tin tức (Sentiment, NER, Impact).
-*   Xây dựng `AnalysisOrchestrator` có khả năng thực thi các tác vụ song song để tối ưu hóa hiệu năng.
+#### **14.1. Vai trò của FitnessEvaluator**
+Đây là lớp "quản đốc", điều phối tất cả các thành phần của backtester để thực hiện một lần đánh giá hoàn chỉnh cho một `Rule`. Nó nhận vào `Rule`, chạy toàn bộ quy trình từ tạo `Action` -> `Simulation` -> `Metrics`, và cuối cùng trả về kết quả.
 
-#### **12.3. Hoàn thành `Advisor Module` với bộ quy tắc dựng sẵn:**
-*   Triển khai kiến trúc `Advisor` phân cấp, bao gồm `RulesOrchestrator` và `AggregationOrchestrator`.
-*   Mã hóa và "seed" thành công một bộ quy tắc chuyên gia ban đầu cho các mục đích Decision, Risk, và Opportunity.
-*   Xây dựng logic tổng hợp và `Meta-Synthesis` (dưới dạng placeholder) để đưa ra khuyến nghị cuối cùng.
+#### **14.2. Trích xuất Mục tiêu cho NSGA-II**
+Thay vì gộp các chỉ số thành một điểm fitness duy nhất, `FitnessEvaluator` được thiết kế để phục vụ thuật toán đa mục tiêu NSGA-II.
+*   Nó không sử dụng tổng trọng số.
+*   Thay vào đó, nó trích xuất và chuẩn hóa tất cả 6 chỉ số từ `PerformanceMetrics` thành một **tuple các giá trị mục tiêu** (ví dụ: `(total_return, sharpe_ratio, resilience, ...)`).
+*   Tất cả các mục tiêu đều được chuẩn hóa theo quy tắc "càng cao càng tốt".
+*   Tuple này chính là "fitness" đa chiều mà thuật toán NSGA-II sử dụng để sắp xếp và chọn lọc các `Rule`.
 
-#### **12.4. Hoàn thành hệ thống `Explainer` end-to-end:**
-*   Xây dựng một framework `Explainer` phân cấp, có khả năng tạo ra các bản giải thích bằng ngôn ngữ tự nhiên cho cả báo cáo `Analysis` và báo cáo `Advisor`.
-*   Cung cấp API cho phép người dùng "đào sâu" vào logic của từng quy tắc riêng lẻ.
+#### **14.3. Tầm nhìn Kết nối với Personal Analysis**
+Kiến trúc đa mục tiêu này tạo ra một sự kết nối hoàn hảo với `Personal Analysis`:
+1.  **`Evo-worker` (với NSGA-II):** Tạo ra một **tập hợp các giải pháp tối ưu không trội (Biên Pareto)**, cung cấp một "thực đơn" các `Rule` với các đặc tính rủi ro/lợi nhuận khác nhau.
+2.  **`Personal Analysis`:** Đóng vai trò là người ra quyết định cuối cùng. Dựa trên hồ sơ rủi ro của người dùng, nó sẽ áp dụng một bộ **trọng số (FitnessWeights)** lên biên Pareto để chọn ra một `Rule` duy nhất từ "thực đơn" đó để đề xuất cho người dùng.
 
-#### **12.5. Hoàn thành Frontend, xác thực và Profiles**
-*   **Xây dựng Web UI:** Phát triển một giao diện người dùng đơn giản (sử dụng Vue.js/React) để người dùng có thể tương tác với hệ thống một cách trực quan, bao gồm các trang đăng nhập, trang tổng quan và trang xem chi tiết phân tích.
-*   **Tích hợp Authentication:** Triển khai luồng xác thực người dùng (ví dụ: OAuth2 với Google) để quản lý các phiên làm việc và làm nền tảng cho các tính năng cá nhân.
-### 13. Lộ trình Phát triển Dự kiến (Roadmap)
-
-Với nền tảng MVP vững chắc, ITAPIA đã sẵn sàng cho các giai đoạn phát triển tiếp theo, tập trung vào việc nâng cao trải nghiệm người dùng và trí thông minh của hệ thống.
-
-#### **13.1. Giai đoạn 2: Xây dựng PersonalAnalysis**
-*   **Hoàn thiện `PersonalAnalysisOrchestrator`:** Xây dựng logic để tạo hồ sơ rủi ro cho người dùng (qua bảng câu hỏi) và sử dụng hồ sơ đó để điều chỉnh các trọng số trong tầng `Meta-Synthesis`, cung cấp các khuyến nghị phù hợp hơn với từng cá nhân.
-
-#### **13.2. Giai đoạn 3: Tự động Tối ưu hóa (`Evo-worker`)**
-*   **Xây dựng Backtester:** Phát triển một engine backtesting hiệu quả (dựa trên vector) để có thể đánh giá hiệu suất của các quy tắc trên dữ liệu lịch sử.
-*   **Triển khai Thuật toán Tiến hóa:** Sử dụng thư viện DEAP để xây dựng `Evo-worker`. Triển khai các toán tử di truyền (crossover, mutation) "thông minh", tuân thủ chặt chẽ các quy tắc của Hệ thống Định kiểu Ngữ nghĩa (STGP).
-*   **Tiến hóa `Rule` và `MetaRule`:**
-    *   Chạy các chiến dịch tiến hóa "công khai" để liên tục cải tiến và khám phá ra các quy tắc (`Rule`) mới hiệu quả hơn cho bộ quy tắc chung.
-    *   Chạy các chiến dịch tiến hóa "cá nhân" để tối ưu hóa các trọng số của `MetaRule` cho từng hồ sơ rủi ro người dùng.
-
-#### **12.3. Giai đoạn 4 (Tầm nhìn xa): `Deep Dive`**
-*   **Tích hợp LLM có Kiểm soát:** Xây dựng quy trình `Deep Dive` bất đồng bộ, nơi các mô hình ngôn ngữ lớn (LLM) được sử dụng cho các tác vụ phân tích sâu hơn, ví dụ như tự động tóm tắt các báo cáo tài chính, phân tích các cuộc họp cổ đông, hoặc tạo ra các giả thuyết đầu tư phức tạp.
-*   **`Agentic LLM`:** Khám phá việc sử dụng kiến trúc Multi-Agent LLM, nơi `QuickCheckReport` đóng vai trò là "bộ bằng chứng" đầu vào có cấu trúc để một Agent LLM đưa ra các lập luận và quyết định ở mức độ sâu hơn.
+---

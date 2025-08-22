@@ -1,8 +1,12 @@
+import asyncio
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 import pandas as pd
 import numpy as np
 import math
+from abc import ABC, abstractmethod
+
+from app.core.config import PARALLEL_MULTICONTEXT_LIMIT
 
 # Import các thành phần đã xây dựng
 from .context import BacktestContext
@@ -22,7 +26,16 @@ logger = ITAPIALogger('Fitness Evaluator (Multi-Objective)')
 # Đây là "kết quả" mà thuật toán NSGA-II sẽ làm việc
 ObjectiveValues = Tuple[float, ...]
 
-class FitnessEvaluator:
+class FitnessEvaluator(ABC):
+    """
+    Một interface để thực hiện việc đánh giá một Rule.
+    """
+
+    @abstractmethod
+    def evaluate(self, rule: Rule) -> Tuple[ObjectiveValues, BacktestPerformanceMetrics]:
+        pass
+
+class SingleContextFitnessEvaluator(FitnessEvaluator):
     """
     Điều phối quy trình đánh giá một Rule và trích xuất một bộ các giá trị
     mục tiêu (objectives) để phục vụ cho thuật toán tối ưu hóa đa mục tiêu
@@ -169,3 +182,119 @@ class FitnessEvaluator:
             return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
             
         return objectives
+    
+class MultiContextFitnessEvaluator(FitnessEvaluator):
+    """
+    Điều phối việc đánh giá một Rule duy nhất trên NHIỀU context (tickers) khác nhau,
+    sau đó tổng hợp các kết quả thành một vector mục tiêu duy nhất.
+    """
+    def __init__(self, contexts: List[BacktestContext], action_mapper: _BaseActionMapper,
+                 aggregation_method: Literal['mean', 'median'] = 'median'):
+        """
+        Khởi tạo evaluator đa luồng.
+
+        Args:
+            contexts (List[BacktestContext]): Danh sách tất cả các context đã ở trạng thái 'READY_SERVE'.
+            action_mapper (_BaseActionMapper): Instance của chiến lược giao dịch sẽ được sử dụng.
+        """
+        self.contexts = contexts
+        self.action_mapper = action_mapper
+        self.semaphore = asyncio.Semaphore(PARALLEL_MULTICONTEXT_LIMIT)
+        self.aggregation_method = aggregation_method
+        
+    def _evaluate_single_context_sync(self, context: BacktestContext, rule: Rule) -> Tuple[ObjectiveValues, BacktestPerformanceMetrics]:
+        """
+        Hàm đồng bộ (synchronous) để thực thi việc đánh giá trên một context.
+        Hàm này sẽ được chạy trong một thread riêng bởi asyncio.to_thread.
+        """
+        try:
+            # 2. Khởi tạo evaluator và chạy đánh giá
+            _evaluator = SingleContextFitnessEvaluator(context, self.action_mapper)
+            return _evaluator.evaluate(rule)
+        except Exception as e:
+            logger.warn(f"Evaluation failed for rule '{rule.name}' on ticker '{context.ticker}': {e}")
+            # Trả về kết quả tệ nhất nếu có lỗi
+            worst_objectives = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            worst_metrics = BacktestPerformanceMetrics()
+            return worst_objectives, worst_metrics
+
+    async def _evaluate_with_semaphore(self, context: BacktestContext, rule: Rule) -> Tuple[ObjectiveValues, BacktestPerformanceMetrics]:
+        """
+        Hàm worker bất đồng bộ được kiểm soát bởi semaphore.
+        """
+        async with self.semaphore:
+            # Chờ để có một "slot" trống.
+            # Sau khi có slot, chạy tác vụ CPU-bound trong một thread riêng.
+            return await asyncio.to_thread(self._evaluate_single_context_sync, context, rule)
+
+    async def evaluate_async(self, rule: Rule) -> Tuple[ObjectiveValues, BacktestPerformanceMetrics]:
+        """
+        (Bất đồng bộ) Thực thi đánh giá một Rule trên tất cả các context một cách song song
+        và trả về một vector mục tiêu đã được tổng hợp.
+        """
+        if not self.contexts:
+            logger.warn("No contexts to evaluate. Returning worst-case fitness.")
+            worst_objectives = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            worst_metrics = BacktestPerformanceMetrics()
+            return worst_objectives, worst_metrics
+
+        logger.info(f"Evaluating rule '{rule.name}' on {len(self.contexts)} tickers with concurrency limit {PARALLEL_MULTICONTEXT_LIMIT}...")
+
+        tasks = [
+            self._evaluate_with_semaphore(context, rule)
+            for context in self.contexts
+        ]
+        
+        results: List[Tuple[ObjectiveValues, BacktestPerformanceMetrics]] = await asyncio.gather(*tasks)
+        
+        # --- Phần logic tổng hợp giữ nguyên ---
+        objective_values_list = [res[0] for res in results if res]
+        performance_metrics_list = [res[1] for res in results if res]
+
+        if not objective_values_list:
+            logger.warn(f"All evaluations failed for rule '{rule.name}'. Returning worst-case fitness.")
+            worst_objectives = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            worst_metrics = BacktestPerformanceMetrics()
+            return worst_objectives, worst_metrics
+            
+        objectives_array = np.array(objective_values_list)
+        aggregated_objectives: np.ndarray
+        if self.aggregation_method == 'median':
+            aggregated_objectives = np.median(objectives_array, axis=0)
+        else: # 'mean'
+            aggregated_objectives = np.mean(objectives_array, axis=0)
+            
+        final_objectives = tuple(aggregated_objectives)
+
+        metrics_df = pd.DataFrame([m.model_dump() for m in performance_metrics_list])
+        mean_metrics_series = metrics_df.mean()
+        metric_dict = mean_metrics_series.to_dict()
+        aggregated_metrics = BacktestPerformanceMetrics(
+            num_trades=int(metric_dict['num_trades']),
+            total_return_pct=metric_dict['total_return_pct'],
+            max_drawdown_pct=metric_dict['max_drawdown_pct'],
+            win_rate_pct=metric_dict['win_rate_pct'],
+            profit_factor=metric_dict['profit_factor'],
+            sharpe_ratio=metric_dict['sharpe_ratio']
+        )
+
+        logger.info(f"Rule '{rule.name}' evaluation complete. Aggregated objectives: {final_objectives}")
+
+        return final_objectives, aggregated_metrics
+    
+    # --- YÊU CẦU 2: WRAPPER ĐỒNG BỘ ---
+    def evaluate(self, rule: Rule) -> Tuple[ObjectiveValues, BacktestPerformanceMetrics]:
+        """
+        (Đồng bộ) Đây là hàm wrapper để gọi từ một môi trường đồng bộ (ví dụ: vòng lặp của thuật toán di truyền).
+        Nó sẽ khởi động event loop của asyncio, chạy hàm `evaluate_async`, và trả về kết quả.
+        """
+        try:
+            # Kiểm tra xem có event loop nào đang chạy không
+            loop = asyncio.get_running_loop()
+            # Nếu có, ta không thể dùng asyncio.run(), phải tạo task và chạy trong loop đó
+            # (Trường hợp này phức tạp và ít xảy ra, tạm thời bỏ qua để đơn giản)
+            raise RuntimeError("evaluate_sync cannot be called from within a running asyncio event loop.")
+        except RuntimeError:
+            # Không có event loop nào đang chạy, đây là trường hợp thông thường.
+            # asyncio.run() sẽ tự động tạo một loop mới, chạy coroutine cho đến khi xong, và đóng loop.
+            return asyncio.run(self.evaluate_async(rule))
