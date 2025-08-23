@@ -14,7 +14,7 @@ from .final_thresholds import (
     RISK_THRESHOLDS,
     OPPORTUNITY_THRESHOLDS
 )
-from itapia_common.schemas.enums import SemanticType
+from itapia_common.schemas.entities.rules import SemanticType
 
 # ===================================================================
 # == LỚP 3/10: SCORE AGGREGATOR

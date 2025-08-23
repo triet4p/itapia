@@ -7,8 +7,7 @@ from typing import Dict, Any
 # Giả định các module này tồn tại và chứa các hàm tương ứng
 # Trong thực tế, bạn sẽ import chúng một cách chính xác
 from .nodes import OperatorNode, _TreeNode
-from itapia_common.schemas.enums import SemanticType
-from itapia_common.schemas.entities.rules import RuleEntity
+from itapia_common.schemas.entities.rules import RuleEntity, SemanticType
 from .parser import parse_tree, serialize_tree
 
 # Giả định sự tồn tại của schema báo cáo

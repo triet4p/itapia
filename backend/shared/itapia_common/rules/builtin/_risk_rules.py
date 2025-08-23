@@ -11,6 +11,7 @@ from itapia_common.rules import names as nms
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes.registry import create_node
 from itapia_common.rules.nodes import _TreeNode
+from itapia_common.schemas.entities.rules import SemanticType
 
 # ===================================================================
 # == A. CÁC HÀM TẠO QUY TẮC QUẢN LÝ RỦI RO (RISK MANAGEMENT RULES)
@@ -44,7 +45,7 @@ def _create_rule_2_weak_trend_risk() -> Rule:
     trend_strength = create_node(nms.VAR_D_TREND_OVERALL_STRENGTH)
     
     logic_tree = create_node(nms.OPR_SUB2, children=[
-        create_node(nms.CONST_NUM(1.0)),
+        create_node(nms.CONST_NUM(1.0, SemanticType.TREND)),
         trend_strength
     ])
     
@@ -79,7 +80,7 @@ def _create_rule_5_overextended_risk() -> Rule:
     # RSI > 50 (giá trị chuẩn hóa là 0)
     cond_is_bullish_territory = create_node(nms.OPR_GT, children=[
         create_node(nms.VAR_D_RSI_14),
-        create_node(nms.CONST_NUM(0.0)) 
+        create_node(nms.CONST_NUM(0.0, SemanticType.MOMENTUM)) 
     ])
     
     # Nếu đúng, điểm rủi ro chính là giá trị RSI đã chuẩn hóa.
@@ -87,7 +88,7 @@ def _create_rule_5_overextended_risk() -> Rule:
     logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
         cond_is_bullish_territory,
         create_node(nms.VAR_D_RSI_14),
-        create_node(nms.CONST_NUM(0.0))
+        create_node(nms.CONST_NUM(0.0, SemanticType.MOMENTUM))
     ])
 
     return _build_risk_rule("RULE_R_05_OVEREXTENDED_RISK", "Overextended Market Risk", "Scores higher risk as RSI moves deeper into overbought territory (>50).", logic_tree)

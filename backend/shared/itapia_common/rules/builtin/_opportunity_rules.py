@@ -11,6 +11,7 @@ from itapia_common.rules import names as nms
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes.registry import create_node
 from itapia_common.rules.nodes import _TreeNode
+from itapia_common.schemas.entities.rules import SemanticType
 
 # ===================================================================
 # == A. CÁC HÀM TẠO QUY TẮC TÌM KIẾM CƠ HỘI (OPPORTUNITY FINDING RULES)
@@ -36,7 +37,7 @@ def _create_rule_1_deep_value_screener() -> Rule:
     # Tín hiệu xu hướng dài hạn tốt: 1 nếu uptrend, 0 nếu không.
     # Chỉ khi cả hai điều kiện đều đúng thì điểm mới là 1.
     cond_rsi_oversold = create_node(nms.OPR_LT, children=[create_node(nms.VAR_D_RSI_14), create_node(nms.CONST_RSI_OVERSOLD)])
-    cond_long_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(1.0))])
+    cond_long_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(1.0, SemanticType.TREND))])
     
     # Dùng AND, nó sẽ trả về 1.0 nếu cả hai đúng, 0.0 nếu không.
     logic_tree = create_node(nms.OPR_AND, children=[cond_rsi_oversold, cond_long_trend_up])
@@ -46,8 +47,8 @@ def _create_rule_1_deep_value_screener() -> Rule:
 def _create_rule_2_trend_reversal_screener() -> Rule:
     """[2] Sàng lọc Đảo chiều Xu hướng: Điểm số dương nếu có tín hiệu đảo chiều."""
     # Logic: Điểm = 0.5 nếu xu hướng trung hạn vừa chuyển sang tăng trong khi xu hướng dài hạn vẫn đang giảm.
-    cond_mid_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_MIDTERM_DIR), create_node(nms.CONST_NUM(1.0))])
-    cond_long_trend_down = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(-1.0))])
+    cond_mid_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_MIDTERM_DIR), create_node(nms.CONST_NUM(1.0, SemanticType.TREND))])
+    cond_long_trend_down = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(-1.0, SemanticType.TREND))])
     
     is_reversal_signal = create_node(nms.OPR_AND, children=[cond_mid_trend_up, cond_long_trend_down])
     
@@ -72,7 +73,7 @@ def _create_rule_4_bullish_pattern_screener() -> Rule:
     """[4] Sàng lọc Mẫu hình Tăng giá: Điểm số dựa trên sự tồn tại của mẫu hình tăng giá mạnh."""
     # Logic: Điểm = (Tín hiệu mẫu hình tăng giá) * (Điểm của mẫu hình / 100)
     # Ví dụ: Mẫu hình bull (1.0) với điểm 80 -> 1.0 * (80/100) = 0.8
-    cond_is_bull_pattern = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_PATTERN_1_SENTIMENT), create_node(nms.CONST_NUM(1.0))])
+    cond_is_bull_pattern = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_PATTERN_1_SENTIMENT), create_node(nms.CONST_NUM(1.0, SemanticType.SENTIMENT))])
     
     # Chuẩn hóa điểm số của mẫu hình (vốn từ 0-100) về khoảng [0, 1]
     normalized_pattern_score = create_node(nms.VAR_D_PATTERN_1_SCORE)

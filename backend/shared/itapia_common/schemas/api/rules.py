@@ -1,8 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Literal
-from itapia_common.schemas.enums import SemanticType
-from itapia_common.schemas.entities.rules import NodeEntity, NodeSpecEntity
+from itapia_common.schemas.entities.rules import NodeEntity, NodeSpecEntity, SemanticType, NodeType
 
 class NodeResponse(NodeSpecEntity):
     pass

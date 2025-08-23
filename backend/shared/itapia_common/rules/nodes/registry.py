@@ -2,8 +2,7 @@ import inspect
 from typing import NamedTuple, Dict, List, Any, Set, Type
 
 from ._nodes import _TreeNode
-from itapia_common.schemas.enums import SemanticType, NodeType
-from itapia_common.schemas.entities.rules import NodeSpecEntity
+from itapia_common.schemas.entities.rules import NodeSpecEntity, SemanticType, NodeType
 
 class NodeSpec(NamedTuple):
     node_class: Type[_TreeNode]
@@ -85,3 +84,37 @@ def get_nodes_by_type(node_type: NodeType, purpose: SemanticType) -> List[NodeSp
             if ((spec.node_type == node_type) or node_type == NodeType.ANY)
                 and ((spec.return_type == purpose) or purpose == SemanticType.ANY)]
     
+def get_terminals_by_type() -> Dict[SemanticType, List[str]]:
+    results: Dict[SemanticType, List[str]] = {}
+    for name, spec in _NODE_REGISTRY.items():
+        return_type = spec.return_type
+        node_type = spec.node_type
+        
+        if node_type == NodeType.CONSTANT or node_type == NodeType.VARIABLE:
+            results[return_type] = results.get(return_type, []) + [name]
+            
+    return results
+
+
+def get_operators_by_type() -> Dict[SemanticType, List[str]]:
+    results: Dict[SemanticType, List[str]] = {}
+    for name, spec in _NODE_REGISTRY.items():
+        return_type = spec.return_type
+        node_type = spec.node_type
+        
+        if node_type == NodeType.OPERATOR:
+            results[return_type] = results.get(return_type, []) + [name]
+            
+    return results
+
+def get_spec_ent(name: str) -> NodeSpecEntity:
+    spec = _NODE_REGISTRY.get(name.upper())
+    if spec is None:
+        raise ValueError(f"Không tìm thấy bản thiết kế nào cho node có tên '{name}'.")
+    return NodeSpecEntity(
+        node_name=name, 
+        description=spec.description,
+        node_type=spec.node_type,
+        return_type=spec.return_type,
+        args_type=spec.args_type
+    )

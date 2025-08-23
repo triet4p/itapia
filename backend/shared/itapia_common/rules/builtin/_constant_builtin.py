@@ -10,7 +10,7 @@ from typing import Set
 import numpy as np
 from itapia_common.rules.nodes.registry import register_node_by_spec, NodeSpec
 from itapia_common.rules.nodes import ConstantNode
-from itapia_common.schemas.enums import SemanticType
+from itapia_common.schemas.entities.rules import SemanticType, NodeType
 from itapia_common.rules import names as nms
 
 # == A. Hằng số Số học Chung (Ephemeral Random Constants - ERCs)
@@ -24,23 +24,27 @@ const_values: Set[float] = set()
 for value in np.round(np.arange(-1.0, 1.1, 0.1), 2):
     const_values.add(float(value))
 # Thêm các giá trị nguyên lớn hơn
-for value in np.round(np.arange(-10.0, 11.0, 1.0), 2):
+for value in np.round(np.arange(-5.0, 5.0, 1.0), 2):
     const_values.add(float(value))
 
 for value in sorted(list(const_values)):
-    node_name = nms.CONST_NUM(value)
-    description = f"Generic numerical constant with value {value}"
-    
-    register_node_by_spec(
-        node_name=node_name,
-        spec=NodeSpec(
-            node_class=ConstantNode,
-            description=description,
-            return_type=SemanticType.NUMERICAL,
-            params={'value': float(value), 'use_normalize': False},
-            node_type='constant'
+    for semantic_type in [SemanticType.NUMERICAL, SemanticType.MOMENTUM,
+                          SemanticType.PERCENTAGE, SemanticType.TREND,
+                          SemanticType.PRICE, SemanticType.SENTIMENT,
+                          SemanticType.VOLATILITY, SemanticType.VOLUME]:
+        node_name = nms.CONST_NUM(value, semantic=semantic_type)
+        description = f"Generic numerical constant with value {value} and semantic type {semantic_type.name}"
+        
+        register_node_by_spec(
+            node_name=node_name,
+            spec=NodeSpec(
+                node_class=ConstantNode,
+                description=description,
+                return_type=semantic_type,
+                params={'value': float(value), 'use_normalize': False},
+                node_type=NodeType.CONSTANT
+            )
         )
-    )
 
 # ===================================================================
 # == B. Đăng ký các Hằng số Đặc biệt (Domain-Specific Constants)
@@ -61,7 +65,7 @@ register_node_by_spec(
             'source_range': (0, 100),
             'target_range': (-1, 1),
         },
-        node_type='constant'
+        node_type=NodeType.CONSTANT
     )
 )
 
@@ -77,7 +81,7 @@ register_node_by_spec(
             'source_range': (0, 100),
             'target_range': (-1, 1)
         },
-        node_type='constant'
+        node_type=NodeType.CONSTANT
     )
 )
 
@@ -93,7 +97,7 @@ register_node_by_spec(
             'source_range': (0, 100),
             'target_range': (-1, 1)
         },
-        node_type='constant'
+        node_type=NodeType.CONSTANT
     )
 )
 
@@ -109,11 +113,9 @@ register_node_by_spec(
             'source_range': (0, 100),
             'target_range': (-1, 1)
         },
-        node_type='constant'
+        node_type=NodeType.CONSTANT
     )
 )
-
-
 # --- Ngưỡng cho các chỉ báo Xu hướng (Trend) ---
 
 register_node_by_spec(
@@ -128,6 +130,23 @@ register_node_by_spec(
             'source_range': (0, 100), # ADX cũng trong khoảng 0-100
             'target_range': (-1, 1)
         },
-        node_type='constant'
+        node_type=NodeType.CONSTANT
     )
 )
+
+register_node_by_spec(
+    node_name=nms.CONST_ATR_STRONG_TREND,
+    spec=NodeSpec(
+        node_class=ConstantNode,
+        description='ATR Strong Trend Threshold (25)',
+        return_type=SemanticType.TREND,
+        params={
+            'value': 0.9,
+            'use_normalize': True,
+            'source_range': (0, 1), # ATR cũng trong khoảng 0-100
+            'target_range': (-1, 1)
+        },
+        node_type=NodeType.CONSTANT
+    )
+)
+

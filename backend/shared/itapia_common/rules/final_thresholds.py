@@ -1,6 +1,6 @@
 from typing import List, NamedTuple
 from . import names as nms
-from itapia_common.schemas.enums import SemanticType
+from itapia_common.schemas.entities.rules import SemanticType
 
 
 class FinalThreshold(NamedTuple):

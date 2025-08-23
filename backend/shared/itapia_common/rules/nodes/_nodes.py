@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Literal, Any, Set, Tuple, Dict, List
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from itapia_common.rules.exceptions import NotFoundVarPathError
-from itapia_common.schemas.enums import SemanticType, NodeType
+from itapia_common.schemas.entities.rules import SemanticType, NodeType
 
 def normalize(raw_value: int|float, default_value: int|float,
               source_range: Tuple[float, float], target_range: Tuple[float, float]):
