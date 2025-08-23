@@ -3,8 +3,7 @@ from fastapi import HTTPException
 import httpx
 from app.core.config import AI_SERVICE_QUICK_BASE_URL
 
-from itapia_common.schemas.api.rules import ExplainationRuleResponse, NodeResponse, RuleResponse
-from itapia_common.schemas.enums import NodeType, SemanticType
+from itapia_common.schemas.api.rules import ExplainationRuleResponse, NodeResponse, RuleResponse, NodeType, SemanticType
 
 ai_rules_client = httpx.AsyncClient(base_url=AI_SERVICE_QUICK_BASE_URL, timeout=10.0)
 

@@ -2,8 +2,7 @@ from typing import Literal
 from fastapi import APIRouter
 from app.clients.ai_rules import get_single_rule_explain, get_active_rules, get_nodes
 
-from itapia_common.schemas.api.rules import ExplainationRuleResponse, RuleResponse, NodeResponse
-from itapia_common.schemas.enums import SemanticType, NodeType
+from itapia_common.schemas.api.rules import ExplainationRuleResponse, RuleResponse, NodeResponse, SemanticType, NodeType
 
 router = APIRouter()
 

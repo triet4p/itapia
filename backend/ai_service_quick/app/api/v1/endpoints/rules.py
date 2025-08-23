@@ -7,7 +7,7 @@ from app.core.exceptions import NoDataError, MissingReportError, NotReadyService
 from app.dependencies import get_ceo_orchestrator
 
 from itapia_common.schemas.api.rules import ExplainationRuleResponse, NodeResponse, RuleResponse
-from itapia_common.schemas.enums import NodeType, SemanticType
+from itapia_common.schemas.entities.rules import NodeType, SemanticType
 
 router = APIRouter()
 

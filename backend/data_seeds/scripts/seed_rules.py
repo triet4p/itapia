@@ -10,6 +10,7 @@ logger = ITAPIALogger('Rules Seeding')
 
 def seed_rules(rule_service: RuleService, rules: List[Rule]):
     for rule in rules:
+        print(rule.name)
         rule_dict = rule.to_entity()
         rule_entity = RuleEntity.model_validate(rule_dict)
         rule_service.save_rule(rule_entity)

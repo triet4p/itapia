@@ -6,8 +6,7 @@ from app.core.exceptions import NoDataError
 
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes.registry import get_nodes_by_type
-from itapia_common.schemas.entities.rules import ExplainationRuleEntity
-from itapia_common.schemas.enums import SemanticType, NodeType
+from itapia_common.schemas.entities.rules import ExplainationRuleEntity, SemanticType, NodeType
 from itapia_common.dblib.services.rules import RuleService
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from itapia_common.schemas.entities.advisor import TriggeredRuleInfo

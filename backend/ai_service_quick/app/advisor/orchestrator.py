@@ -3,7 +3,7 @@ import asyncio
 from typing import Any, Callable, Dict, List, Tuple
 from datetime import datetime, timezone
 
-from itapia_common.schemas.enums import SemanticType
+from itapia_common.schemas.entities.rules import SemanticType
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from itapia_common.schemas.entities.advisor import AdvisorReportSchema, FinalRecommendation, TriggeredRuleInfo
 from itapia_common.logger import ITAPIALogger

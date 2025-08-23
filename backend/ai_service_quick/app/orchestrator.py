@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Dict, Literal
 import uuid
 
-from itapia_common.schemas.enums import NodeType, SemanticType
+from itapia_common.schemas.entities.rules import NodeType, SemanticType
 
 from .analysis import AnalysisOrchestrator
 from .advisor import AdvisorOrchestrator

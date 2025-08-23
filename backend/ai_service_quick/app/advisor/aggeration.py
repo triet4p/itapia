@@ -2,7 +2,7 @@
 from typing import List, Dict, Tuple
 
 from itapia_common.rules.score import ScoreAggregator, ScoreFinalMapper
-from itapia_common.schemas.enums import SemanticType
+from itapia_common.schemas.entities.rules import SemanticType
 from itapia_common.schemas.entities.advisor import AggregatedScoreInfo
 
 class AggregationOrchestrator:
