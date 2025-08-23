@@ -1,4 +1,11 @@
 # common/dblib/session.py
+"""Database session management utilities.
+
+This module provides functions for creating and managing database sessions
+and connections for both PostgreSQL and Redis, using singleton patterns
+for efficient resource usage.
+"""
+
 from typing import Generator
 
 from sqlalchemy import create_engine, Engine
@@ -14,12 +21,31 @@ _SINGLETON_RDBMS_ENGINE = None
 _SINGLETON_REDIS_CLIENT = None
 
 def get_singleton_rdbms_engine() -> Engine:
+    """Get or create a singleton database engine instance.
+
+    This function ensures only one database engine is created and reused
+    throughout the application lifecycle.
+
+    Returns:
+        Engine: A SQLAlchemy database engine instance.
+    """
     global _SINGLETON_RDBMS_ENGINE
     if _SINGLETON_RDBMS_ENGINE is None:
         _SINGLETON_RDBMS_ENGINE = create_engine(cfg.DATABASE_URL, pool_pre_ping=True)
     return _SINGLETON_RDBMS_ENGINE
 
 def get_singleton_redis_client() -> Redis:
+    """Get or create a singleton Redis client instance.
+
+    This function ensures only one Redis client is created and reused
+    throughout the application lifecycle.
+
+    Returns:
+        Redis: A Redis client instance.
+
+    Raises:
+        redis.exceptions.ConnectionError: If unable to connect to Redis.
+    """
     global _SINGLETON_REDIS_CLIENT
     if _SINGLETON_REDIS_CLIENT is None:
         try:
@@ -33,8 +59,13 @@ def get_singleton_redis_client() -> Redis:
     return _SINGLETON_REDIS_CLIENT
 
 def get_rdbms_session() -> Generator[Session, None, None]:
-    """
-    Dependency cho FastAPI: Mở một session DB mới cho mỗi request.
+    """FastAPI dependency: Open a new database session for each request.
+
+    This function creates a database session using the singleton engine
+    and ensures proper cleanup after the request is complete.
+
+    Yields:
+        Session: A SQLAlchemy database session.
     """
     engine = get_singleton_rdbms_engine()
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -45,8 +76,12 @@ def get_rdbms_session() -> Generator[Session, None, None]:
         rdbms_session.close()
         
 def get_redis_connection() -> Generator[Redis | None, None, None]:
+    """FastAPI dependency: Provide an initialized Redis client.
+
+    This function yields the singleton Redis client instance.
+
+    Yields:
+        Redis | None: A Redis client instance or None if not available.
     """
-    Dependency cho FastAPI: Cung cấp Redis client đã được khởi tạo.
-    """
-    # Chỉ cần yield client đã được khởi tạo theo kiểu singleton
-    yield get_singleton_redis_client()       
+    # Simply yield the already initialized singleton client
+    yield get_singleton_redis_client()

@@ -1,59 +1,92 @@
+"""Service layer for business rules operations.
+
+This module provides a high-level interface for managing business rules,
+handling the conversion between Pydantic models and database representations.
+"""
+
 from typing import List
 from sqlalchemy.orm import Session
-from itapia_common.schemas.enums import SemanticType
 from itapia_common.dblib.crud.rules import RuleCRUD
-from itapia_common.schemas.entities.rules import RuleEntity
+from itapia_common.schemas.entities.rules import RuleEntity, SemanticType
 
 class RuleService:
+    """Service class for managing business rules."""
+    
     def __init__(self, db_session: Session):
-        # Service sẽ chứa một instance của lớp CRUD
+        """Initialize the RuleService with a database session.
+
+        The service contains an instance of the RuleCRUD class for data access.
+
+        Args:
+            db_session (Session): The SQLAlchemy database session.
+        """
+        # Service will contain an instance of the CRUD class
         self.crud = RuleCRUD(db_session)
 
     def save_rule(self, rule_entity: RuleEntity) -> str:
+        """Take a Rule object, convert it to a dict, save it to the database 
+        through the CRUD layer, and return the saved Rule object.
+
+        Args:
+            rule_entity (RuleEntity): The rule entity to save.
+
+        Returns:
+            str: The ID of the saved rule.
         """
-        Nhận một đối tượng Rule, chuyển nó thành dict,
-        lưu vào DB thông qua CRUD, và trả về đối tượng Rule đã được lưu.
-        """
-        # Chuyển đối tượng nghiệp vụ thành dữ liệu thô
+        # Convert the business object to raw data
         rule_dict = rule_entity.model_dump()
         
-        # Gọi CRUD để thực hiện thao tác với DB
+        # Call CRUD to perform the database operation
         res_uuid = self.crud.create_or_update_rule(rule_entity.rule_id, rule_dict)
         
-        # Trả về đối tượng Rule ban đầu để có thể tiếp tục sử dụng
+        # Return the original Rule object so it can continue to be used
         return res_uuid
 
     def get_rule_by_id(self, rule_id: str) -> RuleEntity | None:
-        """
-        Nhận một rule_id (str), lấy dữ liệu thô từ CRUD,
-        và "lắp ráp" nó thành một đối tượng Rule.
-        """
+        """Take a rule_id (str), get raw data from the CRUD layer,
+        and "assemble" it into a Rule object.
 
-        # Lấy dữ liệu thô
+        Args:
+            rule_id (str): The ID of the rule to retrieve.
+
+        Returns:
+            RuleEntity | None: The rule entity if found, otherwise None.
+        """
+        # Get raw data
         rule_data = self.crud.get_rule_by_id(rule_id)
         
         if rule_data:
-            # "Lắp ráp" dữ liệu thô thành đối tượng nghiệp vụ
+            # "Assemble" the raw data into a business object
             return RuleEntity(**rule_data)
         return None
 
     def get_active_rules_by_purpose(self, purpose: SemanticType) -> List[RuleEntity]:
+        """Take a SemanticType, get a list of raw data from the CRUD layer,
+        and "assemble" them into a list of Rule objects.
+
+        Args:
+            purpose (SemanticType): The semantic type to filter rules by.
+
+        Returns:
+            List[RuleEntity]: A list of rule entities.
         """
-        Nhận một SemanticType, lấy danh sách dữ liệu thô từ CRUD,
-        và "lắp ráp" chúng thành một danh sách các đối tượng Rule.
-        """
-        # Chuyển đối tượng nghiệp vụ (Enum) thành dữ liệu thô (str)
+        # Convert the business object (Enum) to raw data (str)
         purpose_name = purpose.name
         
-        # Lấy danh sách dữ liệu thô
+        # Get list of raw data
         list_of_rule_data = self.crud.get_active_rules_by_purpose(purpose_name)
         
-        # "Lắp ráp" từng dictionary thành đối tượng Rule
+        # "Assemble" each dictionary into a Rule object
         return [RuleEntity(**row) for row in list_of_rule_data]
     
     def get_all_active_rules(self) -> List[RuleEntity]:
-        # Lấy danh sách dữ liệu thô
+        """Get all active rules from the database.
+
+        Returns:
+            List[RuleEntity]: A list of all active rule entities.
+        """
+        # Get list of raw data
         list_of_rule_data = self.crud.get_all_active_rules()
         
-        # "Lắp ráp" từng dictionary thành đối tượng Rule
+        # "Assemble" each dictionary into a Rule object
         return [RuleEntity(**row) for row in list_of_rule_data]

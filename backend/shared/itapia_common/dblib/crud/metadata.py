@@ -1,4 +1,6 @@
 # common/dblib/crud/metadata.py
+"""Provides CRUD operations for metadata entities like tickers and sectors."""
+
 from sqlalchemy.orm import Session
 from sqlalchemy import Engine, text, Connection
 import pandas as pd
@@ -6,7 +8,18 @@ from threading import Lock
 
 from itapia_common.dblib.cache.memory import SingletonInMemoryCache
 
-def _load_ticker_metadata_from_db(db_connectable: Session|Connection):
+def _load_ticker_metadata_from_db(db_connectable: Session|Connection) -> dict:
+    """Load ticker metadata from the database and format it as a dictionary.
+
+    This function joins the tickers, exchanges, and sectors tables to retrieve
+    comprehensive metadata for all active tickers.
+
+    Args:
+        db_connectable (Session | Connection): Database session or connection object.
+
+    Returns:
+        dict: A dictionary with ticker symbols as keys and metadata as values.
+    """
     query = text("""
                 SELECT 
                     t.ticker_sym as ticker, 
@@ -34,11 +47,26 @@ def _load_ticker_metadata_from_db(db_connectable: Session|Connection):
 
 def get_ticker_metadata(rdbms_connection: Session|Connection = None,
                         rdbms_engine: Engine = None) -> dict[str, any]:
+    """Get ticker metadata with caching support.
+
+    This function retrieves ticker metadata from the database, using a singleton
+    in-memory cache to improve performance on subsequent calls.
+
+    Args:
+        rdbms_connection (Session | Connection, optional): Database session or connection.
+        rdbms_engine (Engine, optional): Database engine.
+
+    Returns:
+        dict[str, any]: A dictionary containing ticker metadata.
+
+    Raises:
+        ValueError: If neither connection nor engine is provided.
+    """
     if rdbms_connection is None and rdbms_engine is None:
         raise ValueError("Required at least connection or engine")
     
     def loader():
-        """Hàm loader được truyền vào cache manager."""
+        """Loader function passed to the cache manager."""
         if rdbms_connection:
             return _load_ticker_metadata_from_db(rdbms_connection)
         else: # rdbms_engine
@@ -53,7 +81,19 @@ def get_ticker_metadata(rdbms_connection: Session|Connection = None,
     )
 
 def get_all_sectors(rdbms_connection: Session|Connection = None,
-                    rdbms_engine: Engine = None):
+                    rdbms_engine: Engine = None) -> list[dict]:
+    """Retrieve all sector information from the database.
+
+    Args:
+        rdbms_connection (Session | Connection, optional): Database session or connection.
+        rdbms_engine (Engine, optional): Database engine.
+
+    Returns:
+        list[dict]: A list of dictionaries containing sector information.
+
+    Raises:
+        ValueError: If neither connection nor engine is provided.
+    """
     if rdbms_connection is None and rdbms_engine is None:
         raise ValueError("Required at least connection or engine")
     
@@ -64,6 +104,5 @@ def get_all_sectors(rdbms_connection: Session|Connection = None,
     else:
         with rdbms_engine.connect() as conn:
             result = conn.execute(query)
-    # .mappings().all() trả về list các dict-like objects
+    # .mappings().all() returns a list of dict-like objects
     return result.mappings().all()
-    

@@ -1,3 +1,9 @@
+"""Service layer for metadata entities.
+
+This module provides high-level interfaces for accessing ticker and sector metadata,
+handling caching and conversion between raw data and Pydantic models.
+"""
+
 from typing import List, Literal
 
 from sqlalchemy import Engine
@@ -11,14 +17,32 @@ from itapia_common.logger import ITAPIALogger
 logger = ITAPIALogger('Metadata Service of DB')
 
 class APIMetadataService:
-    """
-    Lớp Service tập trung cho các truy vấn liên quan tới Metadata qua API
-    """
+    """Centralized service class for metadata-related API queries."""
+    
     def __init__(self, rdbms_session: Session):
+        """Initialize the APIMetadataService with a database session.
+
+        Args:
+            rdbms_session (Session): The SQLAlchemy database session.
+        """
         self.rdbms_session = rdbms_session
         self.metadata_cache = get_ticker_metadata(rdbms_connection=rdbms_session)
         
-    def get_validate_ticker_info(self, ticker: str, data_type: Literal['daily', 'intraday', 'news']):
+    def get_validate_ticker_info(self, ticker: str, data_type: Literal['daily', 'intraday', 'news']) -> TickerMetadata:
+        """Get and validate ticker information for a specific data type.
+
+        This method retrieves ticker metadata from cache and converts it to a Pydantic model.
+
+        Args:
+            ticker (str): The ticker symbol to retrieve information for.
+            data_type (Literal['daily', 'intraday', 'news']): The type of data the ticker will be used for.
+
+        Returns:
+            TickerMetadata: The validated ticker metadata.
+
+        Raises:
+            ValueError: If the ticker is not found in the metadata cache.
+        """
         logger.info(f"SERVICE: Preparing ticker info metadata of ticker {ticker}...")
         ticker_info = self.metadata_cache.get(ticker.upper())
         if not ticker_info:
@@ -28,6 +52,17 @@ class APIMetadataService:
         return TickerMetadata(**ticker_info)
     
     def get_sector_code_of(self, ticker: str) -> str:
+        """Get the sector code for a given ticker.
+
+        Args:
+            ticker (str): The ticker symbol to retrieve the sector code for.
+
+        Returns:
+            str: The sector code for the ticker.
+
+        Raises:
+            ValueError: If the ticker is not found or has no sector code.
+        """
         logger.info(f"SERVICE: Get sector code of a ticker")
         ticker_info = self.metadata_cache.get(ticker.upper())
         if not ticker_info:
@@ -38,16 +73,32 @@ class APIMetadataService:
         return sector_code
     
     def get_all_sectors(self) -> List[SectorMetadata]:
-        """Lấy danh sách tất cả các nhóm ngành được hỗ trợ."""
+        """Get a list of all supported sectors.
+
+        Returns:
+            List[SectorMetadata]: A list of sector metadata objects.
+        """
         logger.info("SERVICE: Preparing all sectors...")
-        sector_rows = get_all_sectors(self.rdbms_session) # Giả sử đã tạo file metadata_crud.py
+        sector_rows = get_all_sectors(self.rdbms_session)  # Assuming metadata_crud.py file exists
         
-        # Chuyển đổi kết quả thô thành danh sách các đối tượng Pydantic
+        # Convert raw results to a list of Pydantic objects
         return [SectorMetadata(**row) for row in sector_rows]
     
 class DataMetadataService:
+    """Service class for data-level metadata operations."""
+    
     def __init__(self, engine: Engine):
+        """Initialize the DataMetadataService with a database engine.
+
+        Args:
+            engine (Engine): The SQLAlchemy database engine.
+        """
         self.metadata_cache = get_ticker_metadata(rdbms_engine=engine)
     
     def get_all_tickers(self) -> list[str]:
+        """Get a list of all ticker symbols.
+
+        Returns:
+            list[str]: A list of all ticker symbols.
+        """
         return list(self.metadata_cache.keys())
