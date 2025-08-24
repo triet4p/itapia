@@ -2,7 +2,7 @@ from typing import Dict, NamedTuple, Literal
 from abc import ABC
 import itapia_common.rules.names as nms
 from itapia_common.rules.score import ScoreFinalMapper
-from itapia_common.schemas.enums import SemanticType 
+from itapia_common.schemas.entities.rules import SemanticType 
 
 ACTION_TYPE = Literal['BUY', 'SELL', 'HOLD']
 
