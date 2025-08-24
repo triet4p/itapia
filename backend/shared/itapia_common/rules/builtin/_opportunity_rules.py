@@ -11,7 +11,7 @@ from itapia_common.rules import names as nms
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes.registry import create_node
 from itapia_common.rules.nodes import _TreeNode
-from itapia_common.schemas.entities.rules import SemanticType
+from itapia_common.schemas.entities.rules import SemanticLevel, SemanticType
 
 # ===================================================================
 # == A. OPPORTUNITY FINDING RULE CREATION FUNCTIONS
@@ -49,7 +49,7 @@ def _create_rule_1_deep_value_screener() -> Rule:
     Score is 1 only when both conditions are true.
     """
     cond_rsi_oversold = create_node(nms.OPR_LT, children=[create_node(nms.VAR_D_RSI_14), create_node(nms.CONST_RSI_OVERSOLD)])
-    cond_long_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(1.0, SemanticType.TREND))])
+    cond_long_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_SEMANTIC(SemanticType.TREND, SemanticLevel.HIGH))])
     
     # Use AND, it will return 1.0 if both are true, 0.0 otherwise.
     logic_tree = create_node(nms.OPR_AND, children=[cond_rsi_oversold, cond_long_trend_up])
@@ -61,8 +61,8 @@ def _create_rule_2_trend_reversal_screener() -> Rule:
     
     Logic: Score = 0.5 if mid-term trend has just turned up while long-term trend is still down.
     """
-    cond_mid_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_MIDTERM_DIR), create_node(nms.CONST_NUM(1.0, SemanticType.TREND))])
-    cond_long_trend_down = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(-1.0, SemanticType.TREND))])
+    cond_mid_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_MIDTERM_DIR), create_node(nms.CONST_SEMANTIC(SemanticType.TREND, SemanticLevel.HIGH))])
+    cond_long_trend_down = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_SEMANTIC(SemanticType.TREND, SemanticLevel.LOW))])
     
     is_reversal_signal = create_node(nms.OPR_AND, children=[cond_mid_trend_up, cond_long_trend_down])
     
@@ -91,7 +91,7 @@ def _create_rule_4_bullish_pattern_screener() -> Rule:
     Logic: Score = (Bullish pattern signal) * (Pattern score / 100)
     Example: Bull pattern (1.0) with score 80 -> 1.0 * (80/100) = 0.8
     """
-    cond_is_bull_pattern = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_PATTERN_1_SENTIMENT), create_node(nms.CONST_NUM(1.0, SemanticType.SENTIMENT))])
+    cond_is_bull_pattern = create_node(nms.OPR_GTE, children=[create_node(nms.VAR_D_PATTERN_1_SENTIMENT), create_node(nms.CONST_SEMANTIC(SemanticType.SENTIMENT, SemanticLevel.HIGH))])
     
     # Normalize pattern score (originally 0-100) to range [0, 1]
     normalized_pattern_score = create_node(nms.VAR_D_PATTERN_1_SCORE)

@@ -9,7 +9,7 @@ from typing import Set
 import numpy as np
 from itapia_common.rules.nodes.registry import register_node_by_spec, NodeSpec
 from itapia_common.rules.nodes import ConstantNode
-from itapia_common.schemas.entities.rules import SemanticType, NodeType
+from itapia_common.schemas.entities.rules import SemanticType, NodeType, SemanticLevel
 from itapia_common.rules import names as nms
 
 # ===================================================================
@@ -28,23 +28,45 @@ for value in np.round(np.arange(-5.0, 5.0, 1.0), 2):
     const_values.add(float(value))
 
 for value in sorted(list(const_values)):
-    for semantic_type in [SemanticType.NUMERICAL, SemanticType.MOMENTUM,
-                          SemanticType.PERCENTAGE, SemanticType.TREND,
-                          SemanticType.PRICE, SemanticType.SENTIMENT,
-                          SemanticType.VOLATILITY, SemanticType.VOLUME]:
-        node_name = nms.CONST_NUM(value, semantic=semantic_type)
-        description = f"Generic numerical constant with value {value} and semantic type {semantic_type.name}"
+    node_name = nms.CONST_NUM(value)
+    description = f"Generic numerical constant with value {value}."
+    
+    register_node_by_spec(
+        node_name=node_name,
+        spec=NodeSpec(
+            node_class=ConstantNode,
+            description=description,
+            return_type=SemanticType.NUMERICAL,
+            params={'value': float(value), 'use_normalize': False},
+            node_type=NodeType.CONSTANT
+        )
+    )
+    
+SEMANTIC_THRESHOLDS = {
+    SemanticLevel.HIGH: 0.55,
+    SemanticLevel.MODERATE: 0.05,
+    SemanticLevel.LOW: -0.4
+}
+
+CONST_SEMANTIC_TYPE_LST = SemanticType.ANY_NUMERIC.concreates
+
+for semantic_type in CONST_SEMANTIC_TYPE_LST:
+    for level in SEMANTIC_THRESHOLDS.keys():
+        node_name = nms.CONST_SEMANTIC(semantic_type, level)
+        value = SEMANTIC_THRESHOLDS[level]
+        description = f"Semantic numerical constant with value {value} and level {level}."
         
         register_node_by_spec(
             node_name=node_name,
             spec=NodeSpec(
                 node_class=ConstantNode,
                 description=description,
+                node_type=NodeType.CONSTANT,
                 return_type=semantic_type,
-                params={'value': float(value), 'use_normalize': False},
-                node_type=NodeType.CONSTANT
+                params={'value': round(value, 2), 'use_normalize': False}
             )
         )
+
 
 # ===================================================================
 # == B. Special Domain-Specific Constants Registration

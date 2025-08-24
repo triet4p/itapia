@@ -11,7 +11,7 @@ from itapia_common.rules import names as nms
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes.registry import create_node
 from itapia_common.rules.nodes import _TreeNode
-from itapia_common.schemas.entities.rules import SemanticType
+from itapia_common.schemas.entities.rules import SemanticLevel, SemanticType
 
 # ===================================================================
 # == A. RISK MANAGEMENT RULE CREATION FUNCTIONS
@@ -59,8 +59,8 @@ def _create_rule_2_weak_trend_risk() -> Rule:
     trend_strength = create_node(nms.VAR_D_TREND_OVERALL_STRENGTH)
     
     logic_tree = create_node(nms.OPR_SUB2, children=[
-        create_node(nms.CONST_NUM(1.0, SemanticType.TREND)),
-        trend_strength
+        create_node(nms.CONST_NUM(1.0)),
+        create_node(nms.OPR_TO_NUMERICAL, children=[trend_strength])
     ])
     
     return _build_risk_rule("RULE_R_02_WEAK_TREND_RISK", "Weak Trend Risk", "Scores higher risk when the trend strength is weaker.", logic_tree)
@@ -98,7 +98,7 @@ def _create_rule_5_overextended_risk() -> Rule:
     # RSI > 50 (normalized value is 0)
     cond_is_bullish_territory = create_node(nms.OPR_GT, children=[
         create_node(nms.VAR_D_RSI_14),
-        create_node(nms.CONST_NUM(0.0, SemanticType.MOMENTUM)) 
+        create_node(nms.CONST_SEMANTIC(SemanticType.MOMENTUM, SemanticLevel.MODERATE)) 
     ])
     
     # If true, risk score is the normalized RSI value.
@@ -106,7 +106,7 @@ def _create_rule_5_overextended_risk() -> Rule:
     logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
         cond_is_bullish_territory,
         create_node(nms.VAR_D_RSI_14),
-        create_node(nms.CONST_NUM(0.0, SemanticType.MOMENTUM))
+        create_node(nms.CONST_SEMANTIC(SemanticType.MOMENTUM, SemanticLevel.MODERATE)) 
     ])
 
     return _build_risk_rule("RULE_R_05_OVEREXTENDED_RISK", "Overextended Market Risk", "Scores higher risk as RSI moves deeper into overbought territory (>50).", logic_tree)

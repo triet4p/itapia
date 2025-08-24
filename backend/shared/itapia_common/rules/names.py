@@ -3,14 +3,18 @@
 
 # 1. Constant
 
-from itapia_common.schemas.entities.rules import SemanticType
+from itapia_common.schemas.entities.rules import SemanticType, SemanticLevel
 
 # Format num template
-CONST_NUM_TEMPLATE = 'CONST_NUM_{sign_char}{name}{semantic}'
-def CONST_NUM(value: float, semantic: SemanticType = SemanticType.NUMERICAL) -> str:
+CONST_NUM_TEMPLATE = 'CONST_NUM_{sign_char}{name}'
+def CONST_NUM(value: float) -> str:
     sign_char = "P" if value >= 0 else "N"
     name_str = str(abs(value)).replace('.', '_')
-    return CONST_NUM_TEMPLATE.format(sign_char=sign_char, name=name_str, semantic=semantic.name)
+    return CONST_NUM_TEMPLATE.format(sign_char=sign_char, name=name_str)
+
+CONST_SEMANTIC_TEMPLATE = 'CONST_SEMANTIC_{semantic_type}_{level}'
+def CONST_SEMANTIC(semantic_type: SemanticType, level: SemanticLevel):
+    return CONST_SEMANTIC_TEMPLATE.format(semantic_type=semantic_type.value, level=level.value)
 
 CONST_RSI_OVERBOUGHT = 'CONST_RSI_OVERBOUGHT'
 CONST_RSI_OVERSOLD = 'CONST_RSI_OVERSOLD'
@@ -100,13 +104,7 @@ OPR_POW2 = 'OPR_POW2'
 OPR_LOG2 = 'OPR_LOG2'
 OPR_ABS = 'OPR_ABS'
 
-OPR_ADD2_TO_NUM = 'OPR_ADD2_TO_NUM'
-OPR_SUB2_TO_NUM = 'OPR_SUB2_TO_NUM'
-OPR_MUL2_TO_NUM = 'OPR_MUL2_TO_NUM'
-OPR_DIV2_TO_NUM = 'OPR_DIV2_TO_NUM'
-OPR_POW2_TO_NUM = 'OPR_POW2_TO_NUM'
-OPR_LOG2_TO_NUM = 'OPR_LOG2_TO_NUM'
-OPR_ABS_TO_NUM = 'OPR_ABS_TO_NUM'
+OPR_TO_NUMERICAL = 'OPR_TO_NUMERICAL'
 
 # --- B. Toán tử So sánh ---
 OPR_GT = 'OPR_GT' # Greater Than (>)
