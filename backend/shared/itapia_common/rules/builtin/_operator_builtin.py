@@ -1,7 +1,7 @@
 # itapia_common/rules/nodes/_operator_nodes_builtin.py
 
 """
-Tệp này định nghĩa và đăng ký tất cả các OperatorNode dựng sẵn trong hệ thống.
+This module defines and registers all built-in OperatorNode instances in the system.
 """
 
 import math
@@ -12,21 +12,37 @@ from itapia_common.schemas.entities.rules import SemanticType, NodeType
 from itapia_common.rules import names as nms
 
 # ===================================================================
-# == A. Các hàm Phụ trợ (Helper Functions)
+# == A. Helper Functions
 # ===================================================================
 
 def _sigmoid(x: float) -> float:
-    """Hàm Sigmoid, ánh xạ một số bất kỳ về khoảng (0, 1)."""
-    if x < -10: return 0.0
-    if x > 10: return 1.0
+    """Sigmoid function that maps any number to the range (0, 1).
+    
+    Args:
+        x: Input value
+        
+    Returns:
+        Mapped value between 0 and 1
+    """
+    if x < -10: 
+        return 0.0
+    if x > 10: 
+        return 1.0
     return 1 / (1 + math.exp(-x))
 
 def _scaled_tanh(x: float) -> float:
-    """Hàm Tanh, ánh xạ một số bất kỳ về khoảng (-1, 1)."""
+    """Tanh function that maps any number to the range (-1, 1).
+    
+    Args:
+        x: Input value
+        
+    Returns:
+        Mapped value between -1 and 1
+    """
     return math.tanh(x)
 
 # ===================================================================
-# == B. Đăng ký các Toán tử Toán học
+# == B. Mathematical Operator Registration
 # ===================================================================
 
 register_node_by_spec(nms.OPR_ADD2, NodeSpec(
@@ -102,7 +118,7 @@ register_node_by_spec(nms.OPR_ABS_TO_NUM, NodeSpec(
 ))
 
 # ===================================================================
-# == C. Đăng ký các Toán tử So sánh (Luôn trả về 1.0 hoặc 0.0)
+# == C. Comparison Operator Registration (Always returns 1.0 or 0.0)
 # ===================================================================
 
 register_node_by_spec(nms.OPR_GT, NodeSpec(
@@ -137,7 +153,7 @@ register_node_by_spec(nms.OPR_NEQ, NodeSpec(
 ))
 
 # ===================================================================
-# == D. Đăng ký các Toán tử Logic (Luôn trả về 1.0 hoặc 0.0)
+# == D. Logical Operator Registration (Always returns 1.0 or 0.0)
 # ===================================================================
 
 register_node_by_spec(nms.OPR_AND, NodeSpec(
@@ -157,20 +173,20 @@ register_node_by_spec(nms.OPR_NOT, NodeSpec(
 ))
 
 # ===================================================================
-# == E. Đăng ký các Toán tử Điều kiện
+# == E. Conditional Operator Registration
 # ===================================================================
 
 register_node_by_spec(nms.OPR_IF_THEN_ELSE, NodeSpec(
     node_class=BranchOperatorNode,
     description="IF condition > 0 THEN evaluate first child ELSE second child.",
-    return_type=SemanticType.ANY, # Kiểu trả về phụ thuộc vào nhánh được chọn
+    return_type=SemanticType.ANY,  # Return type depends on the selected branch
     args_type=[SemanticType.BOOLEAN, SemanticType.ANY, SemanticType.ANY],
     node_type=NodeType.OPERATOR,
     params={}
 ))
 
 # ===================================================================
-# == F. Đăng ký các Toán tử Kết luận Đặc biệt (Return Operators)
+# == F. Special Conclusion Operator Registration (Return Operators)
 # ===================================================================
 
 register_node_by_spec(nms.OPR_TO_DECISION_SIGNAL, NodeSpec(

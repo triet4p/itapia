@@ -4,13 +4,15 @@ from itapia_common.schemas.entities.rules import SemanticType
 
 
 class FinalThreshold(NamedTuple):
+    """Represents a threshold for mapping scores to human-readable labels."""
+    
     name: str
     value: float
     description: str
     purpose: SemanticType
     
 # ===================================================================
-# == A. Ngưỡng cho Tín hiệu Quyết định (Decision Signals)
+# == A. Thresholds for Decision Signals
 # ===================================================================
 DECISION_THRESHOLDS: List[FinalThreshold] = sorted([
     FinalThreshold(nms.THRESHOLD_DECISION_SELL_IMMEDIATE, -0.95, "Sell immediately with high confidence", SemanticType.DECISION_SIGNAL),
@@ -27,7 +29,7 @@ DECISION_THRESHOLDS: List[FinalThreshold] = sorted([
 ], key=lambda x: x.value)
 
 # ===================================================================
-# == B. Ngưỡng cho Mức độ Rủi ro (Risk Levels)
+# == B. Thresholds for Risk Levels
 # ===================================================================
 RISK_THRESHOLDS: List[FinalThreshold] = sorted([
     FinalThreshold(nms.THRESHOLD_RISK_VERY_LOW, 0.1, "Very Low, suitable for capital preservation", SemanticType.RISK_LEVEL),
@@ -38,7 +40,7 @@ RISK_THRESHOLDS: List[FinalThreshold] = sorted([
 ], key=lambda x: x.value)
 
 # ===================================================================
-# == C. Ngưỡng cho Đánh giá Cơ hội (Opportunity Ratings)
+# == C. Thresholds for Opportunity Ratings
 # ===================================================================
 OPPORTUNITY_THRESHOLDS: List[FinalThreshold] = sorted([
     FinalThreshold(nms.THRESHOLD_OPP_RATING_AVOID, 0.0, "Low potential, probably avoid", SemanticType.OPPORTUNITY_RATING),

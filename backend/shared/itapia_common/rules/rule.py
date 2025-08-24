@@ -4,23 +4,23 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any
 
-# Giả định các module này tồn tại và chứa các hàm tương ứng
-# Trong thực tế, bạn sẽ import chúng một cách chính xác
+# Assuming these modules exist and contain the corresponding functions
+# In practice, you would import them correctly
 from .nodes import OperatorNode, _TreeNode
 from itapia_common.schemas.entities.rules import RuleEntity, SemanticType
 from .parser import parse_tree, serialize_tree
 
-# Giả định sự tồn tại của schema báo cáo
+# Assuming the existence of the report schema
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 
 
 class Rule:
-    """
-    Đại diện cho một quy tắc nghiệp vụ hoàn chỉnh.
+    """Represents a complete business rule.
     
-    Một quy tắc bao gồm siêu dữ liệu (để quản lý) và một cây logic (root)
-    để thực thi. Gốc của cây logic luôn phải là một OperatorNode.
+    A rule consists of metadata (for management) and a logic tree (root)
+    for execution. The root of the logic tree must always be an OperatorNode.
     """
+    
     def __init__(self,
                  root: OperatorNode,
                  rule_id: str | None = None,
@@ -30,22 +30,23 @@ class Rule:
                  version: int = 1,
                  created_at: datetime | None = None,
                  updated_at: datetime | None = None):
-        """
-        Khởi tạo một đối tượng Rule.
+        """Initialize a Rule object.
 
         Args:
-            root (OperatorNode): Gốc của cây biểu thức logic. Phải là một OperatorNode.
-            rule_id (str, optional): ID duy nhất của quy tắc. Nếu None, sẽ tự tạo UUID.
-            name (str, optional): Tên quy tắc để con người đọc.
-            description (str, optional): Mô tả chi tiết về quy tắc.
-            purpose (str, optional): Mục đích của quy tắc (ví dụ: DECISION_MAKING).
-            is_active (bool, optional): Cờ để bật/tắt quy tắc.
-            version (float, optional): Phiên bản của quy tắc.
-            created_at (datetime, optional): Thời gian tạo.
-            updated_at (datetime, optional): Thời gian cập nhật lần cuối.
+            root (OperatorNode): The root of the logic expression tree. Must be an OperatorNode.
+            rule_id (str, optional): Unique ID of the rule. If None, a UUID will be auto-generated.
+            name (str, optional): Human-readable name of the rule.
+            description (str, optional): Detailed description of the rule.
+            is_active (bool, optional): Flag to enable/disable the rule.
+            version (int, optional): Version of the rule.
+            created_at (datetime, optional): Creation time.
+            updated_at (datetime, optional): Last update time.
+            
+        Raises:
+            TypeError: If root is not an OperatorNode instance.
         """
         if not isinstance(root, OperatorNode):
-            raise TypeError("Gốc (root) của một quy tắc phải là một thể hiện của OperatorNode.")
+            raise TypeError("The root of a rule must be an instance of OperatorNode.")
             
         self.rule_id = rule_id or str(uuid.uuid4())
         self.name = name
@@ -53,34 +54,46 @@ class Rule:
         self.root = root
         self.is_active = is_active
         self.version = version
-        # Luôn sử dụng timezone-aware datetimes
+        # Always use timezone-aware datetimes
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
         
     @property
-    def purpose(self):
+    def purpose(self) -> SemanticType:
+        """Get the purpose of the rule based on the root node's return type.
+        
+        Returns:
+            SemanticType: The semantic type of the rule's output.
+        """
         return self.root.return_type
 
     def __repr__(self) -> str:
         return f"Rule(rule_id='{self.rule_id}', name='{self.name}', version={self.version}, is_active={self.is_active})"
 
     def execute(self, report: QuickCheckAnalysisReport) -> float:
-        """
-        Thực thi quy tắc dựa trên một báo cáo phân tích và trả về kết quả.
+        """Execute the rule based on an analysis report and return the result.
 
-        Đây là một facade, che giấu logic đệ quy của việc `evaluate` cây.
+        This is a facade that hides the recursive logic of tree `evaluate`.
+        
+        Args:
+            report (QuickCheckAnalysisReport): The analysis report to execute against.
+            
+        Returns:
+            float: The result of the rule execution.
         """
         if not self.is_active:
-            # Có thể trả về giá trị trung tính hoặc báo lỗi tùy thiết kế
+            # Can return a neutral value or raise an error depending on design
             return 0.0 
         return self.root.evaluate(report)
 
     def to_entity(self) -> RuleEntity:
-        """
-        Chuyển đổi (serialize) toàn bộ đối tượng Rule thành một dictionary.
+        """Serialize the entire Rule object into a dictionary.
         
-        Cấu trúc dictionary này phù hợp để lưu trữ dưới dạng JSON trong CSDL 
-        hoặc truyền qua API.
+        This dictionary structure is suitable for storage as JSON in a database
+        or transmission via API.
+        
+        Returns:
+            RuleEntity: A dictionary representing the rule.
         """
         return RuleEntity(
             rule_id=self.rule_id,
@@ -96,37 +109,42 @@ class Rule:
 
     @classmethod
     def from_entity(cls, data: RuleEntity) -> 'Rule':
-        """
-        Tạo (deserialize) một đối tượng Rule từ một dictionary.
+        """Create (deserialize) a Rule object from a dictionary.
 
-        Đây là một factory method, thường được sử dụng sau khi đọc dữ liệu
-        từ CSDL hoặc một request API.
+        This is a factory method, typically used after reading data
+        from a database or API request.
+        
+        Args:
+            data (RuleEntity): Dictionary representing a rule.
+            
+        Returns:
+            Rule: The reconstructed Rule object.
+            
+        Raises:
+            ValueError: If the rule data is missing the logic tree or if there's an error parsing it.
+            TypeError: If the purpose in metadata doesn't match the root node's return type.
         """
         root_json = data.root
         if not root_json:
-            raise ValueError("Dữ liệu quy tắc thiếu cây logic 'root'.")
+            raise ValueError("Rule data is missing the logic tree 'root'.")
         
-        # Sử dụng parser để tái tạo lại cây logic từ cấu trúc JSON
+        # Use the parser to reconstruct the logic tree from the JSON structure
         try:
             root_node = parse_tree(root_json)
         except Exception as e:
-            # Bọc lỗi gốc để cung cấp thêm ngữ cảnh
-            raise ValueError(f"Không thể phân tích cây logic cho rule_id '{data.get('rule_id')}'. Lỗi: {e}") from e
+            # Wrap the original error to provide additional context
+            raise ValueError(f"Cannot parse logic tree for rule_id '{data.rule_id}'. Error: {e}") from e
             
-        # created_at và updated_at có thể không có trong dữ liệu cũ
+        # created_at and updated_at may not be present in old data
         
-        purpose_from_data_str = data.purpose
-        if purpose_from_data_str:
-            try:
-                # Chuyển chuỗi từ JSON thành Enum
-                purpose_from_data = purpose_from_data_str
-                if purpose_from_data != root_node.return_type:
-                    raise TypeError(
-                        f"Purpose trong metadata ('{purpose_from_data.name}') "
-                        f"không khớp với return_type của root node ('{root_node.return_type.name}')."
-                    )
-            except KeyError:
-                raise ValueError(f"Purpose không hợp lệ: '{purpose_from_data_str}'")
+        purpose_from_data = data.purpose
+        if purpose_from_data:
+            # Convert string from JSON to Enum
+            if purpose_from_data != root_node.return_type:
+                raise TypeError(
+                    f"Purpose in metadata ('{purpose_from_data.name}') "
+                    f"does not match the return_type of the root node ('{root_node.return_type.name}')."
+                )
 
         return cls(
             rule_id=data.rule_id,
@@ -136,6 +154,6 @@ class Rule:
             version=data.version,
             created_at=data.created_at,
             updated_at=data.updated_at,
-            # Truyền cây logic đã được tái tạo
+            # Pass the reconstructed logic tree
             root=root_node
         )

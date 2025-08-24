@@ -1,8 +1,8 @@
 # itapia_common/rules/_opportunity_rules_builtin.py
 
 """
-Tệp này định nghĩa và đăng ký các Rule dựng sẵn cho việc Tìm kiếm Cơ hội.
-Mỗi quy tắc đều có node gốc là OPR_TO_OPPORTUNITY_RATING.
+This module defines and registers built-in rules for opportunity finding.
+Each rule has a root node of OPR_TO_OPPORTUNITY_RATING.
 """
 
 from typing import List
@@ -14,13 +14,23 @@ from itapia_common.rules.nodes import _TreeNode
 from itapia_common.schemas.entities.rules import SemanticType
 
 # ===================================================================
-# == A. CÁC HÀM TẠO QUY TẮC TÌM KIẾM CƠ HỘI (OPPORTUNITY FINDING RULES)
+# == A. OPPORTUNITY FINDING RULE CREATION FUNCTIONS
 # ===================================================================
 
 def _build_opportunity_rule(rule_id: str, name: str, description: str, logic_tree: _TreeNode) -> Rule:
-    """Hàm helper để bọc logic vào một Toán tử Kết luận Cơ hội và tạo Rule."""
+    """Helper function to wrap logic in an Opportunity Conclusion Operator and create a Rule.
+    
+    Args:
+        rule_id: Unique identifier for the rule
+        name: Human-readable name of the rule
+        description: Description of what the rule does
+        logic_tree: The logical expression tree for the rule
+        
+    Returns:
+        A fully constructed Rule object
+    """
     root_node = create_node(
-        node_name=nms.OPR_TO_OPPORTUNITY_RATING, # <<< Chú ý: Sử dụng toán tử OPPORTUNITY
+        node_name=nms.OPR_TO_OPPORTUNITY_RATING,  # <<< Note: Using OPPORTUNITY operator
         children=[logic_tree]
     )
     return Rule(
@@ -31,54 +41,62 @@ def _build_opportunity_rule(rule_id: str, name: str, description: str, logic_tre
     )
 
 def _create_rule_1_deep_value_screener() -> Rule:
-    """[1] Sàng lọc "Mua giá trị": Điểm số cao nếu RSI quá bán trong một xu hướng dài hạn tốt."""
-    # Logic: Điểm = (Tín hiệu RSI quá bán) * (Tín hiệu xu hướng dài hạn tốt)
-    # Tín hiệu RSI quá bán: 1 nếu RSI < 30, 0 nếu không.
-    # Tín hiệu xu hướng dài hạn tốt: 1 nếu uptrend, 0 nếu không.
-    # Chỉ khi cả hai điều kiện đều đúng thì điểm mới là 1.
+    """[1] Deep Value Screener: High score if RSI is oversold in a good long-term trend.
+    
+    Logic: Score = (RSI oversold signal) * (Good long-term trend signal)
+    RSI oversold signal: 1 if RSI < 30, 0 otherwise.
+    Good long-term trend signal: 1 if uptrend, 0 otherwise.
+    Score is 1 only when both conditions are true.
+    """
     cond_rsi_oversold = create_node(nms.OPR_LT, children=[create_node(nms.VAR_D_RSI_14), create_node(nms.CONST_RSI_OVERSOLD)])
     cond_long_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(1.0, SemanticType.TREND))])
     
-    # Dùng AND, nó sẽ trả về 1.0 nếu cả hai đúng, 0.0 nếu không.
+    # Use AND, it will return 1.0 if both are true, 0.0 otherwise.
     logic_tree = create_node(nms.OPR_AND, children=[cond_rsi_oversold, cond_long_trend_up])
     
     return _build_opportunity_rule("RULE_O_01_DEEP_VALUE", "Deep Value Screener", "Scores highly for oversold stocks within a long-term uptrend.", logic_tree)
 
 def _create_rule_2_trend_reversal_screener() -> Rule:
-    """[2] Sàng lọc Đảo chiều Xu hướng: Điểm số dương nếu có tín hiệu đảo chiều."""
-    # Logic: Điểm = 0.5 nếu xu hướng trung hạn vừa chuyển sang tăng trong khi xu hướng dài hạn vẫn đang giảm.
+    """[2] Trend Reversal Screener: Positive score if there's a reversal signal.
+    
+    Logic: Score = 0.5 if mid-term trend has just turned up while long-term trend is still down.
+    """
     cond_mid_trend_up = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_MIDTERM_DIR), create_node(nms.CONST_NUM(1.0, SemanticType.TREND))])
     cond_long_trend_down = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_TREND_LONGTERM_DIR), create_node(nms.CONST_NUM(-1.0, SemanticType.TREND))])
     
     is_reversal_signal = create_node(nms.OPR_AND, children=[cond_mid_trend_up, cond_long_trend_down])
     
-    # Nếu có tín hiệu đảo chiều, trả về điểm 0.5 (cơ hội thú vị), nếu không thì 0.
+    # If there's a reversal signal, return score 0.5 (interesting opportunity), otherwise 0.
     logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
         is_reversal_signal,
-        create_node(nms.CONST_NUM(0.5)), # Điểm cho một cơ hội "thú vị"
+        create_node(nms.CONST_NUM(0.5)),  # Score for an "interesting" opportunity
         create_node(nms.CONST_NUM(0.0))
     ])
     
     return _build_opportunity_rule("RULE_O_02_TREND_REVERSAL", "Trend Reversal Screener", "Scores positively for early signs of a trend reversal from bearish to bullish.", logic_tree)
 
 def _create_rule_3_forecast_upside_potential() -> Rule:
-    """[3] Sàng lọc theo Tiềm năng Tăng trưởng Dự báo: Điểm số là tiềm năng tăng giá dự báo."""
-    # Logic: Điểm = Giá trị đã chuẩn hóa của VAR_FC_20D_MAX_PCT.
-    # Biến này đã được chuẩn hóa về [0, 1], nên ta có thể dùng trực tiếp.
+    """[3] Forecast Upside Potential Screener: Score is the forecasted upside potential.
+    
+    Logic: Score = Normalized value of VAR_FC_20D_MAX_PCT.
+    This variable is already normalized to [0, 1], so we can use it directly.
+    """
     logic_tree = create_node(nms.VAR_FC_5D_MAX_PCT)
 
     return _build_opportunity_rule("RULE_O_03_FC_UPSIDE", "Forecasted Upside Potential", "Scores based on the normalized forecasted max upside potential.", logic_tree)
 
 def _create_rule_4_bullish_pattern_screener() -> Rule:
-    """[4] Sàng lọc Mẫu hình Tăng giá: Điểm số dựa trên sự tồn tại của mẫu hình tăng giá mạnh."""
-    # Logic: Điểm = (Tín hiệu mẫu hình tăng giá) * (Điểm của mẫu hình / 100)
-    # Ví dụ: Mẫu hình bull (1.0) với điểm 80 -> 1.0 * (80/100) = 0.8
+    """[4] Bullish Pattern Screener: Score based on the existence of a strong bullish pattern.
+    
+    Logic: Score = (Bullish pattern signal) * (Pattern score / 100)
+    Example: Bull pattern (1.0) with score 80 -> 1.0 * (80/100) = 0.8
+    """
     cond_is_bull_pattern = create_node(nms.OPR_EQ, children=[create_node(nms.VAR_D_PATTERN_1_SENTIMENT), create_node(nms.CONST_NUM(1.0, SemanticType.SENTIMENT))])
     
-    # Chuẩn hóa điểm số của mẫu hình (vốn từ 0-100) về khoảng [0, 1]
+    # Normalize pattern score (originally 0-100) to range [0, 1]
     normalized_pattern_score = create_node(nms.VAR_D_PATTERN_1_SCORE)
     
-    # Nếu là mẫu hình bull, trả về điểm đã chuẩn hóa, nếu không thì 0
+    # If it's a bull pattern, return the normalized score, otherwise 0
     logic_tree = create_node(nms.OPR_IF_THEN_ELSE, children=[
         cond_is_bull_pattern,
         normalized_pattern_score,
@@ -88,10 +106,12 @@ def _create_rule_4_bullish_pattern_screener() -> Rule:
     return _build_opportunity_rule("RULE_O_04_BULLISH_PATTERN", "Bullish Pattern Screener", "Scores based on the existence and strength of a bullish pattern.", logic_tree)
 
 def _create_rule_5_news_catalyst_screener() -> Rule:
-    """[5] Sàng lọc theo Chất xúc tác Tin tức: Điểm số dựa trên mật độ tin tốt và có tác động."""
-    # Logic: Điểm = (Điểm tin tích cực) * (Điểm tin tác động mạnh)
-    # Cả hai biến này đều đã được chuẩn hóa về [0, 1].
-    # Điểm sẽ chỉ cao khi cả hai yếu tố đều cao.
+    """[5] News Catalyst Screener: Score based on density of positive and high-impact news.
+    
+    Logic: Score = (Positive news score) * (High-impact news score)
+    Both variables are already normalized to [0, 1].
+    Score will only be high when both factors are high.
+    """
     positive_news_score = create_node(nms.VAR_NEWS_SUM_NUM_POSITIVE)
     high_impact_news_score = create_node(nms.VAR_NEWS_SUM_NUM_HIGH_IMPACT)
     
@@ -100,15 +120,18 @@ def _create_rule_5_news_catalyst_screener() -> Rule:
     return _build_opportunity_rule("RULE_O_05_NEWS_CATALYST", "News Catalyst Screener", "Scores based on the density of positive and high-impact news.", logic_tree)
 
 # ===================================================================
-# == B. DANH SÁCH TỔNG HỢP CÁC QUY TẮC DỰNG SẴN
+# == B. BUILT-IN OPPORTUNITY RULES COLLECTION
 # ===================================================================
 
 _BUILTIN_OPPORTUNITY_RULES: List[Rule] | None = None
 
 def builtin_opportunity_rules() -> List[Rule]:
-    """
-    Trả về một danh sách các quy tắc tìm kiếm cơ hội dựng sẵn.
-    Sử dụng lazy initialization để chỉ tạo danh sách một lần.
+    """Return a list of built-in opportunity finding rules.
+    
+    Uses lazy initialization to create the list only once.
+    
+    Returns:
+        List of built-in opportunity rules
     """
     global _BUILTIN_OPPORTUNITY_RULES
     if _BUILTIN_OPPORTUNITY_RULES is not None:

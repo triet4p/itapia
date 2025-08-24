@@ -2,76 +2,81 @@
 
 from typing import Dict, Any, List
 
-# Import các lớp Node để kiểm tra kiểu
+# Import node classes for type checking
 from .nodes import _TreeNode, ConstantNode, VarNode, OperatorNode
 from .nodes.registry import create_node
 from itapia_common.schemas.entities.rules import NodeEntity
 
 def serialize_tree(node: _TreeNode) -> NodeEntity:
-    """
-    Chuyển đổi (serialize) một cây Node (bắt đầu từ node gốc) thành một cấu trúc dictionary lồng nhau.
-    Hàm này hoạt động theo kiểu đệ quy.
+    """Serialize a Node tree (starting from the root node) into a nested dictionary structure.
+    This function works recursively.
 
     Args:
-        node (_TreeNode): Node gốc của cây hoặc nhánh cây cần chuyển đổi.
+        node (_TreeNode): The root node of the tree or branch to convert.
 
     Returns:
-        Dict[str, Any]: Một dictionary đại diện cho cây.
+        Dict[str, Any]: A dictionary representing the tree.
+        
+    Raises:
+        TypeError: If the input is not an instance of _TreeNode.
     """
     if not isinstance(node, _TreeNode):
-        raise TypeError("Đầu vào phải là một thể hiện của _TreeNode.")
+        raise TypeError("Input must be an instance of _TreeNode.")
 
-    # Tạo dictionary cơ bản
-    # Lưu ý: node.node_name đã được .upper() trong constructor
+    # Create basic dictionary
+    # Note: node.node_name has been .upper() in the constructor
     node_name = node.node_name
     node_children = None
     
-    # Nếu là một Operator, đệ quy serialize các con của nó
+    # If it's an Operator, recursively serialize its children
     if isinstance(node, OperatorNode):
-        if node.children: # Chỉ thêm key 'children' nếu có
+        if node.children:  # Only add 'children' key if present
             node_children = [serialize_tree(child) for child in node.children]
             
-    # Các loại node khác (Constant, Var) không có 'children' hay tham số đặc biệt
-    # nên không cần làm gì thêm. Tên của chúng (node_name) đã đủ để tái tạo lại.
+    # Other node types (Constant, Var) don't have 'children' or special parameters
+    # so no additional processing is needed. Their names (node_name) are sufficient for reconstruction.
 
     return NodeEntity(node_name=node_name, children=node_children)
 
 def parse_tree(data: NodeEntity) -> _TreeNode:
-    """
-    Phân tích (parse) một cấu trúc dictionary và tái tạo lại một cây Node hoàn chỉnh.
-    Hàm này hoạt động theo kiểu đệ quy và sử dụng Node Factory.
+    """Parse a dictionary structure and reconstruct a complete Node tree.
+    This function works recursively and uses the Node Factory.
 
     Args:
-        data (Dict[str, Any]): Dictionary đại diện cho một node (và các con của nó).
+        data (Dict[str, Any]): Dictionary representing a node (and its children).
 
     Returns:
-        _TreeNode: Node gốc của cây hoặc nhánh cây đã được tái tạo.
+        _TreeNode: The root node of the reconstructed tree or branch.
+        
+    Raises:
+        TypeError: If children data is not a list.
+        ValueError: If there's an error creating the node.
     """
     node_name = data.node_name
 
-    # Chuẩn bị các tham số sẽ được truyền vào factory
-    # Đây là các tham số động, không được định nghĩa sẵn trong Spec
+    # Prepare parameters to be passed to the factory
+    # These are dynamic parameters, not predefined in the Spec
     factory_kwargs: Dict[str, Any] = {}
 
-    # 1. Đệ quy parse các node con trước (nếu có)
+    # 1. Recursively parse child nodes first (if any)
     if data.children is not None:
         children_data = data.children
         if not isinstance(children_data, list):
-            raise TypeError("'children' phải là một danh sách.")
+            raise TypeError("'children' must be a list.")
         
-        # Tái tạo lại từng node con và thêm vào kwargs
+        # Recreate each child node and add to kwargs
         factory_kwargs["children"] = [parse_tree(child_data) for child_data in children_data]
         
-    # Thêm các tham số đặc biệt khác ở đây nếu có...
+    # Add other special parameters here if needed...
 
-    # 3. Gọi Node Factory để tạo node hiện tại
-    # node_name của một node trong cây sẽ được tự tạo hoặc có thể lấy từ dict nếu muốn
-    # Ở đây, ta đơn giản hóa bằng cách dùng chính node_name
+    # 3. Call Node Factory to create the current node
+    # The node_name of a node in the tree will be auto-generated or can be taken from dict if desired
+    # Here, we simplify by using the node_name directly
     try:
-        # Nhà máy sẽ sử dụng node_name để tra cứu Spec và dùng kwargs để truyền các tham số động
+        # The factory will use node_name to look up the Spec and use kwargs to pass dynamic parameters
         node_instance = create_node(node_name=node_name, **factory_kwargs)
     except Exception as e:
-        # Bọc lỗi gốc để cung cấp thêm ngữ cảnh khi debug
-        raise ValueError(f"Lỗi khi tạo node với tên '{node_name}'. Lỗi gốc: {e}") from e
+        # Wrap the original error to provide additional context when debugging
+        raise ValueError(f"Error creating node with name '{node_name}'. Original error: {e}") from e
 
     return node_instance

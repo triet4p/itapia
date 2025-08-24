@@ -1,8 +1,8 @@
 # itapia_common/rules/nodes/_variable_nodes_builtin.py
 
 """
-Tệp này định nghĩa và đăng ký tất cả các VarNode dựng sẵn trong hệ thống.
-Các biến này trích xuất dữ liệu trực tiếp từ QuickCheckReport.
+This module defines and registers all built-in VarNode instances in the system.
+These variables extract data directly from QuickCheckReport.
 """
 
 from itapia_common.rules.nodes.registry import register_node_by_spec, NodeSpec
@@ -11,10 +11,10 @@ from itapia_common.schemas.entities.rules import SemanticType, NodeType
 from itapia_common.rules import names as nms
 
 # ===================================================================
-# == A. BIẾN TỪ BÁO CÁO PHÂN TÍCH KỸ THUẬT - KHUNG NGÀY (DAILY)
+# == A. VARIABLES FROM DAILY TECHNICAL ANALYSIS REPORT
 # ===================================================================
 
-# --- A.1. Từ các chỉ báo chính (Key Indicators) ---
+# --- A.1. From Key Indicators ---
 
 register_node_by_spec(nms.VAR_D_RSI_14, NodeSpec(
     node_class=NumericalVarNode,
@@ -35,10 +35,10 @@ register_node_by_spec(nms.VAR_D_ATR_14, NodeSpec(
     description='Daily ATR (14-period) as a percentage of close price, normalized to [0, 1]',
     node_type=NodeType.VARIABLE,
     return_type=SemanticType.VOLATILITY,
-    # Giả định ATR 10% là rất cao
+    # Assume 10% ATR is very high
     params={'path': 'technical_report.daily_report.key_indicators.atr_14', 'source_range': (0, 15), 'target_range': (0, 1)}
 ))
-# --- A.2. Từ báo cáo xu hướng (Trend Report) ---
+# --- A.2. From Trend Report ---
 
 register_node_by_spec(nms.VAR_D_TREND_MIDTERM_DIR, NodeSpec(
     node_class=CategoricalVarNode,
@@ -71,8 +71,8 @@ register_node_by_spec(nms.VAR_D_TREND_OVERALL_STRENGTH, NodeSpec(
     }
 ))
 
-# --- A.3. Từ báo cáo Hỗ trợ/Kháng cự (S/R Report) ---
-# Giả định: Lấy mức giá của ngưỡng quan trọng nhất (đầu tiên trong danh sách)
+# --- A.3. From Support/Resistance Report ---
+# Assumption: Take the price level of the most important threshold (first in the list)
 register_node_by_spec(nms.VAR_D_SUPPORT_1_PRICE, NodeSpec(
     node_class=NumericalVarNode,
     description='Price level of the nearest support',
@@ -88,8 +88,8 @@ register_node_by_spec(nms.VAR_D_RESISTANCE_1_PRICE, NodeSpec(
     params={'path': 'technical_report.daily_report.sr_report.resistances.0.level', 'source_range': (0, 200), 'target_range': (0, 1)}
 ))
 
-# --- A.4. Từ báo cáo Mẫu hình (Pattern Report) ---
-# Giả định: Lấy thông tin của mẫu hình quan trọng nhất (đầu tiên trong danh sách)
+# --- A.4. From Pattern Report ---
+# Assumption: Take information of the most prominent pattern (first in the list)
 register_node_by_spec(nms.VAR_D_PATTERN_1_SCORE, NodeSpec(
     node_class=NumericalVarNode,
     description='Score of the most prominent recognized pattern',
@@ -110,7 +110,7 @@ register_node_by_spec(nms.VAR_D_PATTERN_1_SENTIMENT, NodeSpec(
 
 
 # ===================================================================
-# == B. BIẾN TỪ BÁO CÁO PHÂN TÍCH KỸ THUẬT - TRONG NGÀY (INTRADAY)
+# == B. VARIABLES FROM INTRADAY TECHNICAL ANALYSIS REPORT
 # ===================================================================
 
 register_node_by_spec(nms.VAR_I_RSI_STATUS, NodeSpec(
@@ -145,28 +145,28 @@ register_node_by_spec(nms.VAR_I_ORB_STATUS, NodeSpec(
 ))
 
 # ===================================================================
-# == C. BIẾN TỪ BÁO CÁO DỰ BÁO (FORECASTING) - ĐÃ CẬP NHẬT
+# == C. VARIABLES FROM FORECASTING REPORT - UPDATED
 # ===================================================================
 
-# --- C.1. Từ task Triple Barrier Classification (forecasts[0]) ---
+# --- C.1. From Triple Barrier Classification task (forecasts[0]) ---
 register_node_by_spec(nms.VAR_FC_TB_PREDICTION, NodeSpec(
     CategoricalVarNode, 'Forecasted trade outcome (-1: loss, 0: timeout, 1: win)',
     return_type=SemanticType.NUMERICAL, node_type=NodeType.VARIABLE,
-    # Giá trị đã là -1, 0, 1 nên không cần mapping
+    # Values are already -1, 0, 1 so no mapping needed
     params={'path': 'forecasting_report.forecasts.0.prediction.0', 'mapping': {-1: -1.0, 0: 0.0, 1: 1.0}}
 ))
 
-# --- C.2. Từ task 5-Day Distribution Regression (forecasts[1]) ---
+# --- C.2. From 5-Day Distribution Regression task (forecasts[1]) ---
 register_node_by_spec(nms.VAR_FC_5D_MEAN_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted mean price change in 5 days (%)',
     return_type=SemanticType.PERCENTAGE, node_type=NodeType.VARIABLE,
-    # Giả định thay đổi 5% trong 5 ngày là lớn
+    # Assume 5% change in 5 days is large
     params={'path': 'forecasting_report.forecasts.1.prediction.0', 'source_range': (-2, 2), 'target_range': (-1, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_5D_STD_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted price volatility (std) in 5 days (%)', 
     return_type=SemanticType.VOLATILITY, node_type=NodeType.VARIABLE,
-    # Giả định độ lệch chuẩn 5% là rất cao
+    # Assume 5% standard deviation is very high
     params={'path': 'forecasting_report.forecasts.1.prediction.1', 'source_range': (0, 2.5), 'target_range': (0, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_5D_MAX_PCT, NodeSpec(
@@ -182,27 +182,27 @@ register_node_by_spec(nms.VAR_FC_5D_MIN_PCT, NodeSpec(
 register_node_by_spec(nms.VAR_FC_5D_Q25_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted q25 price change in 5 days (%)', 
     return_type=SemanticType.PERCENTAGE, node_type=NodeType.VARIABLE,
-    # Giả định thay đổi 5% trong 5 ngày là lớn
+    # Assume 5% change in 5 days is large
     params={'path': 'forecasting_report.forecasts.1.prediction.4', 'source_range': (-2.5, 2.5), 'target_range': (-1, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_5D_Q75_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted q75 price change in 5 days (%)', 
     return_type=SemanticType.PERCENTAGE, node_type=NodeType.VARIABLE,
-    # Giả định thay đổi 5% trong 5 ngày là lớn
+    # Assume 5% change in 5 days is large
     params={'path': 'forecasting_report.forecasts.1.prediction.5', 'source_range': (-2.5, 2.5), 'target_range': (-1, 1)}
 ))
 
-# --- C.3. Từ task 20-Day Distribution Regression (forecasts[2]) ---
+# --- C.3. From 20-Day Distribution Regression task (forecasts[2]) ---
 register_node_by_spec(nms.VAR_FC_20D_MEAN_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted mean price change in 20 days (%)',
     return_type=SemanticType.PERCENTAGE, node_type=NodeType.VARIABLE,
-    # Giả định thay đổi 10% trong 20 ngày là lớn
+    # Assume 10% change in 20 days is large
     params={'path': 'forecasting_report.forecasts.2.prediction.0', 'source_range': (-2.5, 2.5), 'target_range': (-1, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_20D_STD_PCT, NodeSpec(
     NumericalVarNode, 'Forecasted price volatility (std) in 20 days (%)', 
     return_type=SemanticType.VOLATILITY, node_type=NodeType.VARIABLE,
-    # Giả định độ lệch chuẩn 10% là rất cao
+    # Assume 10% standard deviation is very high
     params={'path': 'forecasting_report.forecasts.2.prediction.1', 'source_range': (0, 3.5), 'target_range': (0, 1)}
 ))
 register_node_by_spec(nms.VAR_FC_20D_MAX_PCT, NodeSpec(
@@ -217,18 +217,18 @@ register_node_by_spec(nms.VAR_FC_20D_MIN_PCT, NodeSpec(
 ))
 
 # ===================================================================
-# == D. BIẾN TỪ BÁO CÁO PHÂN TÍCH TIN TỨC (NEWS)
-# == Sử dụng các trường đã được tổng hợp trong SummaryReport
+# == D. VARIABLES FROM NEWS ANALYSIS REPORT
+# == Using fields already aggregated in SummaryReport
 # ===================================================================
 
-# --- D.1. Biến về số lượng (Count-based) ---
+# --- D.1. Count-based Variables ---
 
 register_node_by_spec(nms.VAR_NEWS_SUM_NUM_POSITIVE, NodeSpec(
     node_class=NumericalVarNode,
     description='Summary: Total number of news with positive sentiment',
     node_type=NodeType.VARIABLE,
     return_type=SemanticType.SENTIMENT,
-    # Giả định: 5 tin tích cực là một tín hiệu rất mạnh
+    # Assume: 5 positive news is a very strong signal
     params={'path': 'news_report.summary.num_positive_sentiment', 'source_range': (0, 5), 'target_range': (0, 1)}
 ))
 
@@ -237,7 +237,7 @@ register_node_by_spec(nms.VAR_NEWS_SUM_NUM_NEGATIVE, NodeSpec(
     description='Summary: Total number of news with negative sentiment',
     node_type=NodeType.VARIABLE,
     return_type=SemanticType.SENTIMENT,
-    # Giả định: 5 tin tiêu cực là tín hiệu rất mạnh (giá trị chuẩn hóa là 1.0, nhưng ý nghĩa là tiêu cực)
+    # Assume: 5 negative news is a very strong signal (normalized value is 1.0, but meaning is negative)
     params={'path': 'news_report.summary.num_negative_sentiment', 'source_range': (0, 5), 'target_range': (0, 1)}
 ))
 
@@ -262,14 +262,14 @@ register_node_by_spec(nms.VAR_NEWS_SUM_NUM_LOW_IMPACT, NodeSpec(
     return_type=SemanticType.SENTIMENT,
     params={'path': 'news_report.summary.num_low_impact', 'source_range': (0, 3), 'target_range': (0, 1)}
 ))
-# --- D.2. Biến về tỷ lệ/trung bình (Ratio/Average-based) ---
+# --- D.2. Ratio/Average-based Variables ---
 
 register_node_by_spec(nms.VAR_NEWS_SUM_AVG_POSITIVE_KEYWORDS, NodeSpec(
     node_class=NumericalVarNode,
     description='Summary: Average number of positive keywords found per news item',
     node_type=NodeType.VARIABLE,
     return_type=SemanticType.SENTIMENT,
-    # Giả định: Trung bình 3 từ khóa tích cực/tin là một tín hiệu mạnh
+    # Assume: Average 3 positive keywords/news is a strong signal
     params={'path': 'news_report.summary.avg_of_positive_keyword_found', 'source_range': (0, 2), 'target_range': (0, 1)}
 ))
 
@@ -286,6 +286,6 @@ register_node_by_spec(nms.VAR_NEWS_SUM_AVG_NER, NodeSpec(
     description='Summary: Average number of named entities found per news item',
     node_type=NodeType.VARIABLE,
     return_type=SemanticType.SENTIMENT,
-    # Giả định: Trung bình 5 thực thể/tin cho thấy tin tức rất cụ thể và đáng tin
+    # Assume: Average 5 entities/news indicates very specific and trustworthy news
     params={'path': 'news_report.summary.avg_of_ner_found', 'source_range': (0, 4), 'target_range': (0, 1)}
 ))

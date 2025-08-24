@@ -1,11 +1,10 @@
 # itapia_common/rules/nodes/_constant_nodes_builtin.py
 
 """
-Tệp này định nghĩa và đăng ký tất cả các ConstantNode dựng sẵn trong hệ thống.
-Bao gồm các hằng số chung và các hằng số đặc biệt cho lĩnh vực tài chính.
+This module defines and registers all built-in ConstantNode instances in the system.
+Includes both general arithmetic constants and special financial domain constants.
 """
 
-# Sử dụng import tương đối để giao tiếp với các module anh em
 from typing import Set
 import numpy as np
 from itapia_common.rules.nodes.registry import register_node_by_spec, NodeSpec
@@ -13,17 +12,18 @@ from itapia_common.rules.nodes import ConstantNode
 from itapia_common.schemas.entities.rules import SemanticType, NodeType
 from itapia_common.rules import names as nms
 
-# == A. Hằng số Số học Chung (Ephemeral Random Constants - ERCs)
-# == Mục đích: Cung cấp "vật liệu xây dựng" thô cho Evo-worker.
-# == Kiểu: NUMERICAL, không có ngữ nghĩa cụ thể.
+# ===================================================================
+# == A. General Arithmetic Constants (Ephemeral Random Constants - ERCs)
+# == Purpose: Provide raw "building materials" for the Evo-worker.
+# == Type: NUMERICAL, no specific semantics.
 # ===================================================================
 
-# Tạo một loạt các hằng số số học từ -1.0 đến 1.0
+# Create a series of arithmetic constants from -1.0 to 1.0
 const_values: Set[float] = set()
-# Thêm các giá trị chi tiết trong khoảng [-1, 1]
+# Add detailed values in the range [-1, 1]
 for value in np.round(np.arange(-1.0, 1.1, 0.1), 2):
     const_values.add(float(value))
-# Thêm các giá trị nguyên lớn hơn
+# Add larger integer values
 for value in np.round(np.arange(-5.0, 5.0, 1.0), 2):
     const_values.add(float(value))
 
@@ -47,11 +47,11 @@ for value in sorted(list(const_values)):
         )
 
 # ===================================================================
-# == B. Đăng ký các Hằng số Đặc biệt (Domain-Specific Constants)
-# == Các hằng số này là các ngưỡng kỹ thuật, cần được chuẩn hóa.
+# == B. Special Domain-Specific Constants Registration
+# == These constants are technical thresholds that need normalization.
 # ===================================================================
 
-# --- Ngưỡng cho các chỉ báo Động lượng (Momentum) ---
+# --- Thresholds for Momentum Indicators ---
 
 register_node_by_spec(
     node_name=nms.CONST_RSI_OVERBOUGHT,
@@ -116,7 +116,8 @@ register_node_by_spec(
         node_type=NodeType.CONSTANT
     )
 )
-# --- Ngưỡng cho các chỉ báo Xu hướng (Trend) ---
+
+# --- Thresholds for Trend Indicators ---
 
 register_node_by_spec(
     node_name=nms.CONST_ADX_STRONG_TREND,
@@ -127,7 +128,7 @@ register_node_by_spec(
         params={
             'value': 25.0,
             'use_normalize': True,
-            'source_range': (0, 100), # ADX cũng trong khoảng 0-100
+            'source_range': (0, 100),  # ADX is also in the range 0-100
             'target_range': (-1, 1)
         },
         node_type=NodeType.CONSTANT
@@ -143,7 +144,7 @@ register_node_by_spec(
         params={
             'value': 0.9,
             'use_normalize': True,
-            'source_range': (0, 1), # ATR cũng trong khoảng 0-100
+            'source_range': (0, 1),  # ATR is also in the range 0-100
             'target_range': (-1, 1)
         },
         node_type=NodeType.CONSTANT

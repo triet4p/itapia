@@ -1,8 +1,8 @@
 # itapia_common/rules/_rules_builtin.py
 
 """
-Tệp này định nghĩa và đăng ký các Rule dựng sẵn trong hệ thống.
-Mỗi quy tắc đều có node gốc là một Toán tử Kết luận Đặc biệt.
+This module defines and registers built-in rules in the system.
+Each rule has a root node that is a special Conclusion Operator.
 """
 
 from typing import List
