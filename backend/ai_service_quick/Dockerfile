@@ -17,6 +17,10 @@ RUN conda run -n itapia conda install -c conda-forge -y ta-lib "spacy>=3.5,<3.7"
 COPY ./ai_service_quick/requirements.txt /ai-service-quick/requirements.txt
 RUN conda run -n itapia pip install --no-cache-dir --upgrade -r /ai-service-quick/requirements.txt
 
+# Install shared dependencies first to leverage Docker layer caching
+COPY ./shared/requirements.txt /tmp/shared-itapia/requirements.txt
+RUN conda run -n itapia pip install --no-cache-dir --upgrade -r /tmp/shared-itapia/requirements.txt
+
 COPY ./shared /tmp/shared-itapia
 RUN conda run -n itapia pip install -e /tmp/shared-itapia
 

@@ -61,6 +61,11 @@ class NodeType(str, Enum):
     
     ANY = 'any'
 
+class SemanticLevel(str, Enum):
+    HIGH = 'HIGH'
+    MODERATE = 'MODERATE'
+    LOW = 'low'
+
 class NodeEntity(BaseModel):
     node_name: str
     children: Optional[List['NodeEntity']] = Field(default=None)

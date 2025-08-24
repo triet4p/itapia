@@ -1,0 +1,8 @@
+numpy==1.26.4
+pandas
+sqlalchemy
+psycopg2-binary
+python-dotenv
+redis
+pydantic
+fastapi
