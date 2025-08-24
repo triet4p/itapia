@@ -1,4 +1,9 @@
-# data_processing/scripts/fetch_universal_news.py
+"""Universal news fetching and processing pipeline.
+
+This module implements a pipeline to fetch universal news articles
+using keywords and topics from GNews API, process the data, and store it in the database.
+"""
+
 import sys
 from datetime import datetime, timezone, timedelta
 import hashlib
@@ -22,7 +27,18 @@ def _extract_news_data_by_keyword(keywords: list[str],
                        sleep_time: int = 5,
                        max_results: int = 2,
                        end_date: Optional[datetime] = None) -> list[dict]:
-    """Thực hiện thu thập dữ liệu tin tức cho một list các từ khóa."""
+    """Extract news data for a list of keywords.
+
+    Args:
+        keywords (list[str]): List of keywords to search for news.
+        period_days (int, optional): Number of days to look back for news. Defaults to 5.
+        sleep_time (int, optional): Time to wait (in seconds) between requests. Defaults to 5.
+        max_results (int, optional): Maximum number of results per keyword. Defaults to 2.
+        end_date (Optional[datetime], optional): End date for news search. Defaults to None.
+
+    Returns:
+        list[dict]: List of raw news data dictionaries.
+    """
     all_news_data = []
     
     if end_date is None:
@@ -38,7 +54,7 @@ def _extract_news_data_by_keyword(keywords: list[str],
         try:
             news_for_keyword = gnews_client.get_news(keyword)
             
-            # Gắn từ khóa vào mỗi bản tin để biết nguồn gốc
+            # Attach keyword to each article to track source
             for article in news_for_keyword:
                 article['keyword'] = keyword
                 article['prior'] = 2
@@ -48,7 +64,7 @@ def _extract_news_data_by_keyword(keywords: list[str],
         except Exception as e:
             logger.err(f"Failed to fetch news for '{keyword}'. Error: {e}")
         
-        # Luôn có độ trễ để tránh bị chặn
+        # Always delay to avoid being blocked
         time.sleep(sleep_time)
         
     return all_news_data
@@ -58,7 +74,18 @@ def _extract_news_data_by_topic(topics: list[str],
                        sleep_time: int = 5,
                        max_results: int = 20,
                        end_date: Optional[datetime] = None) -> list[dict]:
-    """Thực hiện thu thập dữ liệu tin tức cho một list các từ khóa."""
+    """Extract news data for a list of topics.
+
+    Args:
+        topics (list[str]): List of topics to search for news.
+        period_days (int, optional): Number of days to look back for news. Defaults to 5.
+        sleep_time (int, optional): Time to wait (in seconds) between requests. Defaults to 5.
+        max_results (int, optional): Maximum number of results per topic. Defaults to 20.
+        end_date (Optional[datetime], optional): End date for news search. Defaults to None.
+
+    Returns:
+        list[dict]: List of raw news data dictionaries.
+    """
     all_news_data = []
     if end_date is None:
         gnews_client = GNews(language='en', country='US', max_results=max_results, period=f'{period_days}d')
@@ -72,7 +99,7 @@ def _extract_news_data_by_topic(topics: list[str],
         try:
             news_for_keyword = gnews_client.get_news(topic)
             
-            # Gắn từ khóa vào mỗi bản tin để biết nguồn gốc
+            # Attach topic to each article to track source
             for article in news_for_keyword:
                 article['keyword'] = topic
                 article['prior'] = 1
@@ -82,61 +109,97 @@ def _extract_news_data_by_topic(topics: list[str],
         except Exception as e:
             logger.err(f"Failed to fetch news for '{topic}'. Error: {e}")
         
-        # Luôn có độ trễ để tránh bị chặn
+        # Always delay to avoid being blocked
         time.sleep(sleep_time)
         
     return all_news_data
 
 def _normalize_text(text: str) -> str:
-    """Chuẩn hóa văn bản để tạo định danh nhất quán."""
+    """Normalize text to create consistent identifiers.
+
+    Args:
+        text (str): Text to normalize.
+
+    Returns:
+        str: Normalized text.
+    """
     if not text:
         return ""
-    # Chuyển về chữ thường
+    # Convert to lowercase
     text = text.lower()
-    # Loại bỏ dấu câu
+    # Remove punctuation
     text = re.sub(r'[^\w\s]', '', text)
-    # Loại bỏ khoảng trắng thừa
+    # Remove extra whitespace
     text = " ".join(text.split())
     return text
 
 def _normalize_url(url: str) -> str:
-    """Chuẩn hóa URL để loại bỏ các yếu tố không cần thiết."""
+    """Normalize URL to remove unnecessary elements.
+
+    Args:
+        url (str): URL to normalize.
+
+    Returns:
+        str: Normalized URL.
+    """
     if not url:
         return ""
     parsed = urlparse(url)
-    # Xây dựng lại URL chỉ với các thành phần cốt lõi, bỏ qua query params, fragment
-    # Có thể tùy chỉnh để giữ lại một số query params quan trọng nếu cần
+    # Reconstruct URL with core components only, ignoring query params, fragment
+    # Can be customized to keep important query params if needed
     clean_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', '', ''))
-    # Đảm bảo có trailing slash hoặc không có để nhất quán
+    # Ensure consistent trailing slash or no trailing slash
     return clean_url.lower()
 
 def _generate_article_uuid(link: str, title: str) -> str:
-    """
-    Tạo UUID v5 duy nhất và nhất quán cho một phiên bản bài báo cụ thể
-    dựa trên link và title đã được chuẩn hóa.
+    """Generate a unique and consistent UUID v5 for a specific article based on normalized link and title.
+
+    Args:
+        link (str): Article URL.
+        title (str): Article title.
+
+    Returns:
+        str: UUID v5 string.
     """
     normalized_link = _normalize_url(link)
     normalized_title = _normalize_text(title)
     
-    # Sử dụng một ký tự phân tách rõ ràng để tránh va chạm
-    # Ví dụ: link='ab', title='c' và link='a', title='bc' đều tạo ra 'abc'
-    # 'ab|c' và 'a|bc' sẽ khác nhau.
+    # Use a clear separator to avoid collisions
+    # Example: link='ab', title='c' and link='a', title='bc' both create 'abc'
+    # 'ab|c' and 'a|bc' will be different.
     canonical_string = f"{normalized_link}|{normalized_title}"
     
     return str(uuid.uuid5(uuid.NAMESPACE_URL, canonical_string))
 
 def _create_content_hash(text: str) -> str:
-    """Tạo một hash SHA-256 từ văn bản đã được chuẩn hóa."""
+    """Create a SHA-256 hash from normalized text.
+
+    Args:
+        text (str): Text to hash.
+
+    Returns:
+        str: SHA-256 hash string.
+    """
     normalized = _normalize_text(text)
-    # Dùng SHA-256 để có độ an toàn cao và gần như không thể trùng lặp
+    # Use SHA-256 for high security and near-impossibility of collisions
     return hashlib.sha256(normalized.encode('utf-8')).hexdigest()
 
 def _transform_element(element: dict):
-    """Chuyển đổi một dictionary tin tức từ gnews sang schema CSDL."""
+    """Transform a GNews dictionary into the database schema.
+
+    Args:
+        element (dict): Raw news data from GNews.
+
+    Returns:
+        dict: Transformed news data compatible with database schema.
+
+    Raises:
+        FetchException: If required fields are missing from the news data.
+    """
     transformed = {}
     
-    # GNews không có UUID sẵn, chúng ta sẽ tạo dựa trên link hoặc uuid4
-    # Sử dụng link làm base để tạo UUID ổn định hơn, tránh trùng lặp
+    # GNews doesn't provide UUID, we'll create one based on link or uuid4
+    # Use link as base to create more stable UUID, avoiding duplicates
     link = element.get('url')
     title = element.get('title')
     if (not link) or (not title):
@@ -150,14 +213,14 @@ def _transform_element(element: dict):
     
     transformed['title_hash'] = _create_content_hash(title)
 
-    # GNews không có summary, có thể dùng description
+    # GNews doesn't have summary, can use description
     transformed['summary'] = element.get('description', '')
     
-    # Xử lý thời gian
+    # Process time
     pub_date_str = element.get('published date')
     if pub_date_str:
-        # Format của gnews: 'Tue, 18 Jun 2024 10:00:00 GMT'
-        # Chúng ta cần parse nó
+        # GNews format: 'Tue, 18 Jun 2024 10:00:00 GMT'
+        # Need to parse it
         try:
             transformed['publish_time'] = datetime.strptime(
                 pub_date_str, '%a, %d %b %Y %H:%M:%S %Z'
@@ -169,18 +232,26 @@ def _transform_element(element: dict):
 
     transformed['collect_time'] = datetime.now(timezone.utc)
 
-    # Lấy thông tin nhà cung cấp
-    publisher_info = element.get('publisher') # Đây là dict
+    # Get publisher information
+    publisher_info = element.get('publisher') # This is a dict
     transformed['provider'] = publisher_info.get('title', '') if publisher_info else ''
     transformed['link'] = link
     
-    # Thêm từ khóa
+    # Add keyword
     transformed['keyword'] = element['keyword']
     transformed['news_prior'] = element['prior']
 
     return transformed
 
 def _transform(data: list[dict]):
+    """Transform raw news data into database schema.
+
+    Args:
+        data (list[dict]): List of raw news data dictionaries.
+
+    Returns:
+        list[dict]: List of transformed news data dictionaries.
+    """
     transformed_data = []
     for element in data:
         try:
@@ -197,8 +268,16 @@ def full_pipeline(news_service: DataNewsService,
                   max_results: int = 20,
                   sleep_time: int = 5,
                   end_date: Optional[datetime] = None):
-    """
-    Thực thi pipeline hoàn chỉnh để thu thập tin tức universal.
+    """Execute complete pipeline to fetch universal news.
+
+    Args:
+        news_service (DataNewsService): Service to manage news data storage.
+        keywords (list[str]): List of keywords to search for news.
+        topics (list[str]): List of topics to search for news.
+        period_days (int, optional): Number of days to look back for news. Defaults to 5.
+        max_results (int, optional): Maximum number of results per search. Defaults to 20.
+        sleep_time (int, optional): Time to wait (in seconds) between requests. Defaults to 5.
+        end_date (Optional[datetime], optional): End date for news search. Defaults to None.
     """
     try:
         logger.info(f'Getting universal news for {len(keywords)} keywords...')

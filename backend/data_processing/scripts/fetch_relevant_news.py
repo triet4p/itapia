@@ -1,3 +1,9 @@
+"""Stock news fetching and processing pipeline.
+
+This module implements a pipeline to fetch relevant stock news
+from Yahoo Finance, process the data, and store it in the database.
+"""
+
 from datetime import datetime, timezone
 import time
 
@@ -16,7 +22,16 @@ logger = ITAPIALogger('Relevant news Processor')
 def _extract_news_data(tickers: list[str],
                        sleep_time: int = 5,
                        max_news: int = 10) -> list[dict]:
-    """Thực hiện thu thập dữ liệu tin tức của một list các cổ phiếu trong một khung thời gian"""
+    """Extract news data for a list of stock tickers.
+
+    Args:
+        tickers (list[str]): List of stock ticker symbols to fetch news for.
+        sleep_time (int, optional): Time to wait (in seconds) between requests. Defaults to 5.
+        max_news (int, optional): Maximum number of news items per ticker. Defaults to 10.
+
+    Returns:
+        list[dict]: List of raw news data dictionaries.
+    """
     data = []
     for ticker in tickers:
         new_data = yf.Ticker(ticker).get_news(max_news, 'news')
@@ -33,50 +48,69 @@ def _extract_news_data(tickers: list[str],
     return data
 
 def _transform_element(element: dict):
+    """Transform a single news element into the database schema.
+
+    Args:
+        element (dict): Raw news data from Yahoo Finance.
+
+    Returns:
+        dict: Transformed news data compatible with database schema.
+
+    Raises:
+        FetchException: If required fields are missing from the news data.
+    """
     transformed = {}
     
-    # Sử dụng uuid.uuid4() làm fallback nếu 'id' không tồn tại
+    # Use uuid.uuid4() as fallback if 'id' doesn't exist
     transformed['news_uuid'] = element.get('id')
     if transformed['news_uuid'] is None:
         transformed['news_uuid'] = str(uuid.uuid4())
         logger.warn('Use UUID generate alternative!')
     
     content = element.get('content')
-    if not content: # Kiểm tra cả None và dictionary rỗng
+    if not content: # Check for both None and empty dictionary
         raise FetchException(f"News with id {transformed['news_uuid']} do not have 'content'")
     
-    # Lấy các giá trị đơn giản
+    # Get simple values
     transformed['title'] = content.get('title')
-    if not transformed['title']: # Tiêu đề là bắt buộc
+    if not transformed['title']: # Title is required
         raise FetchException(f"News with id {transformed['news_uuid']} do not have 'title'")
 
-    transformed['summary'] = content.get('summary', '') # Mặc định là chuỗi rỗng nếu thiếu
+    transformed['summary'] = content.get('summary', '') # Default to empty string if missing
     
-    # Xử lý thời gian một cách an toàn
+    # Safely process time
     pub_date_str = content.get('pubDate')
     if pub_date_str:
-        # yfinance trả về timestamp (int), cần chuyển đổi
+        # yfinance returns timestamp (int), needs conversion
         transformed['publish_time'] = datetime.fromisoformat(pub_date_str)
     else:
-        # Nếu không có ngày xuất bản, chúng ta không thể sử dụng tin này
+        # If no publication date, we can't use this news
         raise FetchException(f"News with id {transformed['news_uuid']} do not have 'pubDate'")
 
     transformed['collect_time'] = datetime.now(timezone.utc)
 
-    # Lấy 'provider' một cách an toàn
-    provider_info = content.get('provider') # Có thể là dict hoặc None
+    # Safely get 'provider'
+    provider_info = content.get('provider') # Could be dict or None
     transformed['provider'] = provider_info.get('displayName', '') if provider_info else ''
 
-    # Lấy 'link' một cách an toàn
-    click_through_info = content.get('clickThroughUrl') # Có thể là dict hoặc None
+    # Safely get 'link'
+    click_through_info = content.get('clickThroughUrl') # Could be dict or None
     transformed['link'] = click_through_info.get('url', '') if click_through_info else ''
     
-    # Lấy 'ticker' từ một cấp cao hơn nếu có
+    # Get 'ticker' from a higher level if available
     transformed['ticker'] = element['ticker']
 
     return transformed
 
 def _transform(data: list[dict]):
+    """Transform raw news data into database schema.
+
+    Args:
+        data (list[dict]): List of raw news data dictionaries.
+
+    Returns:
+        list[dict]: List of transformed news data dictionaries.
+    """
     transformed_data = []
     for element in data:
         try:
@@ -90,18 +124,19 @@ def full_pipeline(metadata_service: DataMetadataService,
                   news_service: DataNewsService,
                   max_news: int = 10,
                   sleep_time: int = 5):
-    """Thực thi pipeline hoàn chỉnh để thu thập tin tức liên quan đến các cổ phiếu.
+    """Execute complete pipeline to fetch stock-relevant news.
 
-    Quy trình bao gồm:
-    1. Lấy danh sách tất cả các ticker đang hoạt động từ DB manager.
-    2. Lặp qua từng ticker, gọi API của yfinance để lấy tin tức.
-    3. Chuyển đổi và chuẩn hóa dữ liệu tin tức thô.
-    4. Ghi các tin tức mới vào cơ sở dữ liệu, bỏ qua nếu đã tồn tại.
+    Process:
+    1. Get list of all active tickers from database.
+    2. Iterate through each ticker, call yfinance API to get news.
+    3. Transform and normalize raw news data.
+    4. Write new news to database, skipping if already exists.
 
     Args:
-        table_name (str): Tên bảng trong CSDL để lưu dữ liệu (ví dụ: 'relevant_news').
-        max_news (int, optional): Số lượng tin tức tối đa lấy cho mỗi ticker. Mặc định là 10.
-        sleep_time (int, optional): Thời gian nghỉ (giây) giữa các request API. Mặc định là 5.
+        metadata_service (DataMetadataService): Service to access ticker metadata.
+        news_service (DataNewsService): Service to manage news data storage.
+        max_news (int, optional): Maximum number of news items per ticker. Defaults to 10.
+        sleep_time (int, optional): Time to wait (in seconds) between API requests. Defaults to 5.
     """
     
     try:

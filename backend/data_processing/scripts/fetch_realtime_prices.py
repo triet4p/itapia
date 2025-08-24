@@ -1,3 +1,9 @@
+"""Real-time stock price fetching and processing pipeline.
+
+This module implements a pipeline to fetch real-time stock prices
+from Yahoo Finance at scheduled intervals and store them in Redis.
+"""
+
 from datetime import datetime, timezone
 import time
 import pytz
@@ -14,25 +20,30 @@ from itapia_common.logger import ITAPIALogger
 logger = ITAPIALogger('Realtime Price Processor')
 
 def _is_market_open_for_ticker(ticker_info: dict) -> bool:
-    """
-    Kiểm tra xem thị trường có đang mở cửa cho một ticker cụ thể không,
-    dựa trên thông tin metadata của nó.
+    """Check if the market is open for a specific ticker based on its metadata.
+
+    Args:
+        ticker_info (dict): Dictionary containing ticker metadata including
+            timezone, open_time, and close_time.
+
+    Returns:
+        bool: True if the market is open for the ticker, False otherwise.
     """
     try:
-        # Lấy thông tin từ cache
+        # Get information from cache
         tz_str = ticker_info['timezone']
-        #open_time_str = ticker_info['open_time'] # Ví dụ: "09:30:00"
-        #close_time_str = ticker_info['close_time'] # Ví dụ: "16:00:00"
+        #open_time_str = ticker_info['open_time'] # Example: "09:30:00"
+        #close_time_str = ticker_info['close_time'] # Example: "16:00:00"
 
         open_time = ticker_info['open_time']
         close_time = ticker_info['close_time']
         
-        # Lấy thời gian hiện tại theo đúng múi giờ của sàn
+        # Get current time in the exchange's timezone
         tz = pytz.timezone(tz_str)
         local_dt = datetime.now(tz)
         local_time = local_dt.time()
         
-        # Kiểm tra ngày trong tuần
+        # Check if it's a weekday
         is_weekday = local_dt.isoweekday() <= 5
         
         return is_weekday and open_time <= local_time < close_time
@@ -42,7 +53,12 @@ def _is_market_open_for_ticker(ticker_info: dict) -> bool:
         return False
     
 def _process_single_ticker(ticker_sym: str, prices_service: DataPricesService):
+    """Process a single ticker to fetch and store its real-time price data.
 
+    Args:
+        ticker_sym (str): Ticker symbol to process.
+        prices_service (DataPricesService): Service to manage price data storage.
+    """
     info = yf.Ticker(ticker_sym).fast_info
     
     required_keys = ['lastPrice', 'dayHigh', 'dayLow', 'open', 'lastVolume']
@@ -66,26 +82,26 @@ def _process_single_ticker(ticker_sym: str, prices_service: DataPricesService):
 def full_pipeline(metadata_service: DataMetadataService,
                   prices_service: DataPricesService,
                   relax_time: int = 2):
-    """Pipeline chính, chạy định kỳ để lấy dữ liệu giá real-time.
+    """Main pipeline that runs periodically to fetch real-time price data.
 
-    Nó lặp qua tất cả các ticker đang hoạt động, kiểm tra xem thị trường của
-    ticker đó có đang mở cửa không. Nếu có, nó sẽ gọi yfinance để lấy giá
-    mới nhất và ghi vào Redis Stream.
+    It iterates through all active tickers, checks if the market for that
+    ticker is open. If so, it calls yfinance to get the latest price
+    and writes it to Redis Stream.
 
     Args:
-        db_mng (PostgreDBManager): Instance của DB manager.
-        redis_mng (RedisManager): Instance của Redis manager.
-        relax_time (int, optional): Thời gian nghỉ (giây) giữa các request. Mặc định là 2.
+        metadata_service (DataMetadataService): Service to access ticker metadata.
+        prices_service (DataPricesService): Service to manage price data storage.
+        relax_time (int, optional): Time to wait (in seconds) between requests. Defaults to 2.
     """
     logger.info(f"--- RUNNING REAL-TIME PIPELINE at {datetime.now().isoformat()} ---")
     
-    # 1. Lấy thông tin của tất cả các ticker đang hoạt động từ cache
-    # Thao tác này rất nhanh vì dữ liệu đã có trong bộ nhớ
+    # 1. Get information for all active tickers from cache
+    # This operation is fast because data is already in memory
     logger.info("Getting metadata of all tickers ...")
     active_tickers_info = metadata_service.metadata_cache
     tickers_to_process = []
     
-    # 2. Lọc ra danh sách các ticker cần xử lý ngay bây giờ
+    # 2. Filter list of tickers that need to be processed right now
     for ticker, info in active_tickers_info.items():
         if _is_market_open_for_ticker(info):
             tickers_to_process.append(ticker)
@@ -98,23 +114,23 @@ def full_pipeline(metadata_service: DataMetadataService,
         
     logger.info(f"Markets open for {len(tickers_to_process)} tickers: {tickers_to_process[:5]}...")
     
-    # 3. Xử lý các ticker đã lọc
+    # 3. Process filtered tickers
     for ticker in tickers_to_process:
         try:
             _process_single_ticker(ticker, prices_service)
         except Exception as e:
-            # Bắt lỗi chung để pipeline không bị sập
+            # Catch general exception to prevent pipeline crash
             logger.err(f'Unknown Error processing ticker {ticker}: {e}')
         
-        time.sleep(relax_time) # Nghỉ một chút giữa các ticker
+        time.sleep(relax_time) # Pause between tickers
 
     logger.info('--- COMPLETED PIPELINE CYCLE ---')
         
 def main_orchestrator():
-    """Điểm vào chính, thiết lập và chạy lịch trình thu thập dữ liệu real-time.
+    """Main entry point that sets up and runs the real-time data collection schedule.
 
-    Hàm này khởi tạo các manager cần thiết và sử dụng thư viện `schedule`
-    để lặp lại việc gọi `full_pipeline` theo một chu kỳ cố định (ví dụ: mỗi phút).
+    This function initializes the required services and uses the `schedule`
+    library to repeatedly call `full_pipeline` at fixed intervals (e.g., every minute).
     """
     logger.info("--- REAL-TIME ORCHESTRATOR (SCHEDULE-BASED) HAS BEEN STARTED ---")
     
@@ -136,10 +152,10 @@ def main_orchestrator():
     # schedule.every().hour.at(":40").do(partial_job)
     # schedule.every().hour.at(":50").do(partial_job)
         
-    # Vòng lặp thực thi
+    # Execution loop
     while True:
         schedule.run_pending()
-        # Nghỉ 5 giây để tránh CPU load 100%
+        # Sleep 5 seconds to avoid 100% CPU load
         time.sleep(5)
         
 if __name__ == '__main__':

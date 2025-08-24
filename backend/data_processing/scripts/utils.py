@@ -1,39 +1,52 @@
+"""Utility functions and constants for data processing scripts.
+
+This module contains utility classes, constants, and functions used across
+the data processing scripts for fetching and processing financial data.
+"""
+
 from datetime import datetime, timezone
 
 class FetchException(Exception):
+    """Custom exception for data fetching errors."""
+    
     def __init__(self, msg: str):
+        """Initialize the exception with a message.
+        
+        Args:
+            msg (str): Error message.
+        """
         super().__init__()
         self.msg = msg
     
 DEFAULT_RETURN_DATE = datetime(2017, 12, 31, tzinfo=timezone.utc)
 
-# Tiếng Anh (cho thị trường Mỹ)
+# English keywords (for US market)
 UNIVERSAL_KEYWORDS_EN = [
-    # Vĩ mô & Chính sách
+    # Macro & Policy
     "US economy forecast",
     "Federal Reserve policy",
     "US inflation report CPI",
     "Non-farm payrolls",
     "US GDP growth",
     
-    # Thị trường chung
+    # General Market
     "S&P 500 outlook",
     "NASDAQ composite trends",
     "stock market sentiment",
     
-    # Hàng hóa & Năng lượng
+    # Commodities & Energy
     "oil price forecast WTI crude",
     "OPEC decisions",
     
-    # Ngành Công nghệ
+    # Technology Sector
     "semiconductor industry news",
     "artificial intelligence stocks",
     "cloud computing sector",
     
-    # Ngành Tài chính
+    # Financial Sector
     "US banking sector health",
     
-    # Ngành Chăm sóc sức khỏe
+    # Healthcare Sector
     "pharmaceutical industry FDA",
 ]
 
@@ -49,25 +62,25 @@ UNIVERSAL_TOPIC_EN = [
     'ECONOMY'
 ]
 
-# Tiếng Việt (cho thị trường Việt Nam)
+# Vietnamese keywords (for Vietnamese market)
 UNIVERSAL_KEYWORDS_VI = [
-    # Vĩ mô & Chính sách
+    # Macro & Policy
     "kinh tế vĩ mô Việt Nam",
     "lãi suất ngân hàng nhà nước",
     "lạm phát Việt Nam CPI",
     "tăng trưởng GDP Việt Nam",
     "chính sách tiền tệ",
     
-    # Thị trường chung
+    # General Market
     "nhận định thị trường chứng khoán VN-Index",
     "khối ngoại bán ròng",
     
-    # Ngành Bất động sản
+    # Real Estate Sector
     "thị trường bất động sản",
     
-    # Ngành Ngân hàng
+    # Banking Sector
     "cổ phiếu ngân hàng",
     
-    # Ngành Thép
+    # Steel Sector
     "giá thép xây dựng HRC",
 ]
