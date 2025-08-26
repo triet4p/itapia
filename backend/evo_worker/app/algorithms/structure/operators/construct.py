@@ -15,15 +15,16 @@ class InitOperator(ABC):
     
     def __init__(self, purpose: SemanticType):
         # Kiểm tra chặt chẽ hơn
-        self.allowed_purposes = {
+        self.final_purposes = {
             SemanticType.DECISION_SIGNAL, 
             SemanticType.OPPORTUNITY_RATING, 
             SemanticType.RISK_LEVEL
         }
-        if purpose not in self.allowed_purposes:
-            raise ValueError(f'Invalid purpose for a root rule: {purpose}')
         self.purpose = purpose
     
+        # Sử dụng instance Random riêng để đảm bảo khả năng tái tạo
+        self._random = random.Random(cfg.RANDOM_SEED)
+        
     @abstractmethod
     def __call__(self) -> Individual:
         pass
@@ -39,9 +40,6 @@ class RandomMaxDepthInitOperator(InitOperator):
         self.terminals_by_type: Dict[SemanticType, List[str]] = get_terminals_by_type()
         self.operators_by_type: Dict[SemanticType, List[str]] = get_operators_by_type()
     
-        # Sử dụng instance Random riêng để đảm bảo khả năng tái tạo
-        self._random = random.Random(cfg.RANDOM_SEED)
-        
         # 1. Lấy tập hợp tất cả các kiểu có terminal tương ứng
         self.types_with_terminals = set(self.terminals_by_type.keys())
         
@@ -84,7 +82,6 @@ class RandomMaxDepthInitOperator(InitOperator):
         possible_operators = specific_operators + any_return_operators + any_numeric_return_operators
         
         has_operators = len(possible_operators) > 0
-        print(f'is_max_depth: {is_max_depth}, has_operators: {has_operators}, required_type: {required_type}')
         
         # Quyết định có tạo terminal hay không
         # Phải tạo terminal nếu: ở độ sâu tối đa HOẶC không có operator nào phù hợp
@@ -98,7 +95,6 @@ class RandomMaxDepthInitOperator(InitOperator):
                 raise ValueError(f"Could not find a terminal for required type '{required_type}' at depth {current_depth}.")
             
             terminal_name = self._random.choice(possible_terminals)
-            print(terminal_name)
             return create_node(terminal_name)
         else:
             # --- Tạo một Operator Node (nút trong) ---
@@ -109,15 +105,14 @@ class RandomMaxDepthInitOperator(InitOperator):
             args_types = list(op_spec.args_type)
             resolved_types: Dict[SemanticType, SemanticType] = {}
             
-            for arg_type in args_types:
-                if arg_type.concreates and arg_type not in resolved_types.keys():
+            for arg_type in set(args_types):
+                if arg_type.concreates:
                     if op_spec.return_type == arg_type:
                         resolved_types[arg_type] = required_type
                     else:
                         resolved_types[arg_type] = self._get_concrete_type(arg_type)
                 
             final_args_type = [resolved_types.get(t, t) for t in args_types]
-            print(f'op name: {op_name}, children: {final_args_type}')
             
             children = [
                 self._grow_tree(current_depth + 1, child_type)

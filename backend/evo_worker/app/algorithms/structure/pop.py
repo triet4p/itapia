@@ -1,3 +1,4 @@
+import uuid
 from itapia_common.rules.rule import Rule
 from app.backtest.evaluator import ObjectiveValues, FitnessEvaluator
 from app.backtest.metrics import BacktestPerformanceMetrics
@@ -11,6 +12,13 @@ class Individual:
     def cal_fitness(self, evaluator: FitnessEvaluator) -> ObjectiveValues:
         self.fitness, self.metrics = evaluator.evaluate(self.chromosome)
         return self.fitness
+    
+    @staticmethod
+    def from_rule(rule: Rule) -> 'Individual':
+        new_ind = Individual()
+        new_ind.chromosome = rule
+    
+        return new_ind
     
 class Population:
     def __init__(self, population_size: int):

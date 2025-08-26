@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime, timezone
+from copy import deepcopy
 from typing import Dict, Any
 
 # Assuming these modules exist and contain the corresponding functions
@@ -157,3 +158,6 @@ class Rule:
             # Pass the reconstructed logic tree
             root=root_node
         )
+        
+    def copy(self):
+        return deepcopy(self)
