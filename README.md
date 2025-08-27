@@ -167,7 +167,7 @@ itapia/
 
 ### Tutorials
 To understand the development process, roles, and responsibilities of each component, you can read the:
-*   **[Tutorials](./doc/tutorials/index.md)**
+*   **[Tutorials](https://code2tutorial.com/tutorial/d3f6570c-01c8-48f7-b9df-51b759f36261/index.md)**
 
 
 ---
