@@ -8,6 +8,8 @@ class Individual:
         self.chromosome: Rule = None
         self.fitness: ObjectiveValues = None
         self.metrics: BacktestPerformanceMetrics = None
+        self.crowding_distance: float = 0.0
+        self.rank: int = -1
     
     def cal_fitness(self, evaluator: FitnessEvaluator) -> ObjectiveValues:
         self.fitness, self.metrics = evaluator.evaluate(self.chromosome)

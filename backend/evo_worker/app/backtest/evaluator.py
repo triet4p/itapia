@@ -149,6 +149,7 @@ class SingleContextFitnessEvaluator(FitnessEvaluator):
 
         # Mục tiêu 2: Tỷ lệ Sharpe. Giá trị âm không tốt, coi là 0.
         obj_sharpe_ratio = max(0.0, metrics.sharpe_ratio)
+        obj_sortino_ratio = max(0.0, metrics.sortino_ratio)
         
         # Mục tiêu 3: Khả năng chịu đựng (Resilience).
         # max_drawdown_pct (càng thấp càng tốt) -> 1 - max_drawdown_pct (càng cao càng tốt).
@@ -164,16 +165,20 @@ class SingleContextFitnessEvaluator(FitnessEvaluator):
         # Mục tiêu 6: Số lượng giao dịch.
         # Đây có thể là một mục tiêu phụ, nhưng hữu ích để tránh các rule chỉ thắng 1 trade.
         obj_num_trades = float(metrics.num_trades)
+        
+        obj_stability = 1.0 / (1.0 + metrics.annual_return_stability)
 
         # Trả về một tuple chứa các giá trị mục tiêu theo một thứ tự cố định.
         # Thuật toán NSGA-II sẽ sử dụng tuple này để so sánh các rule.
         objectives = (
             obj_total_return,
             obj_sharpe_ratio,
+            obj_sortino_ratio,
             obj_resilience,
             obj_win_rate,
             obj_profit_factor,
-            obj_num_trades
+            obj_num_trades,
+            obj_stability
         )
         
         # Đảm bảo tất cả các giá trị đều là số hữu hạn

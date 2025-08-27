@@ -12,3 +12,5 @@ class BacktestPerformanceMetrics(BaseModel):
     win_rate_pct: float = Field(default=0.0)
     profit_factor: float = Field(default=0.0)
     sharpe_ratio: float = Field(default=0.0)
+    sortino_ratio: float = Field(default=0.0)
+    annual_return_stability: float = Field(default=0.0)

@@ -164,6 +164,61 @@ class PerformanceMetrics:
         # (Lợi nhuận trung bình / Độ lệch chuẩn) * sqrt(252) để ra Tỷ lệ Sharpe hàng năm
         sharpe_ratio = (excess_returns.mean() / excess_returns.std()) * np.sqrt(252)
         return sharpe_ratio
+    
+    def calculate_sortino_ratio(self) -> float:
+        """Tính toán Tỷ lệ Sortino."""
+        if self.trades_df.empty or len(self.trades_df) < 2:
+            return 0.0
+            
+        equity_curve = self.calculate_equity_curve()
+        daily_returns = equity_curve.pct_change().dropna()
+        
+        # Chỉ xét các khoản lợi nhuận âm (thua lỗ)
+        negative_returns = daily_returns[daily_returns < 0]
+        
+        if negative_returns.empty:
+            # Nếu không có ngày nào thua lỗ, rủi ro là 0.
+            # Để tránh chia cho 0, ta có thể trả về một giá trị rất lớn nếu có lợi nhuận.
+            return 9999.0 if daily_returns.mean() > 0 else 0.0
+            
+        downside_std = negative_returns.std()
+        
+        if downside_std == 0:
+            return 0.0
+
+        excess_returns = daily_returns - self.risk_free_rate_daily
+        sortino_ratio = (excess_returns.mean() / downside_std) * np.sqrt(252)
+        return sortino_ratio
+    
+    def calculate_annual_return_stability(self) -> float:
+        """
+        Đo lường sự ổn định của lợi nhuận qua các năm.
+        Trả về độ lệch chuẩn của lợi nhuận hàng năm. Càng thấp càng tốt.
+        """
+        if self.trades_df.empty:
+            return 999
+        
+        # Đảm bảo cột return_pct tồn tại
+        if 'return_pct' not in self.trades_df.columns:
+            self.trades_df['return_pct'] = self.trades_df['profit_pct'] * self.trades_df['position_size_pct']
+
+        # Nhóm các giao dịch theo năm và tính tổng lợi nhuận
+        # Lưu ý: Đây là phép cộng đơn giản, không phải lợi nhuận kép, để đánh giá hiệu suất thô
+        annual_returns = self.trades_df['return_pct'].resample('YE').sum()
+        
+        if len(annual_returns) < 2:
+            # Thay vì trả về 0.0 (hoàn hảo), hãy kiểm tra xem khoảng thời gian
+            # thực tế của các giao dịch có kéo dài hơn một năm không.
+            if not self.trades_df.empty:
+                trade_duration = self.trades_df.index.max() - self.trades_df.index.min()
+                if trade_duration.days < 365:
+                    # Nếu chiến lược chỉ tồn tại dưới 1 năm, nó không ổn định.
+                    # Trả về một giá trị phạt lớn. 1.0 là một độ lệch chuẩn rất cao.
+                    return 1.0 
+            
+            return 0.02
+            
+        return annual_returns.std(ddof=0)
 
     def summary(self) -> BacktestPerformanceMetrics:
         """
@@ -178,5 +233,7 @@ class PerformanceMetrics:
             max_drawdown_pct = self.calculate_max_drawdown(),
             win_rate_pct = self.calculate_win_rate(),
             profit_factor = self.calculate_profit_factor(),
-            sharpe_ratio = self.calculate_sharpe_ratio()
+            sharpe_ratio = self.calculate_sharpe_ratio(),
+            sortino_ratio = self.calculate_sortino_ratio(),
+            annual_return_stability=self.calculate_annual_return_stability()
         )
