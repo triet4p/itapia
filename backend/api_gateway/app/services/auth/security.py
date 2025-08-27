@@ -3,10 +3,28 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Union
 from urllib.parse import urlencode
 from jose import jwt, JWTError
-from app.core.config import JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, GOOGLE_CLIENT_ID, BACKEND_CALLBACK_URL
+from app.core.config import (
+    JWT_SECRET_KEY, 
+    JWT_ALGORITHM, 
+    ACCESS_TOKEN_EXPIRE_MINUTES, 
+    GOOGLE_CLIENT_ID, 
+    BACKEND_CALLBACK_URL,
+    GOOGLE_AUTH_URL,
+    GOOGLE_OAUTH_SCOPES
+)
 from app.core.exceptions import ServerCredError
 
 def create_access_token(subject: Union[str, Any], expires_delta: timedelta = None) -> str:
+    """Create a new access token for a subject.
+    
+    Args:
+        subject (Union[str, Any]): Subject for which the token is created (usually user ID)
+        expires_delta (timedelta, optional): Token expiration time. 
+            Defaults to ACCESS_TOKEN_EXPIRE_MINUTES if not provided.
+            
+    Returns:
+        str: Encoded JWT token
+    """
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -17,6 +35,17 @@ def create_access_token(subject: Union[str, Any], expires_delta: timedelta = Non
     return encoded_jwt
 
 def verify_access_token(token: str) -> dict:
+    """Verify the access token and return its payload.
+    
+    Args:
+        token (str): JWT token to verify
+        
+    Returns:
+        dict: Decoded token payload
+        
+    Raises:
+        ServerCredError: If token verification fails
+    """
     credentials_exception = ServerCredError(
         detail="Could not validate credentials",
         header={"WWW-Authenticate": "Bearer"},
@@ -28,28 +57,26 @@ def verify_access_token(token: str) -> dict:
         raise credentials_exception
     
 def get_authorized_url():
-    """
-    Tạo và trả về URL để người dùng bắt đầu luồng đăng nhập với Google.
+    """Create and return the URL for users to start the Google login flow.
+    
+    Returns:
+        str: Google OAuth authorization URL
+        
+    Raises:
+        ServerCredError: If Google Client ID is not configured
     """
     if not GOOGLE_CLIENT_ID:
         raise ServerCredError(detail="Google Client ID is not configured.", header=None)
-
-    scopes = [
-        "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "openid"
-    ]
 
     params = {
         "response_type": "code",
         "client_id": GOOGLE_CLIENT_ID,
         "redirect_uri": BACKEND_CALLBACK_URL,
-        "scope": " ".join(scopes),
+        "scope": " ".join(GOOGLE_OAUTH_SCOPES),
         "access_type": "offline",
         "prompt": "consent"
     }
 
-    google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
-    authorization_url = f"{google_auth_url}?{urlencode(params)}"
+    authorization_url = f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
     
     return authorization_url

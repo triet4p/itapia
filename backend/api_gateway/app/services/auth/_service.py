@@ -9,6 +9,20 @@ def get_current_user(
     user_service: UserService,
     token: str,
 ) -> UserEntity:
+    """Get the current user based on the provided token.
+    
+    Validates the token and retrieves the corresponding user from the database.
+    
+    Args:
+        user_service (UserService): UserService instance for user operations
+        token (str): Access token to validate
+        
+    Returns:
+        UserEntity: The authenticated user
+        
+    Raises:
+        AuthError: If token validation fails or user is not found
+    """
     try:
         payload = verify_access_token(token)
         token_payload = TokenPayload.model_validate(payload)

@@ -24,14 +24,6 @@ def google_login():
 @router.get("/auth/google/callback")
 async def google_callback(code: str, 
                           user_service: UserService = Depends(get_users_service)):
-    """
-    Endpoint mà Google gọi lại. Xử lý logic chính:
-    1. Đổi code lấy token Google.
-    2. Lấy thông tin user từ Google.
-    3. Tìm hoặc tạo user trong CSDL.
-    4. Tạo JWT của ITAPIA.
-    5. Redirect về frontend kèm theo JWT.
-    """
     try:
         # 1 & 2. Lấy token và thông tin user từ Google
         google_tokens = await google.get_google_tokens(code=code)

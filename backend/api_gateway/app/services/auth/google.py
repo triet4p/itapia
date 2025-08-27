@@ -1,14 +1,23 @@
 # api_gateway/app/auth/google.py
 import httpx
-from fastapi import HTTPException, status
+from fastapi import status
 from app.core.config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, BACKEND_CALLBACK_URL, \
     GOOGLE_TOKEN_URL, GOOGLE_USERINFO_URL
+from app.core.exceptions import ServerCredError
     
 from itapia_common.schemas.entities.users import UserCreate
 
 async def get_google_tokens(*, code: str) -> dict:
-    """
-    Trao đổi authorization code để lấy access token và id token.
+    """Exchange authorization code for access token and id token.
+    
+    Args:
+        code (str): Authorization code received from Google OAuth flow
+        
+    Returns:
+        dict: Dictionary containing access_token, id_token and other token information
+        
+    Raises:
+        ServerCredError: If token exchange fails
     """
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -24,15 +33,23 @@ async def get_google_tokens(*, code: str) -> dict:
     
     tokens: dict = response.json()
     if "error" in tokens:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        raise ServerCredError(
             detail=tokens.get("error_description", "Failed to fetch Google tokens."),
+            header=None
         )
     return tokens
 
 async def get_google_user_info(*, access_token: str) -> UserCreate:
-    """
-    Dùng access token để lấy thông tin chi tiết của người dùng từ Google.
+    """Use access token to get detailed user information from Google.
+    
+    Args:
+        access_token (str): Access token obtained from Google OAuth flow
+        
+    Returns:
+        UserCreate: User information object containing email, name, avatar and Google ID
+        
+    Raises:
+        ServerCredError: If fetching user info fails
     """
     async with httpx.AsyncClient() as client:
         response = await client.get(
@@ -42,9 +59,9 @@ async def get_google_user_info(*, access_token: str) -> UserCreate:
     
     user_info: dict = response.json()
     if not user_info.get("sub"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+        raise ServerCredError(
             detail="Failed to fetch Google user info.",
+            header=None
         )
         
     user_create = UserCreate(

@@ -6,3 +6,4 @@ python-dotenv
 redis
 pydantic
 fastapi
+graphviz

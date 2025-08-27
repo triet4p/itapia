@@ -1,0 +1,4 @@
+# Test dependencies for ITAPIA API Gateway
+pytest>=7.0.0
+pytest-asyncio>=0.20.0
+httpx>=0.23.0

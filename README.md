@@ -131,7 +131,16 @@ npm run dev
 ```
 itapia/
 ├── backend/            # Contains all microservices, Docker config, and the .env for the backend
+│   ├── api_gateway/    # API Gateway service (see backend/api_gateway/README.md)
+│   ├── ai_service_quick/ # Quick AI analysis service
+│   ├── data_processing/ # Data processing scripts
+│   ├── data_seeds/     # Data seeding utilities
+│   ├── evo_worker/     # Evolutionary algorithms worker
+│   ├── shared/         # Shared code between services
+│   ├── .env.template   # Backend environment template
+│   └── docker-compose.yml # Docker Compose configuration
 ├── frontend/           # The Vue.js SPA, contains its own .env for the frontend
+├── doc/                # Documentation files
 ├── .gitignore
 └── README.md           # You are here
 ```
@@ -152,6 +161,7 @@ itapia/
 *   **[System Architecture](./doc/public/itapia-mv-p-v1.0.md):** A deep dive into the microservices, data flow, and design decisions.
 *   **[API Reference](./doc/public/API-doc-v1.pdf):** A detailed list and description of all API endpoints.
 *   **[Rule Engine Architecture](./doc/public/rule-architecture.pdf):** An explanation of the Symbolic Expression Tree design.
+*   **[API Gateway Documentation](./backend/api_gateway/README.md):** Detailed documentation for the API Gateway service.
 
 ---
 

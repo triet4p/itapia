@@ -9,14 +9,12 @@ def visualize_rule(
     view: bool = True
 ):
     """
-    Tạo ra một file hình ảnh để trực quan hóa cấu trúc của một Rule duy nhất.
+    Generate an image file to visualize the structure of a single Rule.
 
     Args:
-        rule (Rule): Đối tượng Rule cần được vẽ.
-        filename (str): Tên file output (không baoiven gồm phần mở rộng).
-        highlight_nodes (Optional[...]): Một nút hoặc một danh sách các nút cần được tô đậm.
-                                          Rất hữu ích để debug crossover/mutation.
-        view (bool): Nếu True, tự động mở file ảnh sau khi tạo.
+        rule (Rule): The Rule object to be visualized.
+        filename (str): Output file name (without extension).
+        view (bool): If True, automatically open the image file after creation.
     """
     dot = graphviz.Digraph(
         name=f'Rule_{rule.rule_id}',
@@ -25,10 +23,10 @@ def visualize_rule(
     )
     dot.attr('graph', label=f'Rule: {rule.name}', labelloc='t', fontsize='20')
 
-    # Bắt đầu quá trình vẽ đệ quy từ gốc
+    # Start the recursive drawing process from the root
     _recursive_draw_node_simple(dot, rule.root)
 
-    # --- Lưu file ---
+    # --- Save the file ---
     try:
         dot.render(filename, format='png', view=view, cleanup=True)
         print(f"Visualization saved to {filename}.png")
@@ -43,33 +41,33 @@ def _recursive_draw_node_simple(
     graph: graphviz.Digraph,
     node: _TreeNode
 ):
-    """Hàm đệ quy để vẽ một nút và các con của nó."""
+    """Recursively draw a node and its children."""
     
-    # Dùng object id làm ID duy nhất cho nút
+    # Use object id as unique node ID
     node_id = str(id(node))
     
-    # --- Định dạng cho nút ---
+    # --- Node formatting ---
     node_label = f"{node.node_name}\n({node.return_type.value})"
     node_style = {'style': 'filled'}
     
-    # Xác định màu sắc và hình dạng
-    if hasattr(node, 'children') and node.children: # Operator
+    # Determine color and shape based on node type
+    if hasattr(node, 'children') and node.children:  # Operator node
         node_style['shape'] = 'box'
         node_style['fillcolor'] = 'skyblue'
-    else: # Terminal
+    else:  # Terminal node
         node_style['shape'] = 'ellipse'
         node_style['fillcolor'] = 'lightgreen'
 
-    # Vẽ nút
+    # Draw the node
     graph.node(node_id, label=node_label, **node_style)
 
-    # --- Đệ quy và vẽ các cạnh nối ---
+    # --- Recursively draw children and connecting edges ---
     if hasattr(node, 'children') and node.children:
         for i, child in enumerate(node.children):
             child_id = str(id(child))
             
-            # Đệ quy vẽ nút con
+            # Recursively draw child node
             _recursive_draw_node_simple(graph, child)
             
-            # Vẽ cạnh nối
+            # Draw connecting edge
             graph.edge(node_id, child_id, label=f"arg_{i}")
