@@ -9,7 +9,7 @@ import app.core.config as cfg
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes import _TreeNode
 from itapia_common.rules.nodes.registry import get_spec_ent, get_operators_by_type, get_terminals_by_type, create_node
-from itapia_common.schemas.entities.rules import SemanticType
+from itapia_common.schemas.entities.rules import RuleStatus, SemanticType
 
 class InitOperator(ABC):
     
@@ -131,8 +131,7 @@ class RandomMaxDepthInitOperator(InitOperator):
             rule_id=f'evo_{random_id}',
             name=f'Evolved Rule {random_id}',
             description='An automatically generated rule by the evolution algorithm.',
-            is_active=True, # Mặc định là True để có thể đánh giá
-            version=1
+            rule_status=RuleStatus.EVOLVING
         )
         
         ind = Individual()

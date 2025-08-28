@@ -30,6 +30,8 @@ class FitnessEvaluator(ABC):
     """
     Một interface để thực hiện việc đánh giá một Rule.
     """
+    
+    FALSE_OBJECTIVE_VALUES: ObjectiveValues = tuple([0.0] * 5)
 
     @abstractmethod
     def evaluate(self, rule: Rule) -> Tuple[ObjectiveValues, BacktestPerformanceMetrics]:
@@ -132,20 +134,14 @@ class SingleContextFitnessEvaluator(FitnessEvaluator):
         # --- Trường hợp cơ sở: Rule không tạo ra giao dịch nào ---
         # Trả về kết quả tệ nhất có thể cho tất cả các mục tiêu.
         if metrics.num_trades == 0:
-            return (
-                0.0,  # total_return_pct
-                0.0,  # sharpe_ratio
-                0.0,  # resilience (1.0 - max_drawdown_pct)
-                0.0,  # win_rate_pct
-                0.0,  # profit_factor
-                0.0   # num_trades
-            )
+            return self.FALSE_OBJECTIVE_VALUES
 
         # --- Chuẩn hóa các mục tiêu ---
 
         # Mục tiêu 1: Tổng lợi nhuận. Đã theo hướng "càng cao càng tốt".
         # Giới hạn giá trị tối thiểu là -1 (-100%) để tránh số âm quá lớn.
         obj_total_return = max(-1.0, metrics.total_return_pct)
+        obj_cagr = max(-1.0, metrics.cagr)
 
         # Mục tiêu 2: Tỷ lệ Sharpe. Giá trị âm không tốt, coi là 0.
         obj_sharpe_ratio = max(0.0, metrics.sharpe_ratio)
@@ -171,20 +167,17 @@ class SingleContextFitnessEvaluator(FitnessEvaluator):
         # Trả về một tuple chứa các giá trị mục tiêu theo một thứ tự cố định.
         # Thuật toán NSGA-II sẽ sử dụng tuple này để so sánh các rule.
         objectives = (
-            obj_total_return,
-            obj_sharpe_ratio,
+            obj_cagr,
             obj_sortino_ratio,
             obj_resilience,
-            obj_win_rate,
-            obj_profit_factor,
-            obj_num_trades,
-            obj_stability
+            obj_stability,
+            obj_profit_factor
         )
         
         # Đảm bảo tất cả các giá trị đều là số hữu hạn
         if not all(np.isfinite(obj) for obj in objectives):
             # Nếu có lỗi (ví dụ: profit_factor là inf), trả về tuple tệ nhất
-            return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            return self.FALSE_OBJECTIVE_VALUES
             
         return objectives
     
@@ -219,7 +212,7 @@ class MultiContextFitnessEvaluator(FitnessEvaluator):
         except Exception as e:
             logger.warn(f"Evaluation failed for rule '{rule.name}' on ticker '{context.ticker}': {e}")
             # Trả về kết quả tệ nhất nếu có lỗi
-            worst_objectives = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            worst_objectives = self.FALSE_OBJECTIVE_VALUES
             worst_metrics = BacktestPerformanceMetrics()
             return worst_objectives, worst_metrics
 
@@ -239,7 +232,7 @@ class MultiContextFitnessEvaluator(FitnessEvaluator):
         """
         if not self.contexts:
             logger.warn("No contexts to evaluate. Returning worst-case fitness.")
-            worst_objectives = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            worst_objectives = self.FALSE_OBJECTIVE_VALUES
             worst_metrics = BacktestPerformanceMetrics()
             return worst_objectives, worst_metrics
 
@@ -258,7 +251,7 @@ class MultiContextFitnessEvaluator(FitnessEvaluator):
 
         if not objective_values_list:
             logger.warn(f"All evaluations failed for rule '{rule.name}'. Returning worst-case fitness.")
-            worst_objectives = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+            worst_objectives = self.FALSE_OBJECTIVE_VALUES
             worst_metrics = BacktestPerformanceMetrics()
             return worst_objectives, worst_metrics
             
@@ -280,7 +273,10 @@ class MultiContextFitnessEvaluator(FitnessEvaluator):
             max_drawdown_pct=metric_dict['max_drawdown_pct'],
             win_rate_pct=metric_dict['win_rate_pct'],
             profit_factor=metric_dict['profit_factor'],
-            sharpe_ratio=metric_dict['sharpe_ratio']
+            sharpe_ratio=metric_dict['sharpe_ratio'],
+            sortino_ratio=metric_dict['sortino_ratio'],
+            annual_return_stability=metric_dict['annual_return_stability'],
+            cagr=metric_dict['cagr']
         )
 
         logger.info(f"Rule '{rule.name}' evaluation complete. Aggregated objectives: {final_objectives}")

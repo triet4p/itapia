@@ -1,3 +1,4 @@
+from typing import List
 import uuid
 from itapia_common.rules.rule import Rule
 from app.backtest.evaluator import ObjectiveValues, FitnessEvaluator
@@ -27,4 +28,11 @@ class Population:
         self.population_size: int = population_size
         self.population: list[Individual] = []
         
+    def reassign(self, population: List[Individual]):
+        self.population = population
+        self.population_size = len(self.population)
+        
+    def cal_fitness(self, evaluator: FitnessEvaluator):
+        for ind in self.population:
+            ind.cal_fitness(evaluator)
             

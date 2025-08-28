@@ -84,7 +84,6 @@ class PointMutationOperator(MutationOperator):
             return None
         
         mutation_point = self._random.choice(all_nodes[1:])
-        print(mutation_point.node_name)
         
         if isinstance(mutation_point, OperatorNode) and mutation_point.children:
             new_node = self._mutate_operator(mutation_point)

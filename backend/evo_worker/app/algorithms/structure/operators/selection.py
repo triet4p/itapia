@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple
 
 from ..pop import Individual
-from ..dominance import _is_is_dominates # Import hàm tiện ích
+from ..dominance import _is_dominates # Import hàm tiện ích
 import app.core.config as cfg
 
 class SelectionOperator(ABC):

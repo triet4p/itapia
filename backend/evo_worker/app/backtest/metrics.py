@@ -165,30 +165,54 @@ class PerformanceMetrics:
         sharpe_ratio = (excess_returns.mean() / excess_returns.std()) * np.sqrt(252)
         return sharpe_ratio
     
-    def calculate_sortino_ratio(self) -> float:
-        """Tính toán Tỷ lệ Sortino."""
+    def calculate_sortino_ratio(self, target_return: float = 0.0) -> float:
+        """
+        Tính toán Tỷ lệ Sortino sử dụng Target Downside Deviation để có kết quả bền bỉ hơn.
+
+        Args:
+            target_return (float): Lợi nhuận mục tiêu hàng ngày. Mặc định là 0.
+
+        Returns:
+            float: Tỷ lệ Sortino đã được thường niên hóa.
+        """
         if self.trades_df.empty or len(self.trades_df) < 2:
             return 0.0
             
         equity_curve = self.calculate_equity_curve()
         daily_returns = equity_curve.pct_change().dropna()
         
-        # Chỉ xét các khoản lợi nhuận âm (thua lỗ)
-        negative_returns = daily_returns[daily_returns < 0]
-        
-        if negative_returns.empty:
-            # Nếu không có ngày nào thua lỗ, rủi ro là 0.
-            # Để tránh chia cho 0, ta có thể trả về một giá trị rất lớn nếu có lợi nhuận.
-            return 9999.0 if daily_returns.mean() > 0 else 0.0
-            
-        downside_std = negative_returns.std()
-        
-        if downside_std == 0:
+        if daily_returns.empty:
             return 0.0
 
+        # 1. Tính lợi nhuận trung bình vượt mức phi rủi ro (Tử số)
+        # Vẫn có thể dùng risk_free_rate ở đây để nhất quán với Sharpe
         excess_returns = daily_returns - self.risk_free_rate_daily
-        sortino_ratio = (excess_returns.mean() / downside_std) * np.sqrt(252)
-        return sortino_ratio
+        avg_excess_return = excess_returns.mean()
+        
+        # 2. Tính Target Downside Deviation (Mẫu số)
+        # Sự khác biệt so với mục tiêu (thường là 0)
+        returns_below_target = daily_returns - target_return
+        # Chỉ giữ lại các giá trị âm (khi lợi nhuận < mục tiêu) và bình phương chúng
+        squared_downside_diff = np.square(returns_below_target[returns_below_target < 0])
+        
+        if squared_downside_diff.empty:
+            # Nếu không có ngày nào lợi nhuận dưới mục tiêu
+            return 9999.0 if avg_excess_return > 0 else 0.0
+        
+        # Lấy trung bình của các bình phương và sau đó là căn bậc hai
+        # Lưu ý: Chúng ta chia cho TỔNG số ngày (len(daily_returns))
+        # để có một thước đo ổn định.
+        downside_deviation = np.sqrt(squared_downside_diff.sum() / len(daily_returns))
+
+        if downside_deviation == 0:
+            # Trường hợp hiếm gặp, nhưng vẫn có thể xảy ra
+            return 9999.0 if avg_excess_return > 0 else 0.0
+
+        # 3. Tính toán và thường niên hóa
+        sortino_ratio_daily = avg_excess_return / downside_deviation
+        sortino_ratio = sortino_ratio_daily * np.sqrt(252)
+        
+        return sortino_ratio if np.isfinite(sortino_ratio) else 0.0
     
     def calculate_annual_return_stability(self) -> float:
         """
@@ -219,6 +243,29 @@ class PerformanceMetrics:
             return 0.02
             
         return annual_returns.std(ddof=0)
+    
+    def calculate_cagr(self) -> float:
+        """
+        Tính toán Tỷ lệ Tăng trưởng Kép Hàng năm (CAGR).
+        """
+        if self.trades_df.empty:
+            return 0.0
+            
+        equity_curve = self.calculate_equity_curve()
+        final_equity = equity_curve.iloc[-1]
+        
+        start_date = equity_curve.index.min()
+        end_date = equity_curve.index.max()
+        num_days = (end_date - start_date).days
+        
+        # Nếu thời gian dưới 1 năm, không tính CAGR, trả về total return
+        if num_days < 365:
+            return self.calculate_total_return()
+            
+        num_years = num_days / 365.25
+        
+        cagr = (final_equity / self.initial_capital)**(1 / num_years) - 1
+        return cagr
 
     def summary(self) -> BacktestPerformanceMetrics:
         """
@@ -235,5 +282,6 @@ class PerformanceMetrics:
             profit_factor = self.calculate_profit_factor(),
             sharpe_ratio = self.calculate_sharpe_ratio(),
             sortino_ratio = self.calculate_sortino_ratio(),
-            annual_return_stability=self.calculate_annual_return_stability()
+            annual_return_stability=self.calculate_annual_return_stability(),
+            cagr=self.calculate_cagr()
         )

@@ -45,7 +45,7 @@ class BacktestSimulator:
         Returns:
             List[Trade]: Một nhật ký chứa tất cả các giao dịch đã được thực hiện.
         """
-        logger.info(f"Running simulation on {len(self.ohlcv_df)} historical data points...")
+        logger.debug(f"Running simulation on {len(self.ohlcv_df)} historical data points...")
 
         for date, row in self.ohlcv_df.iterrows():
             # Biến để kiểm tra xem một hành động đã được thực hiện trong ngày chưa
@@ -70,10 +70,10 @@ class BacktestSimulator:
         if self.current_position:
             last_date = self.ohlcv_df.index[-1]
             last_close_price = self.ohlcv_df.iloc[-1]['close']
-            logger.info(f"Position still open at the end of simulation. Closing at last price {last_close_price:.2f}")
+            logger.debug(f"Position still open at the end of simulation. Closing at last price {last_close_price:.2f}")
             self._close_position(last_date, last_close_price, 'TIME_STOP')
 
-        logger.info(f"Simulation finished. Total trades executed: {len(self.trade_log)}")
+        logger.debug(f"Simulation finished. Total trades executed: {len(self.trade_log)}")
         return self.trade_log
 
     def _check_and_close_position(self, current_date: datetime, daily_row: pd.Series, action_signal: Optional[Action]):
