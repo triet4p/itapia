@@ -8,7 +8,7 @@ from typing import Dict, Any
 # Assuming these modules exist and contain the corresponding functions
 # In practice, you would import them correctly
 from .nodes import OperatorNode, _TreeNode
-from itapia_common.schemas.entities.rules import RuleEntity, SemanticType
+from itapia_common.schemas.entities.rules import RuleEntity, SemanticType, RuleStatus
 from .parser import parse_tree, serialize_tree
 
 # Assuming the existence of the report schema
@@ -27,8 +27,7 @@ class Rule:
                  rule_id: str | None = None,
                  name: str = "Untitled Rule",
                  description: str = "",
-                 is_active: bool = True,
-                 version: int = 1,
+                 rule_status: RuleStatus = RuleStatus.READY,
                  created_at: datetime | None = None,
                  updated_at: datetime | None = None):
         """Initialize a Rule object.
@@ -38,8 +37,7 @@ class Rule:
             rule_id (str, optional): Unique ID of the rule. If None, a UUID will be auto-generated.
             name (str, optional): Human-readable name of the rule.
             description (str, optional): Detailed description of the rule.
-            is_active (bool, optional): Flag to enable/disable the rule.
-            version (int, optional): Version of the rule.
+            status (RuleStatus, optional): Status of Rule
             created_at (datetime, optional): Creation time.
             updated_at (datetime, optional): Last update time.
             
@@ -53,8 +51,7 @@ class Rule:
         self.name = name
         self.description = description
         self.root = root
-        self.is_active = is_active
-        self.version = version
+        self.rule_status = rule_status
         # Always use timezone-aware datetimes
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
@@ -69,7 +66,7 @@ class Rule:
         return self.root.return_type
 
     def __repr__(self) -> str:
-        return f"Rule(rule_id='{self.rule_id}', name='{self.name}', version={self.version}, is_active={self.is_active})"
+        return f"Rule(rule_id='{self.rule_id}', name='{self.name}', status='{self.rule_status}')"
 
     def execute(self, report: QuickCheckAnalysisReport) -> float:
         """Execute the rule based on an analysis report and return the result.
@@ -82,7 +79,7 @@ class Rule:
         Returns:
             float: The result of the rule execution.
         """
-        if not self.is_active:
+        if self.rule_status == RuleStatus.DEPRECATED:
             # Can return a neutral value or raise an error depending on design
             return 0.0 
         return self.root.evaluate(report)
@@ -101,8 +98,7 @@ class Rule:
             name=self.name,
             description=self.description,
             purpose=self.purpose,
-            version=self.version,
-            is_active=self.is_active,
+            rule_status=self.rule_status,
             created_at=self.created_at,
             updated_at=self.updated_at,
             root=serialize_tree(self.root)
@@ -151,8 +147,7 @@ class Rule:
             rule_id=data.rule_id,
             name=data.name,
             description=data.description,
-            is_active=data.is_active,
-            version=data.version,
+            rule_status=data.rule_status,
             created_at=data.created_at,
             updated_at=data.updated_at,
             # Pass the reconstructed logic tree

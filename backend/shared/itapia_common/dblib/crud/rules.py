@@ -32,8 +32,7 @@ class RuleCRUD:
         # Extract fields into separate columns for querying
         name = rule_data.get("name", "Untitled Rule")
         description = rule_data.get("description", "")
-        version = rule_data.get("version", 1.0)
-        is_active = rule_data.get("is_active", True)
+        rule_status = rule_data.get("rule_status")
         purpose = rule_data.get("purpose")
         created_at = rule_data.get("created_at")
         
@@ -41,14 +40,13 @@ class RuleCRUD:
         root_str = json.dumps(rule_data.get('root'))
         
         stmt = text("""
-            INSERT INTO rules (rule_id, name, description, purpose, version, is_active, created_at, root)
-            VALUES (:rule_id, :name, :description, :purpose, :version, :is_active, :created_at, :root)
+            INSERT INTO rules (rule_id, name, description, purpose, rule_status, created_at, root)
+            VALUES (:rule_id, :name, :description, :purpose, :rule_status, :created_at, :root)
             ON CONFLICT (rule_id) DO UPDATE SET
                 name = EXCLUDED.name,
                 description = EXCLUDED.description,
                 purpose = EXCLUDED.purpose,
-                version = EXCLUDED.version,
-                is_active = EXCLUDED.is_active,
+                rule_status = EXCLUDED.rule_status,
                 root = EXCLUDED.root,
                 updated_at = NOW()
             RETURNING rule_id;
@@ -59,8 +57,7 @@ class RuleCRUD:
             "name": name,
             "description": description,
             "purpose": purpose,
-            "version": version,
-            "is_active": is_active,
+            "rule_status": rule_status,
             "created_at": created_at, 
             "root": root_str
         })
@@ -76,8 +73,8 @@ class RuleCRUD:
         Returns:
             Dict[str, Any] | None: The rule data as a dictionary, or None if not found.
         """
-        stmt = text("""SELECT rule_id, name, description, purpose, version, is_active, created_at, updated_at, root 
-                    FROM rules WHERE is_active=TRUE AND rule_id = :rule_id;""")
+        stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root 
+                    FROM rules WHERE rule_id = :rule_id;""")
         result = self.db.execute(stmt, {"rule_id": rule_id})
         
         if result:
@@ -86,35 +83,39 @@ class RuleCRUD:
             return result.mappings().one()
         return None
 
-    def get_active_rules_by_purpose(self, purpose_name: str) -> List[Dict[str, Any]]:
+    def get_rules_by_purpose(self, purpose_name: str, rule_status: str) -> List[Dict[str, Any]]:
         """Get a list of raw data (list of dicts) of active rules for a specific purpose.
 
         Args:
             purpose_name (str): The purpose to filter rules by.
+            rule_status (str): Status of rules.
 
         Returns:
             List[Dict[str, Any]]: A list of dictionaries containing rule data.
         """
         # Postgres JSONB query: `->>` extracts field as text
-        stmt = text("""SELECT rule_id, name, description, purpose, version, is_active, created_at, updated_at, root 
-                    FROM rules WHERE is_active=TRUE AND purpose = :purpose;""")
+        stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root 
+                    FROM rules WHERE rule_status = :rule_status AND purpose = :purpose;""")
         
-        results = self.db.execute(stmt, {"purpose": purpose_name})
+        results = self.db.execute(stmt, {"purpose": purpose_name, "rule_status": rule_status})
         
         # Return a list of dictionaries
         return results.mappings().all()
     
-    def get_all_active_rules(self) -> List[Dict[str, Any]]:
+    def get_all_rules(self, rule_status: str) -> List[Dict[str, Any]]:
         """Get a list of raw data (list of dicts) of all active rules.
+
+        Args:
+            rule_status (str): Status of rules.
 
         Returns:
             List[Dict[str, Any]]: A list of dictionaries containing rule data.
         """
         # Postgres JSONB query: `->>` extracts field as text
-        stmt = text("""SELECT rule_id, name, description, purpose, version, is_active, created_at, updated_at, root 
-                    FROM rules WHERE is_active=TRUE;""")
+        stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root 
+                    FROM rules WHERE rule_status = :rule_status;""")
         
-        results = self.db.execute(stmt)
+        results = self.db.execute(stmt, {'rule_status': rule_status})
         
         # Return a list of dictionaries
         return results.mappings().all()

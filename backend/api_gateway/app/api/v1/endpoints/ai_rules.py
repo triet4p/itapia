@@ -1,6 +1,6 @@
 from typing import Literal
 from fastapi import APIRouter
-from app.clients.ai_rules import get_single_rule_explain, get_active_rules, get_nodes
+from app.clients.ai_rules import get_single_rule_explain, get_ready_rules, get_nodes
 
 from itapia_common.schemas.api.rules import ExplainationRuleResponse, RuleResponse, NodeResponse, SemanticType, NodeType
 
@@ -12,8 +12,8 @@ async def get_ai_single_rule_explain(rule_id: str):
     return report
 
 @router.get('/rules', response_model=list[RuleResponse], tags=['AI Rules'])
-async def get_ai_active_rules(purpose: SemanticType = SemanticType.ANY):
-    report = await get_active_rules(purpose)
+async def get_ai_ready_rules(purpose: SemanticType = SemanticType.ANY):
+    report = await get_ready_rules(purpose)
     return report
 
 @router.get('/rules/nodes', response_model=list[NodeResponse], tags=['AI Rules'])

@@ -1,7 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Literal
-from itapia_common.schemas.entities.rules import NodeEntity, NodeSpecEntity, SemanticType, NodeType
+from itapia_common.schemas.entities.rules import NodeEntity, NodeSpecEntity, SemanticType, NodeType, RuleStatus
 
 class NodeResponse(NodeSpecEntity):
     pass
@@ -21,8 +21,7 @@ class RuleResponse(BaseModel):
     rule_id: str
     name: str
     purpose: SemanticType
-    version: float
-    is_active: bool
+    rule_status: RuleStatus
     created_at_ts: int
     root: NodeEntity
 

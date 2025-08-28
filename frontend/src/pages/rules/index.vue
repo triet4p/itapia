@@ -12,6 +12,7 @@ import { useRulesStore } from '@/stores/rulesStore';
 type RuleResponse = components['schemas']['RuleResponse'];
 type SemanticType = components['schemas']['SemanticType'];
 type ReadonlyHeaders = VDataTable['$props']['headers'];
+type RuleStatus = components['schemas']['RuleStatus']
 
 // --- STORE ---
 const rulesStore = useRulesStore();
@@ -43,15 +44,9 @@ const headers: ReadonlyHeaders = [
     align: 'start' 
   },
   { 
-    title: 'Version', 
-    key: 'version', 
-    cellProps: { class: 'version-col' },
-    align: 'center' 
-  },
-  { 
-    title: 'Active', 
-    key: 'is_active', 
-    cellProps: { class: 'active-col' },
+    title: 'Status', 
+    key: 'rule_status', 
+    cellProps: { class: 'status-col' },
     align: 'center' 
   },
   { 
@@ -125,9 +120,9 @@ onMounted(() => {
         :loading="isLoadingList"
         items-per-page="15"
       >
-        <template v-slot:item.is_active="{ value }">
+        <template v-slot:item.rule_status="{ value }">
           <v-chip :color="value ? 'success' : 'grey'" size="small">
-            {{ value ? 'Active' : 'Inactive' }}
+            {{ value ? 'READY' : 'DEPRECATED' }}
           </v-chip>
         </template>
         <template v-slot:item.created_at_ts="{ value }">
@@ -163,9 +158,7 @@ onMounted(() => {
   min-width: 180px !important;
 }
 
-/* Cột Version và Active: Hẹp, cố định */
-:deep(.version-col),
-:deep(.active-col) {
+:deep(.status-col) {
   width: 100px !important;
 }
 

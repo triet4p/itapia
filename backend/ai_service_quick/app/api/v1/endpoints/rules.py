@@ -27,8 +27,7 @@ async def get_single_explaination_rule(rule_id: str,
             rule_id=report.rule_id,
             name=report.name,
             purpose=report.purpose,
-            version=report.version,
-            is_active=report.is_active,
+            rule_status=report.rule_status,
             created_at_ts=int(report.created_at.timestamp()),
             explain=report.explain,
             root=report.root
@@ -48,17 +47,16 @@ async def get_single_explaination_rule(rule_id: str,
                 503: {"description": "Service is not ready, still pre-warming caches"}
             }
 )
-async def get_active_rules(purpose: SemanticType = SemanticType.ANY, 
+async def get_ready_rules(purpose: SemanticType = SemanticType.ANY, 
                            orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
                            ):
     try:
-        report = await orchestrator.get_active_rules(purpose=purpose)
+        report = await orchestrator.get_ready_rules(purpose=purpose)
         return [RuleResponse(
             rule_id=rule.rule_id,
             name=rule.name,
             purpose=rule.purpose,
-            version=rule.version,
-            is_active=rule.is_active,
+            rule_status=rule.rule_status,
             created_at_ts=int(rule.created_at.timestamp()),
             root=rule.root
         ) for rule in report]

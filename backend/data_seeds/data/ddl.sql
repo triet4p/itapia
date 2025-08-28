@@ -77,8 +77,7 @@ CREATE TABLE IF NOT EXISTS rules (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     purpose VARCHAR(30),
-    version INT NOT NULL DEFAULT 1,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    status VARCHAR(30),
     
     -- Cột quan trọng nhất, lưu toàn bộ định nghĩa Rule
     -- bao gồm cả metadata và cây logic (root)

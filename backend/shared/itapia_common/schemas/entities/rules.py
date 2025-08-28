@@ -52,7 +52,6 @@ SemanticType.ANY_NUMERIC.concreates = [SemanticType.NUMERICAL, SemanticType.PRIC
                                        SemanticType.MOMENTUM, SemanticType.TREND,
                                        SemanticType.VOLATILITY, SemanticType.VOLUME,
                                        SemanticType.SENTIMENT, SemanticType.FORECAST_PROB]
-        
     
 class NodeType(str, Enum):
     CONSTANT = 'constant'
@@ -60,6 +59,11 @@ class NodeType(str, Enum):
     OPERATOR = 'operator'
     
     ANY = 'any'
+    
+class RuleStatus(str, Enum):
+    READY = 'READY'
+    EVOLVING = 'EVOLVING'
+    DEPRECATED = 'DEPRECATED'
 
 class SemanticLevel(str, Enum):
     HIGH = 'HIGH'
@@ -88,8 +92,7 @@ class RuleEntity(BaseModel):
     name: str
     description: str
     purpose: SemanticType
-    version: float
-    is_active: bool
+    rule_status: RuleStatus
     created_at: datetime
     updated_at: datetime
     

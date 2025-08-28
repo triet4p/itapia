@@ -267,8 +267,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Active Rules */
-        get: operations["get_ai_active_rules_api_v1_rules_get"];
+        /** Get Ai Ready Rules */
+        get: operations["get_ai_ready_rules_api_v1_rules_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -318,15 +318,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Google Callback
-         * @description Endpoint mà Google gọi lại. Xử lý logic chính:
-         *     1. Đổi code lấy token Google.
-         *     2. Lấy thông tin user từ Google.
-         *     3. Tìm hoặc tạo user trong CSDL.
-         *     4. Tạo JWT của ITAPIA.
-         *     5. Redirect về frontend kèm theo JWT.
-         */
+        /** Google Callback */
         get: operations["google_callback_api_v1_auth_google_callback_get"];
         put?: never;
         post?: never;
@@ -412,7 +404,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read Root */
+        /**
+         * Read Root
+         * @description Root endpoint that returns a welcome message.
+         *
+         *     Returns:
+         *         dict: A welcome message for the ITAPIA API Service
+         */
         get: operations["read_root__get"];
         put?: never;
         post?: never;
@@ -556,10 +554,7 @@ export interface components {
             /** Name */
             name: string;
             purpose: components["schemas"]["SemanticType"];
-            /** Version */
-            version: number;
-            /** Is Active */
-            is_active: boolean;
+            rule_status: components["schemas"]["RuleStatus"];
             /** Created At Ts */
             created_at_ts: number;
             root: components["schemas"]["NodeEntity"];
@@ -1203,14 +1198,16 @@ export interface components {
             /** Name */
             name: string;
             purpose: components["schemas"]["SemanticType"];
-            /** Version */
-            version: number;
-            /** Is Active */
-            is_active: boolean;
+            rule_status: components["schemas"]["RuleStatus"];
             /** Created At Ts */
             created_at_ts: number;
             root: components["schemas"]["NodeEntity"];
         };
+        /**
+         * RuleStatus
+         * @enum {string}
+         */
+        RuleStatus: "READY" | "EVOLVING" | "DEPRECATED";
         /** SHAPExplaination */
         SHAPExplaination: {
             /**
@@ -1266,7 +1263,7 @@ export interface components {
          *     Điều này là trái tim của Strongly Typed Genetic Programming (STGP).
          * @enum {string}
          */
-        SemanticType: "NUMERICAL" | "BOOLEAN" | "PRICE" | "PERCENTAGE" | "FINANCIAL_RATIO" | "MOMENTUM" | "TREND" | "VOLATILITY" | "VOLUME" | "SENTIMENT" | "FORECAST_PROB" | "DECISION_SIGNAL" | "RISK_LEVEL" | "OPPORTUNITY_RATING" | "ANY";
+        SemanticType: "NUMERICAL" | "BOOLEAN" | "PRICE" | "PERCENTAGE" | "FINANCIAL_RATIO" | "MOMENTUM" | "TREND" | "VOLATILITY" | "VOLUME" | "SENTIMENT" | "FORECAST_PROB" | "DECISION_SIGNAL" | "RISK_LEVEL" | "OPPORTUNITY_RATING" | "ANY" | "ANY_NUMERIC";
         /** SentimentAnalysisReport */
         SentimentAnalysisReport: {
             /**
@@ -2008,7 +2005,7 @@ export interface operations {
             };
         };
     };
-    get_ai_active_rules_api_v1_rules_get: {
+    get_ai_ready_rules_api_v1_rules_get: {
         parameters: {
             query?: {
                 purpose?: components["schemas"]["SemanticType"];

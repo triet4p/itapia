@@ -7,7 +7,7 @@ from fastapi import HTTPException
 
 from app.clients.ai_rules import (
     get_single_rule_explain,
-    get_active_rules,
+    get_ready_rules,
     get_nodes
 )
 from itapia_common.schemas.api.rules import NodeType, SemanticType
@@ -71,7 +71,7 @@ async def test_get_active_rules_success():
         mock_client.get.return_value = mock_response
         
         # Test the function
-        result = await get_active_rules(SemanticType.ANY)
+        result = await get_ready_rules(SemanticType.ANY)
         
         # Assertions
         assert len(result) == 2
@@ -161,7 +161,7 @@ async def test_get_active_rules_request_error():
         
         # Test the function and expect HTTPException
         with pytest.raises(HTTPException) as exc_info:
-            await get_active_rules(SemanticType.ANY)
+            await get_ready_rules(SemanticType.ANY)
         
         assert exc_info.value.status_code == 503
         assert "AI Service is unavailable" in str(exc_info.value.detail)

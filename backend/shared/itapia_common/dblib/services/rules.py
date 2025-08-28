@@ -7,7 +7,7 @@ handling the conversion between Pydantic models and database representations.
 from typing import List
 from sqlalchemy.orm import Session
 from itapia_common.dblib.crud.rules import RuleCRUD
-from itapia_common.schemas.entities.rules import RuleEntity, SemanticType
+from itapia_common.schemas.entities.rules import RuleEntity, RuleStatus, SemanticType
 
 class RuleService:
     """Service class for managing business rules."""
@@ -60,33 +60,38 @@ class RuleService:
             return RuleEntity(**rule_data)
         return None
 
-    def get_active_rules_by_purpose(self, purpose: SemanticType) -> List[RuleEntity]:
+    def get_rules_by_purpose(self, purpose: SemanticType, rule_status: RuleStatus) -> List[RuleEntity]:
         """Take a SemanticType, get a list of raw data from the CRUD layer,
         and "assemble" them into a list of Rule objects.
 
         Args:
             purpose (SemanticType): The semantic type to filter rules by.
+            rule_status (RuleStatus): Status of rules to filter.
 
         Returns:
             List[RuleEntity]: A list of rule entities.
         """
         # Convert the business object (Enum) to raw data (str)
         purpose_name = purpose.name
+        rule_status_name = rule_status.name
         
         # Get list of raw data
-        list_of_rule_data = self.crud.get_active_rules_by_purpose(purpose_name)
+        list_of_rule_data = self.crud.get_rules_by_purpose(purpose_name, rule_status_name)
         
         # "Assemble" each dictionary into a Rule object
         return [RuleEntity(**row) for row in list_of_rule_data]
     
-    def get_all_active_rules(self) -> List[RuleEntity]:
+    def get_all_rules(self, rule_status: RuleStatus) -> List[RuleEntity]:
         """Get all active rules from the database.
 
+        Args:
+            rule_status (RuleStatus): Status of rules to filter.
+        
         Returns:
             List[RuleEntity]: A list of all active rule entities.
         """
         # Get list of raw data
-        list_of_rule_data = self.crud.get_all_active_rules()
+        list_of_rule_data = self.crud.get_all_rules(rule_status.name)
         
         # "Assemble" each dictionary into a Rule object
         return [RuleEntity(**row) for row in list_of_rule_data]

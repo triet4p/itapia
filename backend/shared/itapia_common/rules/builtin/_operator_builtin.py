@@ -57,22 +57,17 @@ register_node_by_spec(nms.OPR_SUB2, NodeSpec(
 ))
 register_node_by_spec(nms.OPR_MUL2, NodeSpec(
     node_class=FunctionalOperatorNode, description="Multiplies two values",
-    return_type=SemanticType.ANY_NUMERIC, args_type=[SemanticType.ANY_NUMERIC, SemanticType.ANY_NUMERIC], node_type=NodeType.OPERATOR,
+    return_type=SemanticType.ANY_NUMERIC, args_type=[SemanticType.ANY_NUMERIC, SemanticType.NUMERICAL], node_type=NodeType.OPERATOR,
     params={'num_child': 2, 'opr_func': lambda x, y: x * y}
 ))
 register_node_by_spec(nms.OPR_DIV2, NodeSpec(
     node_class=FunctionalOperatorNode, description="Divides first value by the second (arg1 / arg2). Returns 0 if divisor is 0.",
-    return_type=SemanticType.ANY_NUMERIC, args_type=[SemanticType.ANY_NUMERIC, SemanticType.ANY_NUMERIC], node_type=NodeType.OPERATOR,
+    return_type=SemanticType.NUMERICAL, args_type=[SemanticType.ANY_NUMERIC, SemanticType.ANY_NUMERIC], node_type=NodeType.OPERATOR,
     params={'num_child': 2, 'opr_func': lambda x, y: x / y if y != 0 else 0.0}
-))
-register_node_by_spec(nms.OPR_POW2, NodeSpec(
-    node_class=FunctionalOperatorNode, description="Raises the first value to the power of the second (arg1 ^ arg2)",
-    return_type=SemanticType.ANY_NUMERIC, args_type=[SemanticType.ANY_NUMERIC, SemanticType.ANY_NUMERIC], node_type=NodeType.OPERATOR,
-    params={'num_child': 2, 'opr_func': lambda x, y: math.pow(x, y)}
 ))
 register_node_by_spec(nms.OPR_LOG2, NodeSpec(
     node_class=FunctionalOperatorNode, description="Calculates the base-2 logarithm of a value. Returns 0 for non-positive input.",
-    return_type=SemanticType.ANY_NUMERIC, args_type=[SemanticType.ANY_NUMERIC], node_type=NodeType.OPERATOR,
+    return_type=SemanticType.NUMERICAL, args_type=[SemanticType.NUMERICAL], node_type=NodeType.OPERATOR,
     params={'num_child': 1, 'opr_func': lambda x: math.log2(x) if x > 0 else 0.0}
 ))
 register_node_by_spec(nms.OPR_ABS, NodeSpec(

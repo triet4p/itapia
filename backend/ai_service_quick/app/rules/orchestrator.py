@@ -6,7 +6,7 @@ from app.core.exceptions import NoDataError
 
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes.registry import get_nodes_by_type
-from itapia_common.schemas.entities.rules import ExplainationRuleEntity, SemanticType, NodeType
+from itapia_common.schemas.entities.rules import ExplainationRuleEntity, RuleStatus, SemanticType, NodeType
 from itapia_common.dblib.services.rules import RuleService
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from itapia_common.schemas.entities.advisor import TriggeredRuleInfo
@@ -32,7 +32,7 @@ class RulesOrchestrator:
         Lấy, chọn lọc, và thực thi các quy tắc chung cho một mục đích cụ thể.
         """
         # Lấy tất cả quy tắc đang hoạt động từ DB
-        all_rules_schemas = self.rule_service.get_active_rules_by_purpose(purpose)
+        all_rules_schemas = self.rule_service.get_rules_by_purpose(purpose, RuleStatus.READY)
         all_rules = [Rule.from_entity(rs) for rs in all_rules_schemas]
         
         # Áp dụng logic lựa chọn (có thể được cá nhân hóa)
@@ -124,11 +124,11 @@ class RulesOrchestrator:
                   purpose: SemanticType = SemanticType.ANY):
         return get_nodes_by_type(node_type, purpose)
     
-    async def get_active_rules(self, purpose: SemanticType):
+    async def get_ready_rules(self, purpose: SemanticType):
         if purpose != SemanticType.ANY:
-            rule_entites = self.rule_service.get_active_rules_by_purpose(purpose)
+            rule_entites = self.rule_service.get_rules_by_purpose(purpose, RuleStatus.READY)
         else:
-            rule_entites = self.rule_service.get_all_active_rules()
+            rule_entites = self.rule_service.get_all_rules(RuleStatus.READY)
         if rule_entites is None:
             raise NoDataError(f'No rules is actived!')
         return rule_entites

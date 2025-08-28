@@ -21,7 +21,7 @@ async def get_single_rule_explain(rule_id: str) -> ExplainationRuleResponse:
         # Xử lý lỗi kết nối
         raise HTTPException(status_code=503, detail=f"AI Service is unavailable: {type(e).__name__}")
     
-async def get_active_rules(purpose: SemanticType = SemanticType.ANY) -> list[RuleResponse]:
+async def get_ready_rules(purpose: SemanticType = SemanticType.ANY) -> list[RuleResponse]:
     try:
         print(f'Get for url {ai_rules_client.base_url}/rules')
         response = await ai_rules_client.get(f"/rules", params={

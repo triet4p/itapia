@@ -14,3 +14,4 @@ class BacktestPerformanceMetrics(BaseModel):
     sharpe_ratio: float = Field(default=0.0)
     sortino_ratio: float = Field(default=0.0)
     annual_return_stability: float = Field(default=0.0)
+    cagr: float = Field(default=0.0)

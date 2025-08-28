@@ -139,8 +139,8 @@ class AIServiceQuickOrchestrator:
     async def get_single_explaination_rule(self, rule_id: str):
         return await self.rules.get_explaination_for_single_rule(rule_id)
     
-    async def get_active_rules(self, purpose: SemanticType):
-        return await self.rules.get_active_rules(purpose)
+    async def get_ready_rules(self, purpose: SemanticType):
+        return await self.rules.get_ready_rules(purpose)
     
     def get_nodes(self, node_type: NodeType = NodeType.ANY, 
                         purpose: SemanticType = SemanticType.ANY):

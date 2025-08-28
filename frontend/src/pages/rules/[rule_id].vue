@@ -53,11 +53,10 @@ onMounted(() => {
             <v-card-title>Metadata</v-card-title>
             <v-list density="compact">
               <v-list-item title="Purpose" :subtitle="currentRule.purpose"></v-list-item>
-              <v-list-item title="Version" :subtitle="currentRule.version"></v-list-item>
               <v-list-item title="Status">
                 <template v-slot:subtitle>
-                  <v-chip :color="currentRule.is_active ? 'success' : 'grey'" size="small">
-                    {{ currentRule.is_active ? 'Active' : 'Inactive' }}
+                  <v-chip :color="currentRule.rule_status ? 'success' : 'grey'" size="small">
+                    {{ currentRule.rule_status ? 'READY' : 'DEPRECATED' }}
                   </v-chip>
                 </template>
               </v-list-item>
