@@ -1,19 +1,21 @@
 from typing import List
 import uuid
 from itapia_common.rules.rule import Rule
-from app.backtest.evaluator import ObjectiveValues, FitnessEvaluator
+from app.backtest.evaluator import Evaluator
 from app.backtest.metrics import BacktestPerformanceMetrics
+from .objective import AcceptedObjective, ObjectiveExtractor
 
 class Individual:
     def __init__(self):
         self.chromosome: Rule = None
-        self.fitness: ObjectiveValues = None
+        self.fitness: AcceptedObjective = None
         self.metrics: BacktestPerformanceMetrics = None
         self.crowding_distance: float = 0.0
         self.rank: int = -1
     
-    def cal_fitness(self, evaluator: FitnessEvaluator) -> ObjectiveValues:
-        self.fitness, self.metrics = evaluator.evaluate(self.chromosome)
+    def cal_fitness(self, evaluator: Evaluator, obj_extractor: ObjectiveExtractor) -> AcceptedObjective:
+        self.metrics = evaluator.evaluate(self.chromosome)
+        self.fitness = obj_extractor.extract(self.metrics)
         return self.fitness
     
     @staticmethod
@@ -32,7 +34,7 @@ class Population:
         self.population = population
         self.population_size = len(self.population)
         
-    def cal_fitness(self, evaluator: FitnessEvaluator):
+    def cal_fitness(self, evaluator: Evaluator, obj_extractor: ObjectiveExtractor):
         for ind in self.population:
-            ind.cal_fitness(evaluator)
+            ind.cal_fitness(evaluator, obj_extractor)
             

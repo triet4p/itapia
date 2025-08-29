@@ -1,5 +1,5 @@
-from typing import Dict, NamedTuple, Literal
-from abc import ABC
+from typing import Dict, NamedTuple, Literal, Optional, Tuple
+from abc import ABC, abstractmethod
 import itapia_common.rules.names as nms
 from itapia_common.rules.score import ScoreFinalMapper
 from itapia_common.schemas.entities.rules import SemanticType 
@@ -20,58 +20,84 @@ class Action(NamedTuple):
         return f'Action(action_type={self.action_type}, position_size_pct={self.position_size_pct}, duration_days={self.duration_days}, sl_pct={self.sl_pct}, tp_pct={self.tp_pct})'
 
 class _BaseActionMapper(ABC):
-    BASE_TP_SL_RATE: float = 2.0
-    BASE_SL_PCT: float = 0.01
-    MAPPER: Dict[str, Action] = {}
-    def __init__(self):
-        self.threshold_matcher = ScoreFinalMapper()
+    @abstractmethod
+    def map_action(self, score_final: float) -> Action:
+        pass
         
-    def map_action(self, score_final: float, purpose: SemanticType) -> Action:
-        if purpose != SemanticType.DECISION_SIGNAL:
-            return Action(action_type='HOLD')
+class LinearDecisionActionMapper(_BaseActionMapper):
+    
+    DEFAULT_POSITION_SIZE_PCT_RANGE: Tuple[float, float] = (0.1, 0.9)
+    DEFAULT_DURATION_DAYS_RANGE: Tuple[int, int] = (1, 90)
+    DEFAULT_SL_PCT_RANGE: Tuple[float, float] = (0.02, 0.1)
+    DEFAULT_TP_PCT_RANGE: Tuple[float, float] = (0.04, 0.3)
+    MIN_BUY_THRESHOLD: float = 0.1
+    MAX_SELL_THRESHOLD: float = -0.1 
+    
+    def __init__(self, position_size_pct_range: Optional[Tuple[float, float]] = None,
+                 duration_days_range: Optional[Tuple[int, int]] = None,
+                 sl_pct_range: Optional[Tuple[float, float]] = None,
+                 tp_pct_range: Optional[Tuple[float, float]] = None,
+                 min_buy_threshold: Optional[float] = None,
+                 max_sell_threshold: Optional[float] = None):
+        self.position_size_pct_range = position_size_pct_range if position_size_pct_range else self.DEFAULT_POSITION_SIZE_PCT_RANGE
+        self.duration_days_range = duration_days_range if duration_days_range else self.DEFAULT_DURATION_DAYS_RANGE
+        self.sl_pct_range = sl_pct_range if sl_pct_range else self.DEFAULT_SL_PCT_RANGE
+        self.tp_pct_range = tp_pct_range if tp_pct_range else self.DEFAULT_TP_PCT_RANGE
+        self.min_buy_threshold = min_buy_threshold if min_buy_threshold else self.MIN_BUY_THRESHOLD
+        self.max_sell_threshold = max_sell_threshold if max_sell_threshold else self.MAX_SELL_THRESHOLD
+        
+    def map_action(self, score_final: float):
+        action_type: ACTION_TYPE 
+        if score_final > self.min_buy_threshold:
+            action_type = 'BUY'
+        elif score_final < self.max_sell_threshold:
+            action_type = 'SELL'
+        else:
+            action_type = 'HOLD'
+            
+        if action_type == 'HOLD':
+            return Action('HOLD')
+            
+        confidence = abs(score_final)
+            
+        position_size_pct = (self.position_size_pct_range[0]
+                             + (self.position_size_pct_range[1] - 
+                                self.position_size_pct_range[0]) * confidence)
 
-        threshold = self.threshold_matcher.match(purpose=purpose, score=score_final)
-        return self.MAPPER.get(threshold.name, Action(action_type='HOLD'))
+        duration_days = (self.duration_days_range[1]
+                         - (self.duration_days_range[1] 
+                            - self.duration_days_range[0]) * confidence)
         
-class ShortSwingActionMapper(_BaseActionMapper):
-    MAPPER = {
-        nms.THRESHOLD_DECISION_BUY_IMMEDIATE: Action(action_type='BUY', position_size_pct=0.9, duration_days=2, 
-                                                     sl_pct=0.025, tp_pct=0.05),
-        nms.THRESHOLD_DECISION_BUY_STRONG: Action(action_type='BUY', position_size_pct=0.8, duration_days=5, 
-                                                  sl_pct=0.033, tp_pct=0.066),
-        nms.THRESHOLD_DECISION_BUY_MODERATE: Action(action_type='BUY', position_size_pct=0.5, duration_days=10, 
-                                                    sl_pct=0.04, tp_pct=0.08),
-        nms.THRESHOLD_DECISION_ACCUMULATE: Action(action_type='BUY', position_size_pct=0.25, duration_days=15, 
-                                                  sl_pct=0.045, tp_pct=0.09),
+        sl_pct = (self.sl_pct_range[0] 
+                  + (self.sl_pct_range[1] 
+                     - self.sl_pct_range[0]) * confidence)
         
-        nms.THRESHOLD_DECISION_REDUCE_POSITION: Action(action_type='SELL', position_size_pct=0.25, duration_days=15, 
-                                                       sl_pct=0.045, tp_pct=0.09),
-        nms.THRESHOLD_DECISION_SELL_MODERATE: Action(action_type='SELL', position_size_pct=0.45, duration_days=10, 
-                                                     sl_pct=0.04, tp_pct=0.08),
-        nms.THRESHOLD_DECISION_SELL_STRONG: Action(action_type='SELL', position_size_pct=0.7, duration_days=5, 
-                                                   sl_pct=0.03, tp_pct=0.06),
-        nms.THRESHOLD_DECISION_SELL_IMMEDIATE: Action(action_type='SELL', position_size_pct=0.9, duration_days=2, 
-                                                      sl_pct=0.02, tp_pct=0.04),
-    }
-    
-class MediumSwingActionMapper(_BaseActionMapper):
-    MAPPER = {
-        nms.THRESHOLD_DECISION_BUY_IMMEDIATE: Action(action_type='BUY', position_size_pct=0.9, duration_days=25, 
-                                                     sl_pct=0.075, tp_pct=0.21),
-        nms.THRESHOLD_DECISION_BUY_STRONG: Action(action_type='BUY', position_size_pct=0.75, duration_days=40, 
-                                                  sl_pct=0.08, tp_pct=0.24),
-        nms.THRESHOLD_DECISION_BUY_MODERATE: Action(action_type='BUY', position_size_pct=0.5, duration_days=60, 
-                                                    sl_pct=0.088, tp_pct=0.264),
-        nms.THRESHOLD_DECISION_ACCUMULATE: Action(action_type='BUY', position_size_pct=0.3, duration_days=90, 
-                                                  sl_pct=0.1, tp_pct=0.3),
+        tp_pct = (self.tp_pct_range[0] 
+                  + (self.tp_pct_range[1] 
+                     - self.tp_pct_range[0]) * confidence)
         
-        nms.THRESHOLD_DECISION_REDUCE_POSITION: Action(action_type='SELL', position_size_pct=0.25, duration_days=85, 
-                                                       sl_pct=0.1, tp_pct=0.3),
-        nms.THRESHOLD_DECISION_SELL_MODERATE: Action(action_type='SELL', position_size_pct=0.45, duration_days=65, 
-                                                     sl_pct=0.085, tp_pct=0.26),
-        nms.THRESHOLD_DECISION_SELL_STRONG: Action(action_type='SELL', position_size_pct=0.7, duration_days=45, 
-                                                   sl_pct=0.08, tp_pct=0.24),
-        nms.THRESHOLD_DECISION_SELL_IMMEDIATE: Action(action_type='SELL', position_size_pct=0.9, duration_days=25, 
-                                                      sl_pct=0.07, tp_pct=0.21),
-    }
-    
+        return Action(action_type=action_type,
+                      position_size_pct=position_size_pct,
+                      duration_days=duration_days,
+                      sl_pct=sl_pct,
+                      tp_pct=tp_pct)
+        
+MEDIUM_SWING_IDEAL_MAPPER = LinearDecisionActionMapper(
+    position_size_pct_range=[0.2, 0.9],
+    duration_days_range=[25, 90],
+    sl_pct_range=[0.07, 0.1],
+    tp_pct_range=[0.21, 0.3],
+    min_buy_threshold=0.05,
+    max_sell_threshold=-0.02
+)
+
+MEDIUM_SWING_PESSIMISTIC_MAPPER = LinearDecisionActionMapper(
+    position_size_pct_range=[0.2, 0.9],
+    duration_days_range=[25, 90],
+    sl_pct_range=[0.07, 0.1],
+    tp_pct_range=[0.08, 0.12],
+    min_buy_threshold=0.03,
+    max_sell_threshold=-0.03
+)
+
+# Sau này các mapper cho risk, opportunity được triển khai riêng

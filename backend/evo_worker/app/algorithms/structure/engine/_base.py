@@ -1,6 +1,7 @@
 from ..pop import Individual, Population
 from ..operators.construct import InitOperator
-from app.backtest.evaluator import FitnessEvaluator
+from ..objective import ObjectiveExtractor
+from app.backtest.evaluator import Evaluator
 
 import app.core.config as cfg
 
@@ -12,10 +13,12 @@ from itapia_common.rules.rule import Rule
 from abc import ABC, abstractmethod
 
 class BaseStructureEvoEngine(ABC):
-    def __init__(self, evaluator: FitnessEvaluator,
+    def __init__(self, evaluator: Evaluator,
+                 obj_extractor: ObjectiveExtractor,
                  init_opr: InitOperator,
                  seeding_rules: Optional[List[Rule]] = None):
         self.evaluator = evaluator
+        self.obj_extractor = obj_extractor
         self.init_opr = init_opr
         self.seeding_rules = seeding_rules
         

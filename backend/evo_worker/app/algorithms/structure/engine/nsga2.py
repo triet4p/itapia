@@ -6,7 +6,8 @@ from ..operators.crossover import CrossoverOperator
 from ..operators.mutation import MutationOperator
 from ..operators.selection import SelectionOperator
 from ..operators.replacement import ReplacementOperator
-from app.backtest.evaluator import FitnessEvaluator
+from ..objective import ObjectiveExtractor
+from app.backtest.evaluator import Evaluator
 
 import app.core.config as cfg
 
@@ -28,14 +29,15 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
     }
     
     def __init__(self, 
-                 evaluator: FitnessEvaluator,
+                 evaluator: Evaluator,
+                 obj_extractor: ObjectiveExtractor,
                  init_opr: InitOperator,
                  crossover_opr: CrossoverOperator,
                  mutation_opr: MutationOperator,
                  selection_opr: SelectionOperator,
                  replacement_opr: ReplacementOperator,
                  seeding_rules: Optional[List[Rule]] = None):
-        super().__init__(evaluator, init_opr, seeding_rules)
+        super().__init__(evaluator, obj_extractor, init_opr, seeding_rules)
         self.pareto_front: List[Individual] = None
     
         self.crossover_opr = crossover_opr
@@ -112,7 +114,7 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
         self._init_pop(pop_size)
         
         logger.info(f"Calculating fitness for initial population of {self.pop.population_size} individuals...")
-        self.pop.cal_fitness(self.evaluator)
+        self.pop.cal_fitness(self.evaluator, self.obj_extractor)
         
         logger.info("Classifing into fronts ...")
         self._classify_pop()
@@ -124,7 +126,7 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
             # Generate offsprings
             offs = self._gen_offs_each_epoch(self.pop.population, pc, pm)
             logger.info(f"Calculating fitness for offs population of {self.pop.population_size} individuals...")
-            offs.cal_fitness(self.evaluator)
+            offs.cal_fitness(self.evaluator, self.obj_extractor)
         
             # Create new population
             logger.info("Performing survival selection...")

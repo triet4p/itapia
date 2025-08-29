@@ -17,7 +17,8 @@ def _is_dominates(ind1: Individual, ind2: Individual) -> bool:
     Returns:
         bool: True nếu ind1 trội hơn ind2, ngược lại là False.
     """
-    
+    if not isinstance(ind1.fitness, tuple):
+        return ind1.fitness > ind2.fitness
     is_better_in_one = False
     for f1, f2 in zip(ind1.fitness, ind2.fitness):
         if f1 < f2:

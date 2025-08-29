@@ -165,53 +165,43 @@ class PerformanceMetrics:
         sharpe_ratio = (excess_returns.mean() / excess_returns.std()) * np.sqrt(252)
         return sharpe_ratio
     
-    def calculate_sortino_ratio(self, target_return: float = 0.0) -> float:
+    def calculate_sortino_ratio(self, target_return_pct: float = 0.0) -> float:
         """
-        Tính toán Tỷ lệ Sortino sử dụng Target Downside Deviation để có kết quả bền bỉ hơn.
+        Tính toán Tỷ lệ Sortino dựa trên lợi nhuận của TỪNG GIAO DỊCH để có kết quả bền bỉ.
 
         Args:
-            target_return (float): Lợi nhuận mục tiêu hàng ngày. Mặc định là 0.
+            target_return_pct (float): Tỷ lệ lợi nhuận mục tiêu cho mỗi giao dịch. Mặc định là 0.
 
         Returns:
-            float: Tỷ lệ Sortino đã được thường niên hóa.
+            float: Tỷ lệ Sortino (không thường niên hóa, vì nó dựa trên giao dịch).
         """
         if self.trades_df.empty or len(self.trades_df) < 2:
             return 0.0
-            
-        equity_curve = self.calculate_equity_curve()
-        daily_returns = equity_curve.pct_change().dropna()
-        
-        if daily_returns.empty:
-            return 0.0
 
-        # 1. Tính lợi nhuận trung bình vượt mức phi rủi ro (Tử số)
-        # Vẫn có thể dùng risk_free_rate ở đây để nhất quán với Sharpe
-        excess_returns = daily_returns - self.risk_free_rate_daily
-        avg_excess_return = excess_returns.mean()
+        trade_returns = self.trades_df['profit_pct']
+
+        # 1. Tính lợi nhuận trung bình cho mỗi giao dịch (Tử số)
+        avg_return_per_trade = trade_returns.mean()
         
-        # 2. Tính Target Downside Deviation (Mẫu số)
-        # Sự khác biệt so với mục tiêu (thường là 0)
-        returns_below_target = daily_returns - target_return
-        # Chỉ giữ lại các giá trị âm (khi lợi nhuận < mục tiêu) và bình phương chúng
-        squared_downside_diff = np.square(returns_below_target[returns_below_target < 0])
+        # 2. Tính Downside Deviation dựa trên các giao dịch thua lỗ (Mẫu số)
+        returns_below_target = trade_returns[trade_returns < target_return_pct]
         
-        if squared_downside_diff.empty:
-            # Nếu không có ngày nào lợi nhuận dưới mục tiêu
-            return 9999.0 if avg_excess_return > 0 else 0.0
-        
-        # Lấy trung bình của các bình phương và sau đó là căn bậc hai
-        # Lưu ý: Chúng ta chia cho TỔNG số ngày (len(daily_returns))
-        # để có một thước đo ổn định.
-        downside_deviation = np.sqrt(squared_downside_diff.sum() / len(daily_returns))
+        if returns_below_target.empty:
+            # Nếu không có giao dịch nào thua lỗ
+            return 9999.0 if avg_return_per_trade > 0 else 0.0
+
+        # Tính độ lệch chuẩn của các giao dịch thua lỗ
+        downside_deviation = returns_below_target.std()
 
         if downside_deviation == 0:
-            # Trường hợp hiếm gặp, nhưng vẫn có thể xảy ra
-            return 9999.0 if avg_excess_return > 0 else 0.0
-
-        # 3. Tính toán và thường niên hóa
-        sortino_ratio_daily = avg_excess_return / downside_deviation
-        sortino_ratio = sortino_ratio_daily * np.sqrt(252)
+            # Trường hợp hiếm gặp (tất cả các lệnh thua đều có cùng một mức lỗ)
+            # Hoặc chỉ có 1 lệnh thua
+            return 9999.0 if avg_return_per_trade > 0 else 0.0
         
+        # 3. Tính toán Sortino Ratio
+        sortino_ratio = (avg_return_per_trade - target_return_pct) / downside_deviation
+        
+        # Không cần thường niên hóa vì nó dựa trên sự kiện (mỗi giao dịch), không phải thời gian.
         return sortino_ratio if np.isfinite(sortino_ratio) else 0.0
     
     def calculate_annual_return_stability(self) -> float:
