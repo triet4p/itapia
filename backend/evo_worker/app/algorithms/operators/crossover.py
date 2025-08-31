@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 import copy
 import random
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 import uuid
 
+from app.state import Stateful
 from itapia_common.rules.nodes import _TreeNode
 
 from ..pop import Individual
@@ -11,7 +12,7 @@ import app.core.config as cfg
 
 from ..utils import get_all_nodes, get_effective_type, get_nodes_by_effective_type, replace_node
 
-class CrossoverOperator(ABC):
+class CrossoverOperator(Stateful):
     
     def __init__(self):
         # Sử dụng instance Random riêng để đảm bảo khả năng tái tạo
@@ -29,6 +30,16 @@ class CrossoverOperator(ABC):
         Returns:
             Tuple[Individual, Individual]: Two offsprings.
         """
+        pass
+    
+    @property
+    def fallback_state(self) -> Dict[str, Any]:
+        return {
+            'random_state': self._random.getstate()
+        }
+        
+    def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
+        self._random.setstate(fallback_state['random_state'])
         
 class SubtreeCrossoverOperator(CrossoverOperator):
     

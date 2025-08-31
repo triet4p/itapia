@@ -1,3 +1,5 @@
+from app.state import Stateful
+from itapia_common.schemas.entities.evo import EvoRuleEntity, EvoRunEntity, EvoRunStatus
 from ..pop import Individual, Population
 from ..operators.construct import InitOperator
 from ..objective import ObjectiveExtractor
@@ -5,22 +7,25 @@ from app.backtest.evaluator import Evaluator
 
 import app.core.config as cfg
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Self
 import random
 
 from itapia_common.rules.rule import Rule
 
 from abc import ABC, abstractmethod
 
-class BaseStructureEvoEngine(ABC):
-    def __init__(self, evaluator: Evaluator,
+class BaseStructureEvoEngine(ABC, Stateful):
+    def __init__(self, run_id: str,
+                 evaluator: Evaluator,
                  obj_extractor: ObjectiveExtractor,
                  init_opr: InitOperator,
                  seeding_rules: Optional[List[Rule]] = None):
+        self.run_id = run_id
         self.evaluator = evaluator
         self.obj_extractor = obj_extractor
         self.init_opr = init_opr
         self.seeding_rules = seeding_rules
+        self.status = EvoRunStatus.RUNNING
         
         self.pop: Population = None
         
@@ -51,3 +56,19 @@ class BaseStructureEvoEngine(ABC):
     @abstractmethod
     def run(self, **kwargs) -> List[Individual]:
         pass
+    
+    @abstractmethod
+    def rerun(self, **kwargs) -> List[Individual]:
+        """Will use metadata attribute to rerun, kwargs only contain config to stop this rerun"""
+        pass
+    
+    @property
+    def fallback_state(self) -> Dict[str, Any]:
+        return {
+            'random_state': self._random.getstate(),
+            'pop': self.pop.fallback_state
+        }
+        
+    def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
+        self._random.setstate(fallback_state['random_state'])
+        self.pop.set_from_fallback_state(fallback_state['pop'])

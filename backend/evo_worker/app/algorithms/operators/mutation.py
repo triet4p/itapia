@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import random
-from typing import Dict, List, Type
+from typing import Any, Dict, List, Type
 import uuid
 
+from app.state import Stateful
 from itapia_common.rules.nodes import _TreeNode, OperatorNode
-from itapia_common.rules.nodes.registry import get_operators_by_type, get_terminals_by_type, get_spec_ent, create_node
+from itapia_common.rules.nodes.registry import get_spec_ent, create_node
 from itapia_common.schemas.entities.rules import SemanticType
 
 from ..pop import Individual
@@ -14,7 +15,7 @@ import app.core.config as cfg
 
 from ..utils import get_all_nodes, get_effective_type, get_nodes_by_effective_type, replace_node
 
-class MutationOperator(ABC):
+class MutationOperator(Stateful):
     
     def __init__(self):
         self._random = random.Random(cfg.RANDOM_SEED)
@@ -32,12 +33,25 @@ class MutationOperator(ABC):
         """
         pass
     
+    @property
+    def fallback_state(self) -> Dict[str, Any]:
+        return {
+            'random_state': self._random.getstate()
+        }
+        
+    def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
+        self._random.setstate(fallback_state['random_state'])
+    
 class SubtreeMutationOperator(MutationOperator):
     def __init__(self, max_subtree_depth: int,
+                 terminals_by_type: Dict[SemanticType, List[str]],
+                 operators_by_type: Dict[SemanticType, List[str]],
                  init_opr_template: Type[RandomMaxDepthInitOperator]):
         super().__init__()
         self.init_oprs: Dict[SemanticType, RandomMaxDepthInitOperator] = {
-            p: RandomMaxDepthInitOperator(purpose=p, max_depth=max_subtree_depth)
+            p: init_opr_template(purpose=p, max_depth=max_subtree_depth,
+                                 terminals_by_type=terminals_by_type,
+                                 operators_by_type=operators_by_type)
             for p in SemanticType.ANY.concreates
         }
         # Sử dụng các kiểu được thay thế bởi ANY, 
@@ -69,12 +83,27 @@ class SubtreeMutationOperator(MutationOperator):
         mutated_rule.rule_id = f'evo_{uuid.uuid4()}'
         return Individual.from_rule(mutated_rule)
     
+    @property
+    def fallback_state(self) -> Dict[str, Any]:
+        super_state = super().fallback_state
+        super_state.update({
+            'init_oprs': {k: init_opr.fallback_state for k, init_opr in self.init_oprs.items()}
+        })
+        return super_state
+        
+    def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
+        super().set_from_fallback_state(fallback_state)
+        for k, init_opr in self.init_oprs.items():
+            init_opr.set_from_fallback_state(fallback_state['init_oprs'][k])
+        
+    
 class PointMutationOperator(MutationOperator):
     
-    def __init__(self):
+    def __init__(self, terminals_by_type: Dict[SemanticType, List[str]],
+                 operators_by_type: Dict[SemanticType, List[str]]):
         super().__init__()
-        self.terminals_by_type = get_terminals_by_type()
-        self.operators_by_type = get_operators_by_type()
+        self.terminals_by_type = terminals_by_type
+        self.operators_by_type = operators_by_type
     
     def __call__(self, ind: Individual) -> Individual | None:
         mutated_rule = deepcopy(ind.chromosome)
@@ -133,9 +162,9 @@ class PointMutationOperator(MutationOperator):
         return None
     
 class ShrinkMutationOperator(MutationOperator):
-    def __init__(self):
+    def __init__(self, terminals_by_type: Dict[SemanticType, List[str]]):
         super().__init__()
-        self.terminals_by_type = get_terminals_by_type()
+        self.terminals_by_type = terminals_by_type
 
     def __call__(self, ind: Individual) -> Individual:
         mutated_rule = deepcopy(ind.chromosome)

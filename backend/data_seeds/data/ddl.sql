@@ -87,6 +87,34 @@ CREATE TABLE IF NOT EXISTS rules (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS evo_runs (
+    run_id VARCHAR(255) PRIMARY KEY,
+    status VARCHAR(30) NOT NULL,
+    algorithm VARCHAR(200) NOT NULL,
+    config JSONB,
+    fallback_state BYTEA
+)
+
+CREATE TABLE IF NOT EXISTS evo_rules (
+    rule_id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    purpose VARCHAR(30),
+    status VARCHAR(30),
+    
+    -- Cột quan trọng nhất, lưu toàn bộ định nghĩa Rule
+    -- bao gồm cả metadata và cây logic (root)
+    root JSONB NOT NULL,
+    
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    evo_run_id VARCHAR(255) NOT NULL,
+    metrics JSONB
+
+    FOREIGN KEY (evo_run_id) REFERENCES evo_runs(run_id)
+);
+
 -- Tạo một trigger để tự động cập nhật updated_at
 CREATE OR REPLACE FUNCTION trigger_set_timestamp()
 RETURNS TRIGGER AS $$

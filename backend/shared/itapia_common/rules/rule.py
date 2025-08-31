@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 from copy import deepcopy
-from typing import Dict, Any
+from typing import Dict, Any, Self
 
 # Assuming these modules exist and contain the corresponding functions
 # In practice, you would import them correctly
@@ -105,7 +105,7 @@ class Rule:
         )
 
     @classmethod
-    def from_entity(cls, data: RuleEntity) -> 'Rule':
+    def from_entity(cls, data: RuleEntity) -> Self:
         """Create (deserialize) a Rule object from a dictionary.
 
         This is a factory method, typically used after reading data

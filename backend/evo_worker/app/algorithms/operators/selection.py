@@ -2,13 +2,16 @@
 
 import random
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
+
+from ..objective import AcceptedObjective
+from app.state import Stateful
 
 from ..pop import Individual
-from ..dominance import _is_dominates # Import hàm tiện ích
+from ..comparator import Comparator # Import hàm tiện ích
 import app.core.config as cfg
 
-class SelectionOperator(ABC):
+class SelectionOperator(Stateful):
     def __init__(self):
         self._random = random.Random(cfg.RANDOM_SEED)
 
@@ -25,30 +28,27 @@ class SelectionOperator(ABC):
             List[Individual]: Danh sách các cha mẹ đã được chọn.
         """
         pass
+    
+    @property
+    def fallback_state(self) -> Dict[str, Any]:
+        return {
+            'random_state': self._random.getstate()
+        }
+        
+    def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
+        self._random.setstate(fallback_state['random_state'])
 
 class TournamentSelectionOperator(SelectionOperator):
     """
     Thực hiện chọn lọc giải đấu dựa trên quan hệ trội và crowding distance.
     Đây là phương pháp chọn lọc tiêu chuẩn cho NSGA-II.
     """
-    def __init__(self, k: int = 4):
+    def __init__(self, comparator: Comparator, k: int = 4):
         super().__init__()
         if k < 2:
             raise ValueError("Tournament size (k) must be at least 2.")
         self.k = k
-
-    def _is_better(self, ind1: Individual, ind2: Individual) -> bool:
-        """
-        So sánh hai cá thể dựa trên xếp hạng NSGA-II.
-        Ưu tiên rank (mặt trận), sau đó là crowding distance.
-        """
-        if ind1.rank < ind2.rank: # Rank nhỏ hơn là tốt hơn
-            return True
-        if ind1.rank > ind2.rank:
-            return False
-        
-        # Nếu rank bằng nhau, ưu tiên cá thể có crowding distance lớn hơn
-        return ind1.crowding_distance > ind2.crowding_distance
+        self.comparator = comparator
 
     def __call__(self, population: List[Individual], num_selections: int) -> List[Individual]:
         selected_parents = []
@@ -64,7 +64,7 @@ class TournamentSelectionOperator(SelectionOperator):
             # 2. Tìm ra người chiến thắng
             winner = tournament_contenders[0]
             for i in range(1, self.k):
-                if self._is_better(tournament_contenders[i], winner):
+                if self.comparator(tournament_contenders[i], winner):
                     winner = tournament_contenders[i]
             
             selected_parents.append(winner)
@@ -75,9 +75,11 @@ class RouletteWheelSelectionOperator(SelectionOperator):
     """
     Thực hiện chọn lọc bánh xe Roulette.
     Lưu ý: Phương pháp này thường không phù hợp với tối ưu hóa đa mục tiêu
-    vì nó yêu cầu một giá trị fitness vô hướng duy nhất. 
-    Đây là phiên bản được điều chỉnh để hoạt động với NSGA-II.
+    vì nó yêu cầu một giá trị fitness vô hướng duy nhất.
     """
+    def __init__(self, fitness_score_mapper: Callable[[AcceptedObjective], float]):
+        self.fitness_score_mapper = fitness_score_mapper
+    
     def __call__(self, population: List[Individual], num_selections: int) -> List[Individual]:
         # Để Roulette Wheel hoạt động, chúng ta cần chuyển đổi rank đa mục tiêu
         # thành một "điểm số" vô hướng duy nhất.
@@ -85,13 +87,12 @@ class RouletteWheelSelectionOperator(SelectionOperator):
         
         # Gán "điểm" dựa trên rank, rank càng thấp điểm càng cao.
         # Ví dụ: rank 0 -> điểm N, rank 1 -> điểm N-1, ...
-        max_rank = max(ind.rank for ind in population)
-        scores = [max_rank - ind.rank + 1 for ind in population]
+        scores = [self.fitness_score_mapper(ind.fitness) for ind in population]
         total_score = sum(scores)
 
         if total_score == 0:
              # Nếu tất cả đều có điểm 0, chọn ngẫu nhiên
-            return self._random.choices(population, k=num_selections)
+            return self._random.sample(population, k=num_selections)
 
         selected_parents = []
         for _ in range(num_selections):

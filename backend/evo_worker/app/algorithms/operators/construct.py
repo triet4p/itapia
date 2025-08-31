@@ -1,44 +1,55 @@
 import random
 import uuid
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Any, Dict, List, Self, Type, Generic
 
-from ..pop import Individual
+from app.state import Stateful
+
+from ..pop import DominanceIndividual, Individual, IndividualType
 import app.core.config as cfg
 
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes import _TreeNode
-from itapia_common.rules.nodes.registry import get_spec_ent, get_operators_by_type, get_terminals_by_type, create_node
+from itapia_common.rules.nodes.registry import get_spec_ent, create_node
 from itapia_common.schemas.entities.rules import RuleStatus, SemanticType
 
-class InitOperator(ABC):
+class InitOperator(Stateful, Generic[IndividualType]):
     
-    def __init__(self, purpose: SemanticType):
+    def __init__(self, purpose: SemanticType, ind_cls: Type[IndividualType]):
         # Kiểm tra chặt chẽ hơn
-        self.final_purposes = {
-            SemanticType.DECISION_SIGNAL, 
-            SemanticType.OPPORTUNITY_RATING, 
-            SemanticType.RISK_LEVEL
-        }
         self.purpose = purpose
+        self.ind_cls = ind_cls
     
         # Sử dụng instance Random riêng để đảm bảo khả năng tái tạo
         self._random = random.Random(cfg.RANDOM_SEED)
         
     @abstractmethod
-    def __call__(self) -> Individual:
+    def __call__(self) -> IndividualType:
         pass
     
-class RandomMaxDepthInitOperator(InitOperator):
-    def __init__(self, purpose: SemanticType, max_depth: int = 5):
-        super().__init__(purpose)
+    @property
+    def fallback_state(self) -> Dict[str, Any]:
+        return {
+            'random_state': self._random.getstate()
+        }
+        
+    def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
+        self._random.setstate(fallback_state['random_state'])
+    
+class RandomMaxDepthInitOperator(InitOperator[IndividualType]):
+    def __init__(self, purpose: SemanticType, 
+                 ind_cls: Type[IndividualType],
+                 terminals_by_type: Dict[SemanticType, List[str]],
+                 operators_by_type: Dict[SemanticType, List[str]],
+                 max_depth: int = 5):
+        super().__init__(purpose, ind_cls)
         if max_depth < 1:
             raise ValueError("Max depth must be at least 1.")
         self.max_depth = max_depth
                 
         # Lấy danh sách các node đã được tiền xử lý
-        self.terminals_by_type: Dict[SemanticType, List[str]] = get_terminals_by_type()
-        self.operators_by_type: Dict[SemanticType, List[str]] = get_operators_by_type()
+        self.terminals_by_type: Dict[SemanticType, List[str]] = terminals_by_type
+        self.operators_by_type: Dict[SemanticType, List[str]] = operators_by_type
     
         # 1. Lấy tập hợp tất cả các kiểu có terminal tương ứng
         self.types_with_terminals = set(self.terminals_by_type.keys())
@@ -121,7 +132,7 @@ class RandomMaxDepthInitOperator(InitOperator):
             
             return create_node(op_name, children=children)
         
-    def __call__(self) -> Individual:
+    def __call__(self) -> IndividualType:
         root = self._grow_tree(current_depth=1, required_type=self.purpose)
         
         random_id = uuid.uuid4().hex
@@ -134,7 +145,6 @@ class RandomMaxDepthInitOperator(InitOperator):
             rule_status=RuleStatus.EVOLVING
         )
         
-        ind = Individual()
-        ind.chromosome = new_rule
+        ind = self.ind_cls.from_rule(rule=new_rule)
         
         return ind
