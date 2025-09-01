@@ -2,23 +2,23 @@
 
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Generic, List, Tuple
 
 from app.state import Stateful
 
-from ..pop import DominanceIndividual, Individual
+from ..pop import DominanceIndividual, Individual, IndividualType
 from ..comparator import Comparator, DominateComparator, non_dominated_sorting, crowding_distance_assignment
 import app.core.config as cfg
 
-class ReplacementOperator(Stateful):
+class ReplacementOperator(Stateful, Generic[IndividualType]):
     def __init__(self):
         self._random = random.Random(cfg.RANDOM_SEED)
 
     @abstractmethod
     def __call__(self, 
-                 population: List[Individual], 
-                 offspring_population: List[Individual],
-                 target_size: int) -> List[Individual]:
+                 population: List[IndividualType], 
+                 offspring_population: List[IndividualType],
+                 target_size: int) -> List[IndividualType]:
         """
         Chọn lọc các cá thể từ cha mẹ và con cái để tạo ra thế hệ tiếp theo.
 
@@ -41,7 +41,7 @@ class ReplacementOperator(Stateful):
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         self._random.setstate(fallback_state['random_state'])
 
-class NSGA2ReplacementOperator(ReplacementOperator):
+class NSGA2ReplacementOperator(ReplacementOperator[DominanceIndividual]):
     """
     Thực hiện chọn lọc sinh tồn đầy đủ theo thuật toán NSGA-II.
     Đây là phương pháp được khuyến nghị.

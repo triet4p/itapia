@@ -1,25 +1,26 @@
 from abc import ABC, abstractmethod
 import copy
 import random
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Generic, List, Optional, Tuple
 import uuid
 
 from app.state import Stateful
 from itapia_common.rules.nodes import _TreeNode
 
-from ..pop import Individual
+from ..pop import Individual, IndividualType
 import app.core.config as cfg
 
 from ..utils import get_all_nodes, get_effective_type, get_nodes_by_effective_type, replace_node
 
-class CrossoverOperator(Stateful):
+class CrossoverOperator(Stateful, Generic[IndividualType]):
     
-    def __init__(self):
+    def __init__(self, new_rule_name_prefix: Optional[str] = None):
         # Sử dụng instance Random riêng để đảm bảo khả năng tái tạo
         self._random = random.Random(cfg.RANDOM_SEED)
+        self.new_rule_name_prefix = new_rule_name_prefix if new_rule_name_prefix else uuid.uuid4().hex
     
     @abstractmethod
-    def __call__(self, ind1: Individual, ind2: Individual) -> Tuple[Individual, Individual] | None:
+    def __call__(self, ind1: IndividualType, ind2: IndividualType) -> Tuple[IndividualType, IndividualType] | None:
         """
         Recombined to individuals and return exactly 2 offsprings.
 
@@ -41,10 +42,13 @@ class CrossoverOperator(Stateful):
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         self._random.setstate(fallback_state['random_state'])
         
-class SubtreeCrossoverOperator(CrossoverOperator):
+class SubtreeCrossoverOperator(CrossoverOperator[IndividualType]):
     
-    def __call__(self, ind1: Individual, ind2: Individual) -> Tuple[Individual, Individual] | None:
+    def __call__(self, ind1: IndividualType, ind2: IndividualType) -> Tuple[IndividualType, IndividualType] | None:
         # 1. Tạo bản sao sâu (deep copy) để không làm thay đổi cha mẹ gốc
+        if not (type(ind1) is type(ind2)):
+            raise TypeError('Two individual must be same type.')
+        
         offspring1_rule = copy.deepcopy(ind1.chromosome)
         offspring2_rule = copy.deepcopy(ind2.chromosome)
 
@@ -78,13 +82,15 @@ class SubtreeCrossoverOperator(CrossoverOperator):
         # Tạo Đứa con 2: Cây của Cha mẹ 2 + nhánh cây của Cha mẹ 1
         replace_node(offspring2_rule.root, point2, subtree1)
         
-        offspring1_rule.rule_id = f'evo_{uuid.uuid4().hex}'
-        offspring2_rule.rule_id = f'evo_{uuid.uuid4().hex}'
+        offspring1_rule.auto_id_name(self.new_rule_name_prefix)
+        offspring2_rule.auto_id_name(self.new_rule_name_prefix)
+        
+        cls = type(ind1)
 
         # 6. Tạo và trả về các đối tượng Individual con
-        return Individual.from_rule(offspring1_rule), Individual.from_rule(offspring2_rule)
+        return cls.from_rule(offspring1_rule), cls.from_rule(offspring2_rule)
 
-class OnePointCrossoverOperator(CrossoverOperator):
+class OnePointCrossoverOperator(CrossoverOperator[IndividualType]):
     def _find_common_points(self, node1: _TreeNode, node2: _TreeNode) -> List[Tuple[_TreeNode, _TreeNode]]:
         """
         Hàm đệ quy để tìm tất cả các cặp nút ở cùng vị trí và có cùng kiểu.
@@ -111,7 +117,10 @@ class OnePointCrossoverOperator(CrossoverOperator):
 
         return common_points
     
-    def __call__(self, ind1: Individual, ind2: Individual) -> Tuple[Individual, Individual] | None:
+    def __call__(self, ind1: IndividualType, ind2: IndividualType) -> Tuple[IndividualType, IndividualType] | None:
+        if not (type(ind1) is type(ind2)):
+            raise TypeError('Two individual must be same type.')
+        
         offspring1_rule = copy.deepcopy(ind1.chromosome)
         offspring2_rule = copy.deepcopy(ind2.chromosome)
 
@@ -132,7 +141,10 @@ class OnePointCrossoverOperator(CrossoverOperator):
         replace_node(offspring1_rule.root, point1, subtree2)
         replace_node(offspring2_rule.root, point2, subtree1)
         
-        offspring1_rule.rule_id = f'evo_{uuid.uuid4().hex}'
-        offspring2_rule.rule_id = f'evo_{uuid.uuid4().hex}'
+        offspring1_rule.auto_id_name(self.new_rule_name_prefix)
+        offspring2_rule.auto_id_name(self.new_rule_name_prefix)
 
-        return Individual.from_rule(offspring1_rule), Individual.from_rule(offspring2_rule)
+        cls = type(ind1)
+
+        # 6. Tạo và trả về các đối tượng Individual con
+        return cls.from_rule(offspring1_rule), cls.from_rule(offspring2_rule)

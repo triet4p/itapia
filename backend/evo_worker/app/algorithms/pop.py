@@ -1,5 +1,4 @@
-from typing import Any, Dict, List, Self, TypeVar, Type
-import uuid
+from typing import Any, Dict, Generic, List, Self, TypeVar, Type
 from itapia_common.rules.rule import Rule
 from app.backtest.evaluator import Evaluator
 from app.backtest.metrics import BacktestPerformanceMetrics
@@ -52,13 +51,14 @@ class DominanceIndividual(Individual):
             'rank': self.rank,
             'crowding_distance': self.crowding_distance,
         })
+        return state
         
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         super().set_from_fallback_state(fallback_state)
         self.rank = fallback_state['rank']
         self.crowding_distance = fallback_state['crowding_distance']
     
-class Population(Stateful):
+class Population(Stateful, Generic[IndividualType]):
     def __init__(self, population_size: int, ind_cls: Type[IndividualType]):
         self.population_size: int = population_size
         self.population: list[Individual] = []

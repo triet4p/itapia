@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from copy import deepcopy
 from typing import Dict, Any, Self
+from hashlib import sha1
 
 # Assuming these modules exist and contain the corresponding functions
 # In practice, you would import them correctly
@@ -156,3 +157,27 @@ class Rule:
         
     def copy(self):
         return deepcopy(self)
+    
+    def get_hash(self) -> str:
+        """
+        Use SHA-1 to hash entity of rule (what can be serialized)
+
+        Returns:
+            str: Hex digest result of SHA-1
+        """
+        return sha1(self.to_entity()).hexdigest()
+    
+    def auto_id_name(self, prefix: str) -> None:
+        """
+        Auto fill rule id and name, match with prefix. 
+        
+        Rule id: `{prefix}_{SHA-1 Hash of entity}`
+        
+        Rule name: `{prefix.upper()} {SHA-1 Hash of entity}`
+
+        Args:
+            prefix (str): Prefix string
+            
+        """
+        self.rule_id = f'{prefix}_{self.get_hash()}'
+        self.name = f'{prefix.upper()} {self.get_hash()[:10]}....'

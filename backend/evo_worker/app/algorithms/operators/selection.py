@@ -2,21 +2,21 @@
 
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, Generic, List, Tuple
 
 from ..objective import AcceptedObjective
 from app.state import Stateful
 
-from ..pop import Individual
+from ..pop import IndividualType
 from ..comparator import Comparator # Import hàm tiện ích
 import app.core.config as cfg
 
-class SelectionOperator(Stateful):
+class SelectionOperator(Stateful, Generic[IndividualType]):
     def __init__(self):
         self._random = random.Random(cfg.RANDOM_SEED)
 
     @abstractmethod
-    def __call__(self, population: List[Individual], num_selections: int) -> List[Individual]:
+    def __call__(self, population: List[IndividualType], num_selections: int) -> List[IndividualType]:
         """
         Chọn ra một số lượng cá thể từ quần thể để làm cha mẹ.
 
@@ -38,7 +38,7 @@ class SelectionOperator(Stateful):
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         self._random.setstate(fallback_state['random_state'])
 
-class TournamentSelectionOperator(SelectionOperator):
+class TournamentSelectionOperator(SelectionOperator[IndividualType]):
     """
     Thực hiện chọn lọc giải đấu dựa trên quan hệ trội và crowding distance.
     Đây là phương pháp chọn lọc tiêu chuẩn cho NSGA-II.
@@ -50,8 +50,8 @@ class TournamentSelectionOperator(SelectionOperator):
         self.k = k
         self.comparator = comparator
 
-    def __call__(self, population: List[Individual], num_selections: int) -> List[Individual]:
-        selected_parents = []
+    def __call__(self, population: List[IndividualType], num_selections: int) -> List[IndividualType]:
+        selected_parents: List[IndividualType] = []
         pop_size = len(population)
 
         if pop_size == 0:
@@ -71,7 +71,7 @@ class TournamentSelectionOperator(SelectionOperator):
             
         return selected_parents
 
-class RouletteWheelSelectionOperator(SelectionOperator):
+class RouletteWheelSelectionOperator(SelectionOperator[IndividualType]):
     """
     Thực hiện chọn lọc bánh xe Roulette.
     Lưu ý: Phương pháp này thường không phù hợp với tối ưu hóa đa mục tiêu
@@ -80,7 +80,7 @@ class RouletteWheelSelectionOperator(SelectionOperator):
     def __init__(self, fitness_score_mapper: Callable[[AcceptedObjective], float]):
         self.fitness_score_mapper = fitness_score_mapper
     
-    def __call__(self, population: List[Individual], num_selections: int) -> List[Individual]:
+    def __call__(self, population: List[IndividualType], num_selections: int) -> List[IndividualType]:
         # Để Roulette Wheel hoạt động, chúng ta cần chuyển đổi rank đa mục tiêu
         # thành một "điểm số" vô hướng duy nhất.
         # Một cách phổ biến là dùng rank làm điểm số chính.

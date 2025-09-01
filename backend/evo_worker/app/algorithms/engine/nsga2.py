@@ -1,6 +1,6 @@
 from copy import deepcopy
 from ..pop import DominanceIndividual, Individual, Population
-from ..comparator import CrowdingDistanceAssignment, DominateComparator, non_dominated_sorting, crowding_distance_assignment
+from ..comparator import DominateComparator, non_dominated_sorting, crowding_distance_assignment
 from ..operators.construct import InitOperator
 from ..operators.crossover import CrossoverOperator
 from ..operators.mutation import MutationOperator
@@ -26,11 +26,11 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
                  run_id: str,
                  evaluator: Evaluator,
                  obj_extractor: ObjectiveExtractor,
-                 init_opr: InitOperator,
-                 crossover_opr: CrossoverOperator,
-                 mutation_opr: MutationOperator,
-                 selection_opr: SelectionOperator,
-                 replacement_opr: ReplacementOperator,
+                 init_opr: InitOperator[DominanceIndividual],
+                 crossover_opr: CrossoverOperator[DominanceIndividual],
+                 mutation_opr: MutationOperator[DominanceIndividual],
+                 selection_opr: SelectionOperator[DominanceIndividual],
+                 replacement_opr: ReplacementOperator[DominanceIndividual],
                  dominate_comparator: DominateComparator,
                  seeding_rules: Optional[List[Rule]] = None,
                  pop_size: int = 150,
@@ -59,7 +59,7 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
             crowding_distance_assignment(front)
         self.pareto_front = fronts[0]
         
-    def _apply_mutation(self, ind: Individual, pm: float, force: bool = False) -> Individual | None:
+    def _apply_mutation(self, ind: DominanceIndividual, pm: float, force: bool = False) -> DominanceIndividual | None:
         """
         Áp dụng đột biến cho một cá thể. 
         'force=True' sẽ đảm bảo đột biến được thực hiện.
@@ -69,10 +69,10 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
             return mutated_ind
         return ind
             
-    def _gen_offs_each_epoch(self, last_pop: List[Individual],
+    def _gen_offs_each_epoch(self, last_pop: List[DominanceIndividual],
                              pc: float,
                              pm: float) -> Population:
-        offs: List[Individual] = []
+        offs: List[DominanceIndividual] = []
         while len(offs) < len(last_pop):
             # Choose 2 parents
             p1, p2 = self.selection_opr(last_pop, num_selections=2)
@@ -91,8 +91,8 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
                     was_crossover = True
                     
             if not was_crossover:
-                c1 = Individual.from_rule(deepcopy(p1.chromosome))
-                c2 = Individual.from_rule(deepcopy(p2.chromosome))
+                c1 = DominanceIndividual.from_rule(deepcopy(p1.chromosome))
+                c2 = DominanceIndividual.from_rule(deepcopy(p2.chromosome))
                 
             c1 = self._apply_mutation(c1, pm, force=not was_crossover)
             c2 = self._apply_mutation(c2, pm, force=not was_crossover)
@@ -107,7 +107,7 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
         
         offs = offs[:len(last_pop)]  
         
-        offs_pop = Population(len(offs))
+        offs_pop = Population(len(offs), ind_cls=DominanceIndividual)
         offs_pop.population = offs
         return offs_pop
     
@@ -117,7 +117,8 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
         offs = self._gen_offs_each_epoch(self.pop.population, pc, pm)
         logger.info(f"Calculating fitness for offs population of {self.pop.population_size} individuals...")
         offs.cal_fitness(self.evaluator, self.obj_extractor)
-    
+        self.archived.population.extend(self._random.sample(offs.population, k=30))
+        
         # Create new population
         logger.info("Performing survival selection...")
         self.pop.population = self.replacement_opr(population=self.pop.population, 
@@ -141,6 +142,7 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
         
         logger.info(f"Calculating fitness for initial population of {self.pop.population_size} individuals...")
         self.pop.cal_fitness(self.evaluator, self.obj_extractor)
+        self.archived.population.extend(self.pop.population)
         
         logger.info("Classifing into fronts ...")
         
@@ -186,6 +188,7 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
         state.update({
             'curr_gen': self._cur_gen 
         })
+        return state
         
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         super().set_from_fallback_state(fallback_state)

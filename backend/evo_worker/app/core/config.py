@@ -31,3 +31,33 @@ PARALLEL_MULTICONTEXT_LIMIT = 5
 
 RANDOM_SEED = 42
 INIT_TERMINAL_PROB = 0.15
+
+FOR_TEST_CONTEXTS = [
+    # Tăng trưởng, biến động cao,
+    'NVDA',
+    'TSLA',
+    'AMD',
+    'AMZN',
+    'META',
+    'GOOGL',
+    'CRM',
+    'NFLX',
+    # Giá trị, ổn định
+    'BRK-B',
+    'PG',
+    'KO',
+    'WMT',
+    'JNJ',
+    'PFE',
+    'NEE',
+    'O',
+    # Chu kì, đặc biệt
+    'JPM',
+    'XOM',
+    'CAT',
+    'BA',
+    'F',
+    'HD',
+    'FCX',
+    'INTC'
+]

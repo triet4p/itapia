@@ -127,7 +127,17 @@ class SingleContextEvaluator(Evaluator):
             for attr in final_metrics_dict.keys():
                 final_metrics_dict[attr] += res_dict[attr] * scenario.weight / total_weight
                 
-        return BacktestPerformanceMetrics.model_validate(final_metrics_dict)
+        return BacktestPerformanceMetrics(
+            num_trades=int(final_metrics_dict['num_trades']),
+            total_return_pct=final_metrics_dict['total_return_pct'],
+            max_drawdown_pct=final_metrics_dict['max_drawdown_pct'],
+            win_rate_pct=final_metrics_dict['win_rate_pct'],
+            profit_factor=final_metrics_dict['profit_factor'],
+            sharpe_ratio=final_metrics_dict['sharpe_ratio'],
+            sortino_ratio=final_metrics_dict['sortino_ratio'],
+            annual_return_stability=final_metrics_dict['annual_return_stability'],
+            cagr=final_metrics_dict['cagr']
+        )
             
 
     def evaluate(self, rule: Rule) -> BacktestPerformanceMetrics:

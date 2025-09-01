@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import random
-from typing import Any, Dict, List, Type
+from typing import Any, Dict, Generic, List, Optional, Type
 import uuid
 
 from app.state import Stateful
@@ -9,19 +9,20 @@ from itapia_common.rules.nodes import _TreeNode, OperatorNode
 from itapia_common.rules.nodes.registry import get_spec_ent, create_node
 from itapia_common.schemas.entities.rules import SemanticType
 
-from ..pop import Individual
+from ..pop import DominanceIndividual, Individual, IndividualType
 from .construct import RandomMaxDepthInitOperator
 import app.core.config as cfg
 
-from ..utils import get_all_nodes, get_effective_type, get_nodes_by_effective_type, replace_node
+from ..utils import get_all_nodes, get_effective_type, get_nodes_by_effective_type, grow_tree, replace_node
 
-class MutationOperator(Stateful):
+class MutationOperator(Stateful, Generic[IndividualType]):
     
-    def __init__(self):
+    def __init__(self, new_rule_name_prefix: Optional[str] = None):
         self._random = random.Random(cfg.RANDOM_SEED)
+        self.new_rule_name_prefix = new_rule_name_prefix if new_rule_name_prefix else uuid.uuid4().hex
         
     @abstractmethod
-    def __call__(self, ind: Individual) -> Individual | None:
+    def __call__(self, ind: IndividualType) -> IndividualType | None:
         """
         Mutate an individual to create exactly one new individual.
 
@@ -42,23 +43,20 @@ class MutationOperator(Stateful):
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         self._random.setstate(fallback_state['random_state'])
     
-class SubtreeMutationOperator(MutationOperator):
+class SubtreeMutationOperator(MutationOperator[IndividualType]):
     def __init__(self, max_subtree_depth: int,
                  terminals_by_type: Dict[SemanticType, List[str]],
                  operators_by_type: Dict[SemanticType, List[str]],
-                 init_opr_template: Type[RandomMaxDepthInitOperator]):
-        super().__init__()
-        self.init_oprs: Dict[SemanticType, RandomMaxDepthInitOperator] = {
-            p: init_opr_template(purpose=p, max_depth=max_subtree_depth,
-                                 terminals_by_type=terminals_by_type,
-                                 operators_by_type=operators_by_type)
-            for p in SemanticType.ANY.concreates
-        }
+                 new_rule_name_prefix: Optional[str] = None):
+        super().__init__(new_rule_name_prefix)
+        self.terminals_by_type = terminals_by_type
+        self.operators_by_type = operators_by_type
+        self.max_subtree_depth = max_subtree_depth
         # Sử dụng các kiểu được thay thế bởi ANY, 
         # vì phải đột biến ở các nút ko phải final purpose trả về (decision signal,...) 
         # mà là 1 purpose trung gian
         
-    def __call__(self, ind: Individual) -> Individual | None:
+    def __call__(self, ind: IndividualType) -> IndividualType | None:
         mutated_rule = deepcopy(ind.chromosome)
         
         # 1. Chọn một điểm đột biến ngẫu nhiên trong cây (không chọn gốc)
@@ -72,40 +70,29 @@ class SubtreeMutationOperator(MutationOperator):
         # 2. Xác định kiểu hiệu quả cần thiết tại điểm đó
         required_type = get_effective_type(mutation_point)
         
-        init_opr = self.init_oprs.get(required_type)
-        if init_opr is None:
-            return None
-        
-        new_subtree = init_opr._grow_tree(current_depth=1, required_type=required_type)
+        new_subtree = grow_tree(current_depth=1,
+                                max_depth=self.max_subtree_depth,
+                                operators_by_type=self.operators_by_type,
+                                terminals_by_type=self.terminals_by_type,
+                                required_type=required_type,
+                                random_ins=self._random)
         
         replace_node(mutated_rule.root, mutation_point, new_subtree)
         
-        mutated_rule.rule_id = f'evo_{uuid.uuid4()}'
-        return Individual.from_rule(mutated_rule)
+        mutated_rule.auto_id_name(self.new_rule_name_prefix)
+        cls = type(ind)
+        return cls.from_rule(mutated_rule)
     
-    @property
-    def fallback_state(self) -> Dict[str, Any]:
-        super_state = super().fallback_state
-        super_state.update({
-            'init_oprs': {k: init_opr.fallback_state for k, init_opr in self.init_oprs.items()}
-        })
-        return super_state
-        
-    def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
-        super().set_from_fallback_state(fallback_state)
-        for k, init_opr in self.init_oprs.items():
-            init_opr.set_from_fallback_state(fallback_state['init_oprs'][k])
-        
-    
-class PointMutationOperator(MutationOperator):
+class PointMutationOperator(MutationOperator[IndividualType]):
     
     def __init__(self, terminals_by_type: Dict[SemanticType, List[str]],
-                 operators_by_type: Dict[SemanticType, List[str]]):
-        super().__init__()
+                 operators_by_type: Dict[SemanticType, List[str]],
+                 new_rule_name_prefix: Optional[str] = None):
+        super().__init__(new_rule_name_prefix)
         self.terminals_by_type = terminals_by_type
         self.operators_by_type = operators_by_type
     
-    def __call__(self, ind: Individual) -> Individual | None:
+    def __call__(self, ind: IndividualType) -> IndividualType | None:
         mutated_rule = deepcopy(ind.chromosome)
         all_nodes = get_all_nodes(mutated_rule.root)
         
@@ -124,8 +111,9 @@ class PointMutationOperator(MutationOperator):
         
         replace_node(mutated_rule.root, mutation_point, new_node)
         
-        mutated_rule.rule_id = f'evo_{uuid.uuid4()}'
-        return Individual.from_rule(mutated_rule)
+        mutated_rule.auto_id_name(self.new_rule_name_prefix)
+        cls = type(ind)
+        return cls.from_rule(mutated_rule)
         
     
     def _mutate_operator(self, node: OperatorNode):
@@ -162,11 +150,12 @@ class PointMutationOperator(MutationOperator):
         return None
     
 class ShrinkMutationOperator(MutationOperator):
-    def __init__(self, terminals_by_type: Dict[SemanticType, List[str]]):
-        super().__init__()
+    def __init__(self, terminals_by_type: Dict[SemanticType, List[str]],
+                 new_rule_name_prefix: Optional[str] = None):
+        super().__init__(new_rule_name_prefix)
         self.terminals_by_type = terminals_by_type
 
-    def __call__(self, ind: Individual) -> Individual:
+    def __call__(self, ind: IndividualType) -> IndividualType:
         mutated_rule = deepcopy(ind.chromosome)
         all_nodes = get_all_nodes(mutated_rule.root)
         
@@ -177,7 +166,6 @@ class ShrinkMutationOperator(MutationOperator):
             return None
             
         mutation_point = self._random.choice(shrinkable_nodes)
-        print(mutation_point.node_name)
         required_type = get_effective_type(mutation_point)
         
         # Tìm một terminal phù hợp để thay thế
@@ -187,12 +175,12 @@ class ShrinkMutationOperator(MutationOperator):
             return None
             
         new_terminal_name = self._random.choice(possible_terminals)
-        print(new_terminal_name)
         
         new_terminal_node = create_node(new_terminal_name)
         
         # Thay thế toàn bộ nhánh cây tại điểm đột biến bằng nút terminal mới
         replace_node(mutated_rule.root, mutation_point, new_terminal_node)
         
-        mutated_rule.rule_id = f'evo_{uuid.uuid4()}'
-        return Individual.from_rule(mutated_rule)
+        mutated_rule.auto_id_name(self.new_rule_name_prefix)
+        cls = type(ind)
+        return cls.from_rule(mutated_rule)

@@ -49,6 +49,16 @@ class FixedDominateComparator(DominateComparator):
                 
         return is_better_in_one
     
+class RankAndCrowdingComparator(DominateComparator):
+    def __call__(self, ind1: DominanceIndividual, ind2: DominanceIndividual):
+        if ind1.rank < 0 or ind2.rank < 0:
+            raise ValueError("Individuals must be ranked!")
+        if ind1.rank > ind2.rank:
+            return True
+        if ind1.rank < ind2.rank:
+            return False
+        return ind1.crowding_distance > ind2.crowding_distance
+    
 class EpsilonBoxDominateComparator(DominateComparator):
     """
     So sánh hai cá thể dựa trên khái niệm Epsilon-Box Dominance.

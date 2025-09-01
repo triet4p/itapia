@@ -2,9 +2,10 @@
 
 import copy
 import random
-from typing import List, Tuple, Dict
+from typing import List, Set, Tuple, Dict
 
 from itapia_common.rules.nodes import _TreeNode
+from itapia_common.rules.nodes.registry import create_node, get_spec_ent
 from itapia_common.schemas.entities.rules import SemanticType
 import app.core.config as cfg
 
@@ -80,3 +81,84 @@ def replace_node(root: _TreeNode, old_node: _TreeNode, new_node: _TreeNode) -> _
                 # Đệ quy tìm kiếm trong các cây con
                 replace_node(child, old_node, new_node)
     return root
+
+def get_concreate_type(required_type: SemanticType,
+                       random_ins: random.Random,
+                       available_types: Set[SemanticType]) -> SemanticType:
+    # Sử dụng các danh sách đã được tính toán trước
+    if not required_type.concreates:
+        return required_type
+    
+    safe_concreate_types = tuple(
+        t for t in required_type.concreates
+        if t in available_types
+    )
+    
+    if not safe_concreate_types:
+        raise TypeError('Not exist any safe concreate types.')
+    
+    return random_ins.choice(safe_concreate_types)
+
+def grow_tree(current_depth: int, 
+              max_depth: int,
+              operators_by_type: Dict[SemanticType, List[str]],
+              terminals_by_type: Dict[SemanticType, List[str]],
+              required_type: SemanticType,
+              random_ins: random.Random,
+              ) -> _TreeNode:
+    """
+    Hàm đệ quy cốt lõi để xây dựng cây một cách ngẫu nhiên.
+    """
+    is_max_depth = current_depth >= max_depth
+    specific_operators = operators_by_type.get(required_type, [])
+    any_return_operators = operators_by_type.get(SemanticType.ANY, []) if current_depth > 1 else []
+    any_numeric_return_operators = operators_by_type.get(SemanticType.ANY_NUMERIC, []) if current_depth > 1 else []
+
+    possible_operators = specific_operators + any_return_operators + any_numeric_return_operators
+    
+    has_operators = len(possible_operators) > 0
+    
+    available_types = set(terminals_by_type.keys())
+    
+    # Quyết định có tạo terminal hay không
+    # Phải tạo terminal nếu: ở độ sâu tối đa HOẶC không có operator nào phù hợp
+    # Nếu không, có xác suất `INIT_TERMINAL_PROB` để tạo terminal
+    if is_max_depth or not has_operators or (current_depth > 1 and random_ins.random() < cfg.INIT_TERMINAL_PROB):
+        # --- Tạo một Terminal Node (nút lá) ---
+        concreate_type = get_concreate_type(required_type, random_ins, available_types)
+        possible_terminals = terminals_by_type.get(concreate_type)
+    
+        if not possible_terminals:
+            raise ValueError(f"Could not find a terminal for required type '{required_type}' at depth {current_depth}.")
+        
+        terminal_name = random_ins.choice(possible_terminals)
+        return create_node(terminal_name)
+    else:
+        # --- Tạo một Operator Node (nút trong) ---
+        op_name = random_ins.choice(possible_operators)
+        op_spec = get_spec_ent(op_name)
+        
+        # Xử lý các tham số
+        args_types = list(op_spec.args_type)
+        resolved_types: Dict[SemanticType, SemanticType] = {}
+        
+        for arg_type in set(args_types):
+            if arg_type.concreates:
+                if op_spec.return_type == arg_type:
+                    resolved_types[arg_type] = required_type
+                else:
+                    resolved_types[arg_type] = get_concreate_type(arg_type, random_ins, available_types)
+            
+        final_args_type = [resolved_types.get(t, t) for t in args_types]
+        
+        children = [
+            grow_tree(current_depth=current_depth + 1, 
+                      max_depth=max_depth,
+                      operators_by_type=operators_by_type,
+                      terminals_by_type=terminals_by_type,
+                      required_type=child_type,
+                      random_ins=random_ins)
+            for child_type in final_args_type
+        ]
+        
+        return create_node(op_name, children=children)

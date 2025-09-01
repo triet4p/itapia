@@ -1,20 +1,20 @@
 from app.state import Stateful
 from itapia_common.schemas.entities.evo import EvoRuleEntity, EvoRunEntity, EvoRunStatus
-from ..pop import Individual, Population
+from ..pop import Individual, IndividualType, Population
 from ..operators.construct import InitOperator
 from ..objective import ObjectiveExtractor
 from app.backtest.evaluator import Evaluator
 
 import app.core.config as cfg
 
-from typing import Any, Dict, List, Optional, Self
+from typing import Any, Dict, List, Optional, Self, Type
 import random
 
 from itapia_common.rules.rule import Rule
 
 from abc import ABC, abstractmethod
 
-class BaseStructureEvoEngine(ABC, Stateful):
+class BaseStructureEvoEngine(Stateful):
     def __init__(self, run_id: str,
                  evaluator: Evaluator,
                  obj_extractor: ObjectiveExtractor,
@@ -28,15 +28,17 @@ class BaseStructureEvoEngine(ABC, Stateful):
         self.status = EvoRunStatus.RUNNING
         
         self.pop: Population = None
+        self.archived: Population = Population(population_size=1000, ind_cls=init_opr.ind_cls)
         
         self._random = random.Random(cfg.RANDOM_SEED)
         
     def _init_pop(self, pop_size: int) -> None:
-        self.pop = Population(pop_size)
+        ind_cls: Type[IndividualType] = self.init_opr.ind_cls
+        self.pop = Population(pop_size, ind_cls)
         
         # Seeding
         if self.seeding_rules:
-            self.pop.population.extend([Individual.from_rule(rule) for rule in self.seeding_rules])
+            self.pop.population.extend([ind_cls.from_rule(rule) for rule in self.seeding_rules])
         
         # Init remain
         for _ in range(pop_size - len(self.pop.population)):
