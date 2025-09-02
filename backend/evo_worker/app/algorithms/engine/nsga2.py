@@ -6,51 +6,100 @@ from ..operators.crossover import CrossoverOperator
 from ..operators.mutation import MutationOperator
 from ..operators.selection import SelectionOperator
 from ..operators.replacement import ReplacementOperator
-from ..objective import ObjectiveExtractor
+from ..objective import ObjectiveExtractor, SingleObjectiveExtractor
 from app.backtest.evaluator import Evaluator
 
 import app.core.config as cfg
 
-from typing import Any, Dict, List, Optional
-from ._base import BaseStructureEvoEngine
+from typing import Any, Dict, List, Optional, Tuple
+from ._base import BaseEvoEngine
 import random
+
+from ..adap import AdaptiveScoreManager
 
 from itapia_common.rules.rule import Rule
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger("NSGA-II Evo Engine")
 
-class NSGA2EvoEngine(BaseStructureEvoEngine):
+class NSGA2EvoEngine(BaseEvoEngine):
     
     def __init__(self, 
                  run_id: str,
-                 evaluator: Evaluator,
-                 obj_extractor: ObjectiveExtractor,
-                 init_opr: InitOperator[DominanceIndividual],
-                 crossover_opr: CrossoverOperator[DominanceIndividual],
-                 mutation_opr: MutationOperator[DominanceIndividual],
-                 selection_opr: SelectionOperator[DominanceIndividual],
-                 replacement_opr: ReplacementOperator[DominanceIndividual],
-                 dominate_comparator: DominateComparator,
                  seeding_rules: Optional[List[Rule]] = None,
                  pop_size: int = 150,
                  num_gen: int = 500,
                  pc: float = 0.8,
-                 pm: float = 0.2):
-        super().__init__(run_id, evaluator, obj_extractor, init_opr, seeding_rules)
+                 pm: float = 0.2,
+                 lr: float = 0.5,
+                 update_score_period: int = 50):
+        super().__init__(run_id, seeding_rules)
         self.pareto_front: List[DominanceIndividual] = None
+        self.pop: Population[DominanceIndividual] = None
+        self.archived: Population[DominanceIndividual] = None
+        
+        self.adaptive_obj_extractor: SingleObjectiveExtractor = None
     
-        self.crossover_opr = crossover_opr
-        self.mutation_opr = mutation_opr
-        self.selection_opr = selection_opr
-        self.replacement_opr = replacement_opr
-        self.dominate_comparator = dominate_comparator
+        self.crossover_oprs: Dict[str, CrossoverOperator[DominanceIndividual]] = {}
+        self.crossover_adap = AdaptiveScoreManager(lr)
+        
+        self.mutation_oprs: Dict[str, MutationOperator[DominanceIndividual]] = {}
+        self.mutation_adap = AdaptiveScoreManager(lr)
+        
+        self.selection_opr: SelectionOperator[DominanceIndividual] = None
+        self.replacement_opr = ReplacementOperator[DominanceIndividual] = None
+        self.dominate_comparator: DominateComparator = None
         
         self.pop_size = pop_size
         self.num_gen = num_gen
         self.pc = pc
         self.pm = pm
+        self.lr = lr
+        self.update_score_period = update_score_period
         self._cur_gen = 0
+        
+    def set_init_opr(self, init_opr: InitOperator[DominanceIndividual]):
+        return super().set_init_opr(init_opr)
+    
+    def set_selection_opr(self, selection_opr: SelectionOperator[DominanceIndividual]):
+        self.selection_opr = selection_opr
+        return self
+    
+    def set_replacement_opr(self, replacement_opr: ReplacementOperator[DominanceIndividual]):
+        self.replacement_opr = replacement_opr
+        return self
+    
+    def add_crossover_opr(self, crossover_opr: CrossoverOperator[DominanceIndividual], init_score: float = 1.0):
+        self.crossover_oprs[crossover_opr.singleton_name] = crossover_opr
+        self.crossover_adap.init_score(crossover_opr, init_score)
+        return self
+    
+    def add_mutation_opr(self, mutation_opr: MutationOperator[DominanceIndividual], init_score: float = 1.0):
+        self.mutation_oprs[mutation_opr.singleton_name] = mutation_opr
+        self.mutation_adap.init_score(mutation_opr, init_score)
+        return self
+    
+    def set_dominate_comparator(self, dominate_comparator: DominateComparator):
+        self.dominate_comparator = dominate_comparator
+        
+    def set_adaptive_obj_extractor(self, adaptive_obj_extractor: SingleObjectiveExtractor):
+        self.adaptive_obj_extractor = adaptive_obj_extractor
+    
+    def _check_ready_oprs(self) -> bool:
+        super_check = super()._check_ready_oprs()
+        if not super_check:
+            return False
+        if not self.selection_opr:
+            return False
+        if not self.replacement_opr:
+            return False
+        if not self.dominate_comparator:
+            return False
+        if not self.crossover_oprs:
+            return False
+        if not self.mutation_oprs:
+            return False
+        return True
         
     def _classify_pop(self):
         # Mỗi cá thể đã được gán rank trong chính hàm non dominated sorting
@@ -59,13 +108,20 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
             crowding_distance_assignment(front)
         self.pareto_front = fronts[0]
         
-    def _apply_mutation(self, ind: DominanceIndividual, pm: float, force: bool = False) -> DominanceIndividual | None:
+    def _apply_mutation(self, mutation_opr: MutationOperator[DominanceIndividual],
+                        ind: DominanceIndividual, pm: float, force: bool = False) -> DominanceIndividual | None:
         """
         Áp dụng đột biến cho một cá thể. 
         'force=True' sẽ đảm bảo đột biến được thực hiện.
         """
         if force or self._random.random() < pm:
-            mutated_ind = self.mutation_opr(ind)
+            mutated_ind = mutation_opr(ind)
+            if mutated_ind:
+                mutated_ind.cal_fitness(self.evaluator, self.obj_extractor)
+                improvement = max(0.0, 
+                                  mutated_ind.flatten_fitness(self.adaptive_obj_extractor) - 
+                                  ind.flatten_fitness(self.adaptive_obj_extractor))
+                self.mutation_adap.add_temp_score(mutation_opr, improvement)
             return mutated_ind
         return ind
             
@@ -73,7 +129,10 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
                              pc: float,
                              pm: float) -> Population:
         offs: List[DominanceIndividual] = []
+        
         while len(offs) < len(last_pop):
+            crossover_opr = self.crossover_oprs[self.crossover_adap.select()]
+            mutation_opr = self.mutation_oprs[self.mutation_adap.select()]
             # Choose 2 parents
             p1, p2 = self.selection_opr(last_pop, num_selections=2)
             
@@ -85,17 +144,30 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
             was_crossover = False
             
             if self._random.random() < pc:
-                pairs = self.crossover_opr(p1, p2)
+                pairs = crossover_opr(p1, p2)
                 if pairs:
                     c1, c2 = pairs
                     was_crossover = True
+                    c1.cal_fitness(self.evaluator, self.obj_extractor)
+                    c2.cal_fitness(self.evaluator, self.obj_extractor)
+                    
+                    worst_parent_fitness = min(p1.flatten_fitness(self.adaptive_obj_extractor), 
+                                               p2.flatten_fitness(self.adaptive_obj_extractor))
+                    improvement = 0.0
+                    improvement += max(0.0, 
+                                       c1.flatten_fitness(self.adaptive_obj_extractor) - worst_parent_fitness)
+                    improvement += max(0.0, 
+                                       c2.flatten_fitness(self.adaptive_obj_extractor) - worst_parent_fitness)
+                    self.crossover_adap.add_temp_score(crossover_opr, improvement)
                     
             if not was_crossover:
                 c1 = DominanceIndividual.from_rule(deepcopy(p1.chromosome))
+                c1.metrics, c1.fitness = p1.metrics, p1.fitness
                 c2 = DominanceIndividual.from_rule(deepcopy(p2.chromosome))
+                c2.metrics, c2.fitness = p2.metrics, p2.fitness
                 
-            c1 = self._apply_mutation(c1, pm, force=not was_crossover)
-            c2 = self._apply_mutation(c2, pm, force=not was_crossover)
+            c1 = self._apply_mutation(mutation_opr, c1, pm, force=not was_crossover)
+            c2 = self._apply_mutation(mutation_opr, c2, pm, force=not was_crossover)
             
             if c1 is None or c2 is None:
                 continue
@@ -116,7 +188,7 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
         # Generate offsprings
         offs = self._gen_offs_each_epoch(self.pop.population, pc, pm)
         logger.info(f"Calculating fitness for offs population of {self.pop.population_size} individuals...")
-        offs.cal_fitness(self.evaluator, self.obj_extractor)
+        #offs.cal_fitness(self.evaluator, self.obj_extractor) #Remove
         self.archived.population.extend(self._random.sample(offs.population, k=30))
         
         # Create new population
@@ -153,6 +225,11 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
             logger.info(f"--- Starting Generation {gen}/{num_gen} ---")
             self._run_each_gen(pop_size, pc, pm)
             logger.info(f"Generation {gen} classification complete. Pareto front size: {len(self.pareto_front)}")
+            
+            if gen % self.update_score_period == 0:
+                self.crossover_adap.update_score()
+                self.mutation_adap.update_score()
+            
             if gen >= stop_gen:
                 break
         
@@ -177,6 +254,11 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
             logger.info(f"--- Starting Generation {gen}/{num_gen} ---")
             self._run_each_gen(pop_size, pc, pm)
             logger.info(f"Generation {gen} classification complete. Pareto front size: {len(self.pareto_front)}")
+            
+            if gen % self.update_score_period == 0:
+                self.crossover_adap.update_score()
+                self.mutation_adap.update_score()
+            
             if gen >= next_stop_gen:
                 break
 
@@ -186,10 +268,14 @@ class NSGA2EvoEngine(BaseStructureEvoEngine):
     def fallback_state(self) -> Dict[str, Any]:
         state = super().fallback_state
         state.update({
-            'curr_gen': self._cur_gen 
+            'curr_gen': self._cur_gen,
+            'crossover_adap': self.crossover_adap.fallback_state,
+            'mutation_adap': self.mutation_adap.fallback_state
         })
         return state
         
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         super().set_from_fallback_state(fallback_state)
         self._cur_gen = fallback_state["curr_gen"]
+        self.crossover_adap.set_from_fallback_state(fallback_state['crossover_adap'])
+        self.mutation_adap.set_from_fallback_state(fallback_state['mutation_adap'])

@@ -1,4 +1,4 @@
-from app.state import Stateful
+from app.state import SingletonNameable, Stateful
 from itapia_common.schemas.entities.evo import EvoRuleEntity, EvoRunEntity, EvoRunStatus
 from ..pop import Individual, IndividualType, Population
 from ..operators.construct import InitOperator
@@ -14,23 +14,32 @@ from itapia_common.rules.rule import Rule
 
 from abc import ABC, abstractmethod
 
-class BaseStructureEvoEngine(Stateful):
+class BaseEvoEngine(Stateful, SingletonNameable):
     def __init__(self, run_id: str,
-                 evaluator: Evaluator,
-                 obj_extractor: ObjectiveExtractor,
-                 init_opr: InitOperator,
                  seeding_rules: Optional[List[Rule]] = None):
         self.run_id = run_id
-        self.evaluator = evaluator
-        self.obj_extractor = obj_extractor
-        self.init_opr = init_opr
+        self.evaluator: Evaluator = None
+        self.obj_extractor: ObjectiveExtractor = None
+        self.init_opr: InitOperator = None
         self.seeding_rules = seeding_rules
         self.status = EvoRunStatus.RUNNING
         
         self.pop: Population = None
-        self.archived: Population = Population(population_size=1000, ind_cls=init_opr.ind_cls)
+        self.archived: Population = None
         
         self._random = random.Random(cfg.RANDOM_SEED)
+        
+    def set_evaluator(self, evaluator: Evaluator):
+        self.evaluator = evaluator
+        return self
+    
+    def set_obj_extractor(self, obj_extractor: ObjectiveExtractor):
+        self.obj_extractor = obj_extractor
+        return self
+    
+    def set_init_opr(self, init_opr: InitOperator):
+        self.init_opr = init_opr
+        return self
         
     def _init_pop(self, pop_size: int) -> None:
         ind_cls: Type[IndividualType] = self.init_opr.ind_cls
@@ -68,9 +77,20 @@ class BaseStructureEvoEngine(Stateful):
     def fallback_state(self) -> Dict[str, Any]:
         return {
             'random_state': self._random.getstate(),
-            'pop': self.pop.fallback_state
+            'pop': self.pop.fallback_state,
+            'archived': self.archived.fallback_state,
         }
         
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         self._random.setstate(fallback_state['random_state'])
         self.pop.set_from_fallback_state(fallback_state['pop'])
+        self.archived.set_from_fallback_state(fallback_state['archived'])
+        
+    def _check_ready_oprs(self) -> bool:
+        if not self.init_opr:
+            return False
+        if not self.evaluator:
+            return False
+        if not self.obj_extractor:
+            return False
+        return True

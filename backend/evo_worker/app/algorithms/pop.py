@@ -3,7 +3,7 @@ from itapia_common.rules.rule import Rule
 from app.backtest.evaluator import Evaluator
 from app.backtest.metrics import BacktestPerformanceMetrics
 from app.state import Stateful
-from .objective import AcceptedObjective, ObjectiveExtractor
+from .objective import AcceptedObjective, ObjectiveExtractor, SingleObjectiveExtractor
 
 IndividualType = TypeVar("IndividualType", bound='Individual')
 
@@ -44,6 +44,11 @@ class DominanceIndividual(Individual):
         self.rank: int = -1
         self.crowding_distance: float = 0.0
         
+    def flatten_fitness(self, single_obj_extractor: SingleObjectiveExtractor) -> float:
+        if not self.metrics:
+            raise ValueError('Metrics must be set before flatten fitness.')
+        return single_obj_extractor.extract(self.metrics)
+        
     @property
     def fallback_state(self) -> Dict[str, Any]:
         state = super().fallback_state
@@ -61,10 +66,10 @@ class DominanceIndividual(Individual):
 class Population(Stateful, Generic[IndividualType]):
     def __init__(self, population_size: int, ind_cls: Type[IndividualType]):
         self.population_size: int = population_size
-        self.population: list[Individual] = []
+        self.population: list[IndividualType] = []
         self.ind_cls: Type[IndividualType] = ind_cls
         
-    def reassign(self, population: List[Individual]):
+    def reassign(self, population: List[IndividualType]):
         self.population = population
         self.population_size = len(self.population)
         

@@ -4,13 +4,13 @@ import random
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Generic, List, Tuple
 
-from app.state import Stateful
+from app.state import SingletonNameable, Stateful
 
 from ..pop import DominanceIndividual, Individual, IndividualType
 from ..comparator import Comparator, DominateComparator, non_dominated_sorting, crowding_distance_assignment
 import app.core.config as cfg
 
-class ReplacementOperator(Stateful, Generic[IndividualType]):
+class ReplacementOperator(Stateful, SingletonNameable, Generic[IndividualType]):
     def __init__(self):
         self._random = random.Random(cfg.RANDOM_SEED)
 

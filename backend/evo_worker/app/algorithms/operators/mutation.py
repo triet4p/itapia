@@ -4,7 +4,7 @@ import random
 from typing import Any, Dict, Generic, List, Optional, Type
 import uuid
 
-from app.state import Stateful
+from app.state import SingletonNameable, Stateful
 from itapia_common.rules.nodes import _TreeNode, OperatorNode
 from itapia_common.rules.nodes.registry import get_spec_ent, create_node
 from itapia_common.schemas.entities.rules import SemanticType
@@ -15,7 +15,7 @@ import app.core.config as cfg
 
 from ..utils import get_all_nodes, get_effective_type, get_nodes_by_effective_type, grow_tree, replace_node
 
-class MutationOperator(Stateful, Generic[IndividualType]):
+class MutationOperator(Stateful, SingletonNameable, Generic[IndividualType]):
     
     def __init__(self, new_rule_name_prefix: Optional[str] = None):
         self._random = random.Random(cfg.RANDOM_SEED)

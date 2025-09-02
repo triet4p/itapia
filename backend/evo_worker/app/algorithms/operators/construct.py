@@ -3,7 +3,7 @@ import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Self, Type, Generic
 
-from app.state import Stateful
+from app.state import SingletonNameable, Stateful
 
 from ..pop import DominanceIndividual, Individual, IndividualType
 import app.core.config as cfg
@@ -15,7 +15,7 @@ from itapia_common.schemas.entities.rules import RuleStatus, SemanticType
 
 from ..utils import grow_tree
 
-class InitOperator(Stateful, Generic[IndividualType]):
+class InitOperator(Stateful, SingletonNameable, Generic[IndividualType]):
     
     def __init__(self, purpose: SemanticType, ind_cls: Type[IndividualType],
                  new_rule_name_prefix: Optional[str] = None):

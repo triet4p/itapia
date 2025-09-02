@@ -12,3 +12,8 @@ class Stateful(ABC):
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         pass
     
+class SingletonNameable(ABC):
+    
+    @property
+    def singleton_name(self) -> str:
+        return type(self).__name__

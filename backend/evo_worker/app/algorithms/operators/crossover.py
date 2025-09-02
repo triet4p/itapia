@@ -4,7 +4,7 @@ import random
 from typing import Any, Dict, Generic, List, Optional, Tuple
 import uuid
 
-from app.state import Stateful
+from app.state import SingletonNameable, Stateful
 from itapia_common.rules.nodes import _TreeNode
 
 from ..pop import Individual, IndividualType
@@ -12,7 +12,7 @@ import app.core.config as cfg
 
 from ..utils import get_all_nodes, get_effective_type, get_nodes_by_effective_type, replace_node
 
-class CrossoverOperator(Stateful, Generic[IndividualType]):
+class CrossoverOperator(Stateful, SingletonNameable, Generic[IndividualType]):
     
     def __init__(self, new_rule_name_prefix: Optional[str] = None):
         # Sử dụng instance Random riêng để đảm bảo khả năng tái tạo

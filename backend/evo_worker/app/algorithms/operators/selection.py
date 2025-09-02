@@ -5,13 +5,13 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Generic, List, Tuple
 
 from ..objective import AcceptedObjective
-from app.state import Stateful
+from app.state import SingletonNameable, Stateful
 
 from ..pop import IndividualType
 from ..comparator import Comparator # Import hàm tiện ích
 import app.core.config as cfg
 
-class SelectionOperator(Stateful, Generic[IndividualType]):
+class SelectionOperator(Stateful, SingletonNameable, Generic[IndividualType]):
     def __init__(self):
         self._random = random.Random(cfg.RANDOM_SEED)
 
