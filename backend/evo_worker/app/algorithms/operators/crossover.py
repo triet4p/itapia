@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import copy
 import random
-from typing import Any, Dict, Generic, List, Optional, Tuple
+from typing import Any, Dict, Generic, List, Optional, Protocol, Tuple, Type
 import uuid
 
 from app.state import SingletonNameable, Stateful
@@ -14,10 +14,11 @@ from ..utils import get_all_nodes, get_effective_type, get_nodes_by_effective_ty
 
 class CrossoverOperator(Stateful, SingletonNameable, Generic[IndividualType]):
     
-    def __init__(self, new_rule_name_prefix: Optional[str] = None):
+    def __init__(self, ind_cls: Type[IndividualType], new_rule_name_prefix: Optional[str] = None):
         # Sử dụng instance Random riêng để đảm bảo khả năng tái tạo
         self._random = random.Random(cfg.RANDOM_SEED)
         self.new_rule_name_prefix = new_rule_name_prefix if new_rule_name_prefix else uuid.uuid4().hex
+        self.ind_cls = ind_cls
     
     @abstractmethod
     def __call__(self, ind1: IndividualType, ind2: IndividualType) -> Tuple[IndividualType, IndividualType] | None:
@@ -46,8 +47,10 @@ class SubtreeCrossoverOperator(CrossoverOperator[IndividualType]):
     
     def __call__(self, ind1: IndividualType, ind2: IndividualType) -> Tuple[IndividualType, IndividualType] | None:
         # 1. Tạo bản sao sâu (deep copy) để không làm thay đổi cha mẹ gốc
-        if not (type(ind1) is type(ind2)):
-            raise TypeError('Two individual must be same type.')
+        if not (type(ind1) is self.ind_cls):
+            raise TypeError('Individual must be same type as init.')
+        if not (type(ind2) is self.ind_cls):
+            raise TypeError('Individual must be same type as init.')
         
         offspring1_rule = copy.deepcopy(ind1.chromosome)
         offspring2_rule = copy.deepcopy(ind2.chromosome)
@@ -84,11 +87,9 @@ class SubtreeCrossoverOperator(CrossoverOperator[IndividualType]):
         
         offspring1_rule.auto_id_name(self.new_rule_name_prefix)
         offspring2_rule.auto_id_name(self.new_rule_name_prefix)
-        
-        cls = type(ind1)
 
         # 6. Tạo và trả về các đối tượng Individual con
-        return cls.from_rule(offspring1_rule), cls.from_rule(offspring2_rule)
+        return self.ind_cls.from_rule(offspring1_rule), self.ind_cls.from_rule(offspring2_rule)
 
 class OnePointCrossoverOperator(CrossoverOperator[IndividualType]):
     def _find_common_points(self, node1: _TreeNode, node2: _TreeNode) -> List[Tuple[_TreeNode, _TreeNode]]:
@@ -118,8 +119,10 @@ class OnePointCrossoverOperator(CrossoverOperator[IndividualType]):
         return common_points
     
     def __call__(self, ind1: IndividualType, ind2: IndividualType) -> Tuple[IndividualType, IndividualType] | None:
-        if not (type(ind1) is type(ind2)):
-            raise TypeError('Two individual must be same type.')
+        if not (type(ind1) is self.ind_cls):
+            raise TypeError('Individual must be same type as init.')
+        if not (type(ind2) is self.ind_cls):
+            raise TypeError('Individual must be same type as init.')
         
         offspring1_rule = copy.deepcopy(ind1.chromosome)
         offspring2_rule = copy.deepcopy(ind2.chromosome)
@@ -144,7 +147,5 @@ class OnePointCrossoverOperator(CrossoverOperator[IndividualType]):
         offspring1_rule.auto_id_name(self.new_rule_name_prefix)
         offspring2_rule.auto_id_name(self.new_rule_name_prefix)
 
-        cls = type(ind1)
-
         # 6. Tạo và trả về các đối tượng Individual con
-        return cls.from_rule(offspring1_rule), cls.from_rule(offspring2_rule)
+        return self.ind_cls.from_rule(offspring1_rule), self.ind_cls.from_rule(offspring2_rule)

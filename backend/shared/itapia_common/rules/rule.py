@@ -1,5 +1,6 @@
 # itapia_common/rules/rule.py
 
+import json
 import uuid
 from datetime import datetime, timezone
 from copy import deepcopy
@@ -165,7 +166,8 @@ class Rule:
         Returns:
             str: Hex digest result of SHA-1
         """
-        return sha1(self.to_entity()).hexdigest()
+        to_encode = json.dumps(self.to_entity().root.model_dump())
+        return sha1(to_encode.encode('utf-8')).hexdigest()
     
     def auto_id_name(self, prefix: str) -> None:
         """

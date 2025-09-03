@@ -2,6 +2,8 @@
 
 from typing import Optional
 
+from .backtest.selector import BacktestPointSelector
+
 from .backtest.context import BacktestContextManager
 from .backtest.data_prepare import BacktestDataPreparer
 

@@ -2,7 +2,7 @@
 
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Tuple
+from typing import Any, Dict, Generic, List, Protocol, Tuple, Type
 
 from app.state import SingletonNameable, Stateful
 
@@ -11,8 +11,9 @@ from ..comparator import Comparator, DominateComparator, non_dominated_sorting, 
 import app.core.config as cfg
 
 class ReplacementOperator(Stateful, SingletonNameable, Generic[IndividualType]):
-    def __init__(self):
+    def __init__(self, ind_cls: Type[IndividualType]):
         self._random = random.Random(cfg.RANDOM_SEED)
+        self.ind_cls = ind_cls
 
     @abstractmethod
     def __call__(self, 
@@ -47,7 +48,7 @@ class NSGA2ReplacementOperator(ReplacementOperator[DominanceIndividual]):
     Đây là phương pháp được khuyến nghị.
     """
     def __init__(self, comparator: DominateComparator):
-        super().__init__()
+        super().__init__(ind_cls=DominanceIndividual)
         self.comparator = comparator
     
     def __call__(self, 

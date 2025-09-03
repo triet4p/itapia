@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import random
-from typing import Any, Dict, Generic, List, Optional, Type
+from typing import Any, Dict, Generic, List, Optional, Protocol, Type
 import uuid
 
 from app.state import SingletonNameable, Stateful
@@ -17,9 +17,11 @@ from ..utils import get_all_nodes, get_effective_type, get_nodes_by_effective_ty
 
 class MutationOperator(Stateful, SingletonNameable, Generic[IndividualType]):
     
-    def __init__(self, new_rule_name_prefix: Optional[str] = None):
+    def __init__(self, ind_cls: Type[IndividualType],
+                 new_rule_name_prefix: Optional[str] = None):
         self._random = random.Random(cfg.RANDOM_SEED)
         self.new_rule_name_prefix = new_rule_name_prefix if new_rule_name_prefix else uuid.uuid4().hex
+        self.ind_cls = ind_cls
         
     @abstractmethod
     def __call__(self, ind: IndividualType) -> IndividualType | None:
@@ -44,11 +46,11 @@ class MutationOperator(Stateful, SingletonNameable, Generic[IndividualType]):
         self._random.setstate(fallback_state['random_state'])
     
 class SubtreeMutationOperator(MutationOperator[IndividualType]):
-    def __init__(self, max_subtree_depth: int,
+    def __init__(self, ind_cls: Type[IndividualType], max_subtree_depth: int,
                  terminals_by_type: Dict[SemanticType, List[str]],
                  operators_by_type: Dict[SemanticType, List[str]],
                  new_rule_name_prefix: Optional[str] = None):
-        super().__init__(new_rule_name_prefix)
+        super().__init__(ind_cls, new_rule_name_prefix)
         self.terminals_by_type = terminals_by_type
         self.operators_by_type = operators_by_type
         self.max_subtree_depth = max_subtree_depth
@@ -57,6 +59,8 @@ class SubtreeMutationOperator(MutationOperator[IndividualType]):
         # mà là 1 purpose trung gian
         
     def __call__(self, ind: IndividualType) -> IndividualType | None:
+        if not (type(ind) is self.ind_cls):
+            raise TypeError('Individual must be same type as init.')
         mutated_rule = deepcopy(ind.chromosome)
         
         # 1. Chọn một điểm đột biến ngẫu nhiên trong cây (không chọn gốc)
@@ -80,19 +84,20 @@ class SubtreeMutationOperator(MutationOperator[IndividualType]):
         replace_node(mutated_rule.root, mutation_point, new_subtree)
         
         mutated_rule.auto_id_name(self.new_rule_name_prefix)
-        cls = type(ind)
-        return cls.from_rule(mutated_rule)
+        return self.ind_cls.from_rule(mutated_rule)
     
 class PointMutationOperator(MutationOperator[IndividualType]):
     
-    def __init__(self, terminals_by_type: Dict[SemanticType, List[str]],
+    def __init__(self, ind_cls: Type[IndividualType], terminals_by_type: Dict[SemanticType, List[str]],
                  operators_by_type: Dict[SemanticType, List[str]],
                  new_rule_name_prefix: Optional[str] = None):
-        super().__init__(new_rule_name_prefix)
+        super().__init__(ind_cls, new_rule_name_prefix)
         self.terminals_by_type = terminals_by_type
         self.operators_by_type = operators_by_type
     
     def __call__(self, ind: IndividualType) -> IndividualType | None:
+        if not (type(ind) is self.ind_cls):
+            raise TypeError('Individual must be same type as init.')
         mutated_rule = deepcopy(ind.chromosome)
         all_nodes = get_all_nodes(mutated_rule.root)
         
@@ -112,8 +117,7 @@ class PointMutationOperator(MutationOperator[IndividualType]):
         replace_node(mutated_rule.root, mutation_point, new_node)
         
         mutated_rule.auto_id_name(self.new_rule_name_prefix)
-        cls = type(ind)
-        return cls.from_rule(mutated_rule)
+        return self.ind_cls.from_rule(mutated_rule)
         
     
     def _mutate_operator(self, node: OperatorNode):
@@ -149,13 +153,15 @@ class PointMutationOperator(MutationOperator[IndividualType]):
             return create_node(node_name=new_term_name)
         return None
     
-class ShrinkMutationOperator(MutationOperator):
-    def __init__(self, terminals_by_type: Dict[SemanticType, List[str]],
+class ShrinkMutationOperator(MutationOperator[IndividualType]):
+    def __init__(self, ind_cls: Type[IndividualType], terminals_by_type: Dict[SemanticType, List[str]],
                  new_rule_name_prefix: Optional[str] = None):
-        super().__init__(new_rule_name_prefix)
+        super().__init__(ind_cls, new_rule_name_prefix)
         self.terminals_by_type = terminals_by_type
 
-    def __call__(self, ind: IndividualType) -> IndividualType:
+    def __call__(self, ind: IndividualType) -> IndividualType | None:
+        if not (type(ind) is self.ind_cls):
+            raise TypeError('Individual must be same type as init.')
         mutated_rule = deepcopy(ind.chromosome)
         all_nodes = get_all_nodes(mutated_rule.root)
         
@@ -182,5 +188,4 @@ class ShrinkMutationOperator(MutationOperator):
         replace_node(mutated_rule.root, mutation_point, new_terminal_node)
         
         mutated_rule.auto_id_name(self.new_rule_name_prefix)
-        cls = type(ind)
-        return cls.from_rule(mutated_rule)
+        return self.ind_cls.from_rule(mutated_rule)

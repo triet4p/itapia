@@ -32,7 +32,8 @@ class NSGA2EvoEngine(BaseEvoEngine):
                  pc: float = 0.8,
                  pm: float = 0.2,
                  lr: float = 0.5,
-                 update_score_period: int = 50):
+                 update_score_period: int = 50,
+                 archive_each_gen: int = 50):
         super().__init__(run_id, seeding_rules)
         self.pareto_front: List[DominanceIndividual] = None
         self.pop: Population[DominanceIndividual] = None
@@ -47,7 +48,7 @@ class NSGA2EvoEngine(BaseEvoEngine):
         self.mutation_adap = AdaptiveScoreManager(lr)
         
         self.selection_opr: SelectionOperator[DominanceIndividual] = None
-        self.replacement_opr = ReplacementOperator[DominanceIndividual] = None
+        self.replacement_opr: ReplacementOperator[DominanceIndividual] = None
         self.dominate_comparator: DominateComparator = None
         
         self.pop_size = pop_size
@@ -56,6 +57,7 @@ class NSGA2EvoEngine(BaseEvoEngine):
         self.pm = pm
         self.lr = lr
         self.update_score_period = update_score_period
+        self.archive_each_gen = archive_each_gen
         self._cur_gen = 0
         
     def set_init_opr(self, init_opr: InitOperator[DominanceIndividual]):
@@ -81,9 +83,11 @@ class NSGA2EvoEngine(BaseEvoEngine):
     
     def set_dominate_comparator(self, dominate_comparator: DominateComparator):
         self.dominate_comparator = dominate_comparator
+        return self
         
     def set_adaptive_obj_extractor(self, adaptive_obj_extractor: SingleObjectiveExtractor):
         self.adaptive_obj_extractor = adaptive_obj_extractor
+        return self
     
     def _check_ready_oprs(self) -> bool:
         super_check = super()._check_ready_oprs()
@@ -132,7 +136,9 @@ class NSGA2EvoEngine(BaseEvoEngine):
         
         while len(offs) < len(last_pop):
             crossover_opr = self.crossover_oprs[self.crossover_adap.select()]
+            
             mutation_opr = self.mutation_oprs[self.mutation_adap.select()]
+           
             # Choose 2 parents
             p1, p2 = self.selection_opr(last_pop, num_selections=2)
             
@@ -143,6 +149,7 @@ class NSGA2EvoEngine(BaseEvoEngine):
             c1, c2 = None, None
             was_crossover = False
             
+            logger.info(f'Choose Crossover: {crossover_opr.singleton_name}')
             if self._random.random() < pc:
                 pairs = crossover_opr(p1, p2)
                 if pairs:
@@ -165,7 +172,7 @@ class NSGA2EvoEngine(BaseEvoEngine):
                 c1.metrics, c1.fitness = p1.metrics, p1.fitness
                 c2 = DominanceIndividual.from_rule(deepcopy(p2.chromosome))
                 c2.metrics, c2.fitness = p2.metrics, p2.fitness
-                
+            logger.info(f'Choose Mutation: {mutation_opr.singleton_name}')     
             c1 = self._apply_mutation(mutation_opr, c1, pm, force=not was_crossover)
             c2 = self._apply_mutation(mutation_opr, c2, pm, force=not was_crossover)
             
@@ -189,7 +196,7 @@ class NSGA2EvoEngine(BaseEvoEngine):
         offs = self._gen_offs_each_epoch(self.pop.population, pc, pm)
         logger.info(f"Calculating fitness for offs population of {self.pop.population_size} individuals...")
         #offs.cal_fitness(self.evaluator, self.obj_extractor) #Remove
-        self.archived.population.extend(self._random.sample(offs.population, k=30))
+        self.archived.population.extend(self._random.sample(offs.population, k=min(self.archive_each_gen, len(offs.population))))
         
         # Create new population
         logger.info("Performing survival selection...")
@@ -214,6 +221,7 @@ class NSGA2EvoEngine(BaseEvoEngine):
         
         logger.info(f"Calculating fitness for initial population of {self.pop.population_size} individuals...")
         self.pop.cal_fitness(self.evaluator, self.obj_extractor)
+        self.archived = Population(population_size=pop_size*10, ind_cls=self.pop.ind_cls)
         self.archived.population.extend(self.pop.population)
         
         logger.info("Classifing into fronts ...")

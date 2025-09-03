@@ -2,7 +2,7 @@
 
 import random
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Generic, List, Tuple
+from typing import Any, Callable, Dict, Generic, List, Protocol, Tuple, Type
 
 from ..objective import AcceptedObjective
 from app.state import SingletonNameable, Stateful
@@ -12,8 +12,9 @@ from ..comparator import Comparator # Import hàm tiện ích
 import app.core.config as cfg
 
 class SelectionOperator(Stateful, SingletonNameable, Generic[IndividualType]):
-    def __init__(self):
+    def __init__(self, ind_cls: Type[IndividualType]):
         self._random = random.Random(cfg.RANDOM_SEED)
+        self.ind_cls = ind_cls
 
     @abstractmethod
     def __call__(self, population: List[IndividualType], num_selections: int) -> List[IndividualType]:
@@ -43,8 +44,8 @@ class TournamentSelectionOperator(SelectionOperator[IndividualType]):
     Thực hiện chọn lọc giải đấu dựa trên quan hệ trội và crowding distance.
     Đây là phương pháp chọn lọc tiêu chuẩn cho NSGA-II.
     """
-    def __init__(self, comparator: Comparator, k: int = 4):
-        super().__init__()
+    def __init__(self, ind_cls: Type[IndividualType], comparator: Comparator, k: int = 4):
+        super().__init__(ind_cls)
         if k < 2:
             raise ValueError("Tournament size (k) must be at least 2.")
         self.k = k
@@ -77,7 +78,8 @@ class RouletteWheelSelectionOperator(SelectionOperator[IndividualType]):
     Lưu ý: Phương pháp này thường không phù hợp với tối ưu hóa đa mục tiêu
     vì nó yêu cầu một giá trị fitness vô hướng duy nhất.
     """
-    def __init__(self, fitness_score_mapper: Callable[[AcceptedObjective], float]):
+    def __init__(self, ind_cls: Type[IndividualType], fitness_score_mapper: Callable[[AcceptedObjective], float]):
+        super().__init__(ind_cls)
         self.fitness_score_mapper = fitness_score_mapper
     
     def __call__(self, population: List[IndividualType], num_selections: int) -> List[IndividualType]:

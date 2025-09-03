@@ -134,7 +134,7 @@ class PerformanceMetrics:
             if gross_profit > 0:
                 # Nếu không có lỗ nhưng có lời, profit factor là vô hạn.
                 # Trả về một số lớn, dương để thể hiện kết quả rất tốt.
-                return 9999.0
+                return 50.0
             else:
                 # Không lời, không lỗ (tất cả các trade đều hòa vốn).
                 # Profit factor không xác định, trả về 1.0 (hòa vốn).
@@ -188,15 +188,15 @@ class PerformanceMetrics:
         
         if returns_below_target.empty:
             # Nếu không có giao dịch nào thua lỗ
-            return 9999.0 if avg_return_per_trade > 0 else 0.0
+            return 50.0 if avg_return_per_trade > 0 else 0.0
 
         # Tính độ lệch chuẩn của các giao dịch thua lỗ
-        downside_deviation = returns_below_target.std()
+        downside_deviation = returns_below_target.std(ddof=0)
 
-        if downside_deviation == 0:
+        if abs(downside_deviation) <= 1e-4:
             # Trường hợp hiếm gặp (tất cả các lệnh thua đều có cùng một mức lỗ)
             # Hoặc chỉ có 1 lệnh thua
-            return 9999.0 if avg_return_per_trade > 0 else 0.0
+            return 50.0 if avg_return_per_trade > 0 else 0.0
         
         # 3. Tính toán Sortino Ratio
         sortino_ratio = (avg_return_per_trade - target_return_pct) / downside_deviation

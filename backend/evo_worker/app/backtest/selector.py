@@ -3,6 +3,7 @@ import numpy as np
 from datetime import datetime, timezone
 from typing import List, Dict, Set
 
+from app.backtest.data_prepare import BacktestDataPreparer
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Backtest Point Selector')
@@ -18,9 +19,7 @@ class BacktestPointSelector:
     
     Hỗ trợ chaining methods để xây dựng một tập hợp các điểm backtest.
     """
-    def __init__(self, ohlcv_df: pd.DataFrame, 
-                 selector_start: datetime|None = None,
-                 selector_end: datetime|None = None,
+    def __init__(self, ticker: str, data_preparer: BacktestDataPreparer,
                  config: Dict = None):
         """
         Khởi tạo selector với DataFrame OHLCV.
@@ -30,14 +29,15 @@ class BacktestPointSelector:
                                      phải có DatetimeIndex và các cột 'open', 'high', 'low', 'close'.
             config (Dict, optional): Một dictionary để tinh chỉnh các tham số.
         """
+        
+        ohlcv_df = data_preparer.get_daily_ohlcv_for_ticker(ticker, limit=5000)
+        
         if ohlcv_df.empty:
             raise ValueError("OHLCV DataFrame cannot be empty.")
         
         self.config = config or self.DEFAULT_CONFIG
         
         self.df = ohlcv_df.copy()
-        self.selector_start = selector_start.replace(tzinfo=timezone.utc) if selector_start else self.df.index.min().to_pydatetime()
-        self.selector_end = selector_end.replace(tzinfo=timezone.utc) if selector_end else self.df.index.max().to_pydatetime()
     
         # 1. Chuẩn bị dữ liệu và các chỉ báo MỘT LẦN DUY NHẤT
         self._calculate_indicators()
@@ -66,26 +66,59 @@ class BacktestPointSelector:
         # Bỏ qua các hàng NaN được tạo ra bởi các chỉ báo (chủ yếu là do SMA_200)
         self.df.dropna(inplace=True)
 
-    def add_monthly_points(self, day_of_month: int) -> 'BacktestPointSelector':
+    def add_monthly_points(self, day_of_month: int, max_points: int = 100,          
+                            selector_start: datetime|None = None,
+                            selector_end: datetime|None = None) -> 'BacktestPointSelector':
         """
-        Thêm các điểm backtest định kỳ hàng tháng.
+        Thêm các điểm backtest định kỳ hàng tháng, ưu tiên những ngày gần nhất.
+
+        Args:
+            day_of_month (int): Ngày trong tháng để nhắm đến.
+            max_points (int): Số lượng điểm định kỳ tối đa cần lấy.
         """
-        logger.info(f"Adding monthly points on day {day_of_month}...")
+        logger.info(f"Adding up to {max_points} monthly points on day {day_of_month}, prioritizing recent dates...")
         
+        selector_start = selector_start.replace(tzinfo=timezone.utc) if selector_start else self.df.index.min().to_pydatetime()
+        selector_end = selector_end.replace(tzinfo=timezone.utc) if selector_end else self.df.index.max().to_pydatetime()
         
-        monthly_dates: List[pd.Timestamp] = []
-        for month_start_date in pd.date_range(start=self.selector_start, end=self.selector_end, freq='MS'):
-            target_date = month_start_date.replace(day=day_of_month)
-            monthly_dates.append(target_date)
-        monthly_dates_idx = pd.to_datetime(monthly_dates, utc=True)
+        # --- BƯỚC 1: TẠO RA TẤT CẢ CÁC ỨNG CỬ VIÊN NGÀY ĐỊNH KỲ ---
         
-        for monthly_idx in monthly_dates_idx:
-            curr_df = self.df[self.df.index <= monthly_idx]
-            self.selected_points.add(curr_df.iloc[-1].name)
+        candidate_target_dates: List[pd.Timestamp] = []
+        # Lặp qua tất cả các tháng trong khoảng thời gian
+        for month_start_date in pd.date_range(start=selector_start, end=selector_end, freq='MS'):
+            # Xử lý trường hợp ngày không tồn tại (ví dụ: ngày 31 tháng 2)
+            day = min(day_of_month, month_start_date.days_in_month)
+            target_date = month_start_date.replace(day=day)
+            candidate_target_dates.append(target_date)
+            
+        # Sắp xếp các ngày ứng cử viên theo thứ tự GIẢM DẦN (từ gần nhất đến xa nhất)
+        candidate_target_dates.sort(reverse=True)
+        
+        # --- BƯỚC 2: TÌM NGÀY GIAO DỊCH THỰC TẾ GẦN NHẤT VÀ LỌC ---
+        
+        target_dates_to_find = pd.to_datetime(candidate_target_dates[:max_points], utc=True)
+
+        # --- BƯỚC 2: TÌM NGÀY GIAO DỊCH THỰC TẾ GẦN NHẤT ---
+        
+        # SỬA LỖI Ở ĐÂY: Dùng get_indexer thay vì get_loc
+        # get_indexer nhận một danh sách các ngày và trả về một danh sách các vị trí
+        indices = self.df.index.get_indexer(target_dates_to_find, method='ffill')
+        
+        # Lọc ra các vị trí hợp lệ (khác -1) và không trùng lặp
+        valid_indices = sorted(list(set(idx for idx in indices if idx != -1)))
+        
+        # Lấy các ngày thực tế từ các vị trí hợp lệ
+        points_to_add = self.df.index[valid_indices]
+        
+        # --- BƯỚC 3: CẬP NHẬT TẬP HỢP ĐIỂM CHÍNH ---
+        
+        self.selected_points.update(points_to_add)
         
         return self
 
-    def add_significant_points(self, max_points: int = 100) -> 'BacktestPointSelector':
+    def add_significant_points(self, max_points: int = 100,
+                               selector_start: datetime|None = None,
+                               selector_end: datetime|None = None) -> 'BacktestPointSelector':
         """
         Thêm các điểm backtest "đặc biệt" dựa trên các sự kiện kỹ thuật.
         """
@@ -106,10 +139,13 @@ class BacktestPointSelector:
         
         top_points = distinct_candidates.sort_values(by='final_score', ascending=False).head(max_points)
         
+        selector_start = selector_start.replace(tzinfo=timezone.utc) if selector_start else self.df.index.min().to_pydatetime()
+        selector_end = selector_end.replace(tzinfo=timezone.utc) if selector_end else self.df.index.max().to_pydatetime()
+        
         for point in top_points['date']:
-            if point.to_pydatetime() > self.selector_end:
+            if point.to_pydatetime() > selector_end:
                 continue
-            if point.to_pydatetime() < self.selector_start:
+            if point.to_pydatetime() < selector_start:
                 continue
             self.selected_points.add(point)
             

@@ -4,6 +4,7 @@
 doc/docx/*
 **/local
 **/.vscode
+*.pkl
 
 .VSCodeCounter
 

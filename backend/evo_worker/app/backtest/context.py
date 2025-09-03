@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta
 import pandas as pd
 from typing import List, Dict, Optional
 
@@ -24,9 +25,11 @@ class BacktestContext:
     """
 
     def __init__(self, ticker: str, data_preparer: BacktestDataPreparer,
+                 selector: BacktestPointSelector,
                  is_ready: bool = False):
         self.ticker = ticker
         self.data_preparer = data_preparer
+        self.selector = selector
         
         self.job_id: Optional[str] = None # ID của tác vụ tạo dữ liệu|
 
@@ -62,16 +65,7 @@ class BacktestContext:
 
             # 2. Chọn các điểm backtest
             
-            selector = BacktestPointSelector(
-                self.ohlcv_df,
-                selector_start=cfg.SELECTOR_START_DATE,
-                selector_end=cfg.SELECTOR_END_DATE,
-            )
-            
-            timestamps_to_request = (selector
-                                     .add_monthly_points(day_of_month=cfg.MONTHLY_DAY)
-                                     .add_significant_points(max_points=cfg.MAX_SPECIAL_POINTS)
-                                     .get_points_as_timestamps())
+            timestamps_to_request = self.selector.get_points_as_timestamps()
             
             if not timestamps_to_request:
                 logger.warn(f"No backtest points selected for ticker {self.ticker}. Marking as ready.")
@@ -131,8 +125,22 @@ class BacktestContext:
                 self.status = 'FAILED'
                 self.data_ready_event.set()
                 break
+            
+    def _choose_reports_from_selector(self, reports: List[QuickCheckAnalysisReport]) -> List[QuickCheckAnalysisReport]:
+        if not reports:
+            return []
+        
+        report_dates = pd.to_datetime([r.generated_timestamp for r in reports], unit='s', utc=True)
+        target_dates = pd.to_datetime(self.selector.get_points_as_timestamps(), unit="s", utc=True)
+        
+        report_series = pd.Series(range(len(reports)), index=report_dates)
+        report_indices = report_dates.get_indexer(target_dates, method='nearest', tolerance=pd.Timedelta(timedelta(days=3)))
+        
+        valid_indices = set(idx for idx in report_indices if idx != -1)
+        
+        return [reports[i] for i in sorted(list(valid_indices))]
 
-    async def load_data_into_memory(self):
+    async def load_data_into_memory(self, max_reports: Optional[int] = None):
         """
         Hàm mới: Tải tất cả dữ liệu cần thiết (OHLCV và reports) vào RAM.
         Đây là một hàm async.
@@ -149,7 +157,15 @@ class BacktestContext:
         ohlcv_task = loop.run_in_executor(None, self.data_preparer.get_daily_ohlcv_for_ticker, self.ticker, 5000)
         reports_task = loop.run_in_executor(None, self.data_preparer.get_backtest_reports_for_ticker, self.ticker)
         
-        self.ohlcv_df, self.historical_reports = await asyncio.gather(ohlcv_task, reports_task)
+        self.ohlcv_df, historical_reports = await asyncio.gather(ohlcv_task, reports_task)
+        
+        relevant_reports = self._choose_reports_from_selector(historical_reports)
+        relevant_reports.sort(key=lambda x: x.generated_timestamp, reverse=True)
+        
+        if max_reports is not None and len(relevant_reports) > max_reports:
+            relevant_reports = relevant_reports[:max_reports]
+        
+        self.historical_reports = relevant_reports
 
         logger.info(f"Successfully loaded {len(self.historical_reports)} reports and OHLCV data for {self.ticker}.")
         self.status = 'READY_SERVE' # Trạng thái cuối cùng: dữ liệu đã nằm trong RAM
@@ -171,16 +187,20 @@ class BacktestContextManager:
     def __init__(self, data_preparer: BacktestDataPreparer):
         self.data_preparer = data_preparer
         self.contexts: Dict[str, BacktestContext] = {}
+        self.selector: Dict[str, BacktestPointSelector] = {}
         
-    def init_ready_contexts(self):
-        tickers = self.data_preparer.get_all_tickers()
-        for ticker in tickers:
-            context = BacktestContext(
-                ticker=ticker,
-                data_preparer=self.data_preparer,
-                is_ready=True
-            )
-            self.contexts[ticker] = context
+    def get_all_ticker_contexts(self) -> List[str]:
+        return self.data_preparer.get_all_tickers()
+        
+    def add_context(self, ticker: str, selector: BacktestPointSelector):
+        context = BacktestContext(
+            ticker=ticker,
+            data_preparer=self.data_preparer,
+            is_ready=True,
+            selector=selector
+        )
+        self.contexts[ticker] = context
+        self.selector[ticker] = selector
 
     async def _prepare_single_context(self, ticker: str, semaphore: asyncio.Semaphore):
         """
@@ -191,7 +211,8 @@ class BacktestContextManager:
             logger.info(f"Starting preparation for ticker: {ticker}...")
             context = BacktestContext(
                 ticker=ticker,
-                data_preparer=self.data_preparer
+                data_preparer=self.data_preparer,
+                selector=self.selector[ticker]
             )
             self.contexts[ticker] = context
             # prepare_data_async giờ đây sẽ là phiên bản gửi yêu cầu cho 1 ticker

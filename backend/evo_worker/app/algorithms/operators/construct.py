@@ -1,7 +1,7 @@
 import random
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Self, Type, Generic
+from typing import Any, Dict, List, Optional, Protocol, Self, Type, Generic
 
 from app.state import SingletonNameable, Stateful
 

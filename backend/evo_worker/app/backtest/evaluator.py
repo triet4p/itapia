@@ -215,7 +215,7 @@ class MultiContextEvaluator(Evaluator):
             worst_metrics = BacktestPerformanceMetrics()
             return worst_metrics
 
-        logger.info(f"Evaluating rule '{rule.name}' on {len(self.contexts)} tickers with concurrency limit {PARALLEL_MULTICONTEXT_LIMIT}...")
+        logger.debug(f"Evaluating rule '{rule.name}' on {len(self.contexts)} tickers with concurrency limit {PARALLEL_MULTICONTEXT_LIMIT}...")
 
         tasks = [
             self._evaluate_with_semaphore(context, rule)
@@ -249,7 +249,7 @@ class MultiContextEvaluator(Evaluator):
             cagr=metric_dict['cagr']
         )
 
-        logger.info(f"Rule '{rule.name}' evaluation complete. Aggregated objectives: {aggregated_metrics}")
+        logger.debug(f"Rule '{rule.name}' evaluation complete. Aggregated objectives: {aggregated_metrics}")
 
         return aggregated_metrics
     
