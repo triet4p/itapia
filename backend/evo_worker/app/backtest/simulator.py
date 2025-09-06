@@ -1,3 +1,5 @@
+"""Backtest simulator for executing trading simulations."""
+
 from datetime import datetime, timedelta
 from typing import List, NamedTuple, Optional, Literal, Dict
 import pandas as pd
@@ -9,64 +11,65 @@ from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Backtest Simulator')
 
+
 class BacktestSimulator:
-    """
-    "Cỗ máy" thực thi mô phỏng giao dịch.
+    """The "machine" that executes trading simulations.
     
-    Nó lặp qua dữ liệu giá ngày qua ngày, quản lý một vị thế tại một thời điểm,
-    và quyết định khi nào Mua/Bán dựa trên các tín hiệu đầu vào và quy tắc thoát lệnh.
+    It iterates through price data day by day, manages one position at a time,
+    and decides when to Buy/Sell based on input signals and exit rules.
     """
+    
     def __init__(self, 
                  ticker: str,
                  ohlcv_df: pd.DataFrame, 
                  actions: Dict[datetime, Action],
-                 trading_fee_pct: float = 0.001): # Phí giao dịch 0.1% mỗi chiều
-        """
-        Khởi tạo bộ mô phỏng.
+                 trading_fee_pct: float = 0.001): # Trading fee 0.1% per side
+        """Initialize the simulation engine.
         
         Args:
-            ohlcv_df (pd.DataFrame): DataFrame chứa dữ liệu OHLCV lịch sử.
-            actions_series (pd.Series): Series chứa các đối tượng `Action` với index là datetime.
-            trading_fee_pct (float): Phí giao dịch cho mỗi lần mua hoặc bán.
+            ticker (str): Stock ticker symbol
+            ohlcv_df (pd.DataFrame): DataFrame containing historical OHLCV data
+            actions (Dict[datetime, Action]): Dictionary containing `Action` objects with datetime index
+            trading_fee_pct (float, optional): Trading fee for each buy or sell transaction. 
+                Defaults to 0.001 (0.1%).
         """
         self.ohlcv_df = ohlcv_df
         self.actions = actions
         self.trading_fee_pct = trading_fee_pct
         self.ticker = ticker
         
-        # Trạng thái nội bộ của bộ mô phỏng
+        # Internal state of the simulation engine
         self.current_position: Optional[OpenPosition] = None
         self.trade_log: List[Trade] = []
 
     def run(self) -> List[Trade]:
-        """
-        Chạy toàn bộ quá trình mô phỏng từ đầu đến cuối.
+        """Run the entire simulation process from start to finish.
         
         Returns:
-            List[Trade]: Một nhật ký chứa tất cả các giao dịch đã được thực hiện.
+            List[Trade]: A log containing all executed trades
         """
         logger.debug(f"Running simulation on {len(self.ohlcv_df)} historical data points...")
 
         for date, row in self.ohlcv_df.iterrows():
-            # Biến để kiểm tra xem một hành động đã được thực hiện trong ngày chưa
+            # Variable to check if an action was taken today
             action_taken_today = False
 
-            # BƯỚC 1: ƯU TIÊN QUẢN LÝ VỊ THẾ ĐANG MỞ
+            # STEP 1: PRIORITIZE MANAGING OPEN POSITION
             if self.current_position:
                 action_signal_for_exit = self.actions.get(date.to_pydatetime())
                 self._check_and_close_position(date, row, action_signal_for_exit)
-                # Nếu vị thế đã được đóng, cập nhật cờ
+                # If position was closed, update flag
                 if self.current_position is None:
                     action_taken_today = True
 
-            # BƯỚC 2: XEM XÉT TÍN HIỆU MỚI NẾU CHƯA CÓ HÀNH ĐỘNG NÀO
+            # STEP 2: CONSIDER NEW SIGNAL IF NO ACTION HAS BEEN TAKEN
             if not action_taken_today:
                 action_signal_for_entry = self.actions.get(date.to_pydatetime())
                 if action_signal_for_entry:
                     self._process_new_signal(date, row, action_signal_for_entry)
         
-        # BƯỚC 3: ĐÓNG VỊ THẾ CUỐI CÙNG (NẾU CÓ)
-        # Nếu sau khi hết dữ liệu mà vẫn còn vị thế, đóng nó ở giá đóng cửa ngày cuối cùng.
+        # STEP 3: CLOSE FINAL POSITION (IF ANY)
+        # If after exhausting data there's still a position, close it at the last day's closing price
         if self.current_position:
             last_date = self.ohlcv_df.index[-1]
             last_close_price = self.ohlcv_df.iloc[-1]['close']
@@ -77,10 +80,16 @@ class BacktestSimulator:
         return self.trade_log
 
     def _check_and_close_position(self, current_date: datetime, daily_row: pd.Series, action_signal: Optional[Action]):
-        """Kiểm tra tất cả các điều kiện thoát lệnh cho vị thế đang mở."""
+        """Check all exit conditions for the open position.
+        
+        Args:
+            current_date (datetime): Current date in simulation
+            daily_row (pd.Series): Daily price data row
+            action_signal (Optional[Action]): Action signal for current date
+        """
         pos = self.current_position
 
-        # Kiểm tra cho vị thế MUA (LONG)
+        # Check for LONG position
         if pos.action_type == 'LONG':
             if daily_row['high'] >= pos.take_profit_price:
                 self._close_position(current_date, pos.take_profit_price, 'TAKE_PROFIT')
@@ -91,7 +100,7 @@ class BacktestSimulator:
             elif current_date >= pos.time_stop_date:
                 self._close_position(current_date, daily_row['close'], 'TIME_STOP')
         
-        # Kiểm tra cho vị thế BÁN KHỐNG (SHORT)
+        # Check for SHORT position
         elif pos.action_type == 'SHORT':
             if daily_row['low'] <= pos.take_profit_price:
                 self._close_position(current_date, pos.take_profit_price, 'TAKE_PROFIT')
@@ -103,10 +112,16 @@ class BacktestSimulator:
                 self._close_position(current_date, daily_row['close'], 'TIME_STOP')
 
     def _process_new_signal(self, current_date: datetime, daily_row: pd.Series, action: Action):
-        """Xử lý một tín hiệu mới từ ActionMapper."""
-        entry_price = daily_row['close'] * (1 + self.trading_fee_pct) # Giá vào lệnh đã tính phí/trượt giá
+        """Process a new signal from ActionMapper.
+        
+        Args:
+            current_date (datetime): Current date in simulation
+            daily_row (pd.Series): Daily price data row
+            action (Action): Action signal to process
+        """
+        entry_price = daily_row['close'] * (1 + self.trading_fee_pct) # Entry price including fees/slippage
 
-        # Mở vị thế MUA (LONG) nếu chưa có vị thế nào
+        # Open LONG position if no position exists
         if action.action_type == 'BUY' and self.current_position is None:
             self.current_position = OpenPosition(
                 entry_date=current_date,
@@ -119,7 +134,7 @@ class BacktestSimulator:
             )
             logger.debug(f"Opened LONG position on {current_date.date()} at {entry_price:.2f}")
 
-        # Mở vị thế BÁN KHỐNG (SHORT) nếu chưa có vị thế nào
+        # Open SHORT position if no position exists
         elif action.action_type == 'SELL' and self.current_position is None:
             self.current_position = OpenPosition(
                 entry_date=current_date,
@@ -133,16 +148,22 @@ class BacktestSimulator:
             logger.debug(f"Opened SHORT position on {current_date.date()} at {entry_price:.2f}")
 
     def _close_position(self, exit_date: datetime, exit_price: float, reason: EXIT_REASON_TYPE):
-        """Đóng gói thông tin và ghi nhận một giao dịch đã hoàn thành."""
+        """Package information and record a completed trade.
+        
+        Args:
+            exit_date (datetime): Exit date for the position
+            exit_price (float): Exit price for the position
+            reason (EXIT_REASON_TYPE): Reason for closing the position
+        """
         pos = self.current_position
         
-        # Giá thoát lệnh thực tế sau khi trừ phí/trượt giá
+        # Actual exit price after deducting fees/slippage
         actual_exit_price = exit_price * (1 - self.trading_fee_pct)
         
         ticker = self.ticker
         
         completed_trade = Trade(
-            ticker=ticker, # Lấy ticker từ df nếu có
+            ticker=ticker, # Get ticker from df if available
             action_type=pos.action_type,
             entry_date=pos.entry_date,
             entry_price=pos.entry_price,
@@ -155,5 +176,5 @@ class BacktestSimulator:
         self.trade_log.append(completed_trade)
         logger.debug(f"Closed {pos.action_type} position: {completed_trade}")
         
-        # Reset vị thế hiện tại
+        # Reset current position
         self.current_position = None

@@ -1,3 +1,5 @@
+"""Fitness evaluator for multi-objective optimization of forecasting rules."""
+
 import asyncio
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -10,60 +12,81 @@ from abc import ABC, abstractmethod
 
 from app.core.config import PARALLEL_MULTICONTEXT_LIMIT
 
-# Import các thành phần đã xây dựng
+# Import the components that have been built
 from .context import BacktestContext
 from .action import _BaseActionMapper, Action
 from .simulator import BacktestSimulator
 from .metrics import PerformanceMetrics
 from .trade import Trade
 
-# Import các thành phần từ shared library
+# Import components from shared library
 from itapia_common.rules.rule import Rule
 from itapia_common.logger import ITAPIALogger
 from itapia_common.schemas.entities.backtest import BacktestPerformanceMetrics
 
 logger = ITAPIALogger('Fitness Evaluator (Multi-Objective)')
 
-# Định nghĩa một kiểu dữ liệu mới để làm cho code rõ ràng hơn
-# Đây là "kết quả" mà thuật toán NSGA-II sẽ làm việc
+# Define a new data type to make the code clearer
+# This is the "result" that the NSGA-II algorithm will work with
+
 
 class EvaluateScenario(NamedTuple):
+    """Represents an evaluation scenario with action mapper and weight."""
     action_mapper: _BaseActionMapper
     weight: float
 
+
 class Evaluator(ABC):
-    """
-    Một interface để thực hiện việc đánh giá một Rule.
-    """
+    """Interface for evaluating a Rule."""
     
     def __init__(self, evaluate_scenarios: Optional[List[EvaluateScenario]] = None):
+        """Initialize evaluator with evaluation scenarios.
+        
+        Args:
+            evaluate_scenarios (Optional[List[EvaluateScenario]], optional): List of evaluation scenarios. 
+                Defaults to None.
+        """
         self.evaluate_scenarios = evaluate_scenarios if evaluate_scenarios else []  
         
     
     def add_evaluate_scenario(self, action_mapper: _BaseActionMapper, weight: float = 1.0):
+        """Add an evaluation scenario to the evaluator.
+        
+        Args:
+            action_mapper (_BaseActionMapper): Action mapper for the scenario
+            weight (float, optional): Weight for the scenario. Defaults to 1.0.
+            
+        Returns:
+            Self: Returns self for method chaining
+        """
         self.evaluate_scenarios.append(EvaluateScenario(action_mapper, weight))
         return self
 
     @abstractmethod
     def evaluate(self, rule: Rule) -> BacktestPerformanceMetrics:
+        """Abstract method to evaluate a rule.
+        
+        Args:
+            rule (Rule): Rule to evaluate
+            
+        Returns:
+            BacktestPerformanceMetrics: Performance metrics for the rule
+        """
         pass
 
+
 class SingleContextEvaluator(Evaluator):
-    """
-    Điều phối quy trình đánh giá một Rule và trích xuất một bộ các giá trị
-    mục tiêu (objectives) để phục vụ cho thuật toán tối ưu hóa đa mục tiêu
-    như NSGA-II.
-    """
 
     def __init__(self, 
                  context: BacktestContext,
                  evaluate_scenarios: Optional[List[EvaluateScenario]] = None):
-        """
-        Khởi tạo Evaluator.
-
+        """Initialize Evaluator.
+        
         Args:
-            context (BacktestContext): Một đối tượng context đã ở trạng thái 'READY',
-                                       chứa dữ liệu OHLCV và các báo cáo lịch sử.
+            context (BacktestContext): A context object in 'READY' state,
+                                       containing OHLCV data and historical reports.
+            evaluate_scenarios (Optional[List[EvaluateScenario]], optional): List of evaluation scenarios. 
+                Defaults to None.
         """
         super().__init__(evaluate_scenarios)
         if context.status != 'READY_SERVE':
@@ -71,15 +94,21 @@ class SingleContextEvaluator(Evaluator):
             
         self.context = context
         
-        # Lấy dữ liệu ra một lần để tái sử dụng trong suốt vòng đời của evaluator
+        # Extract data once for reuse throughout the evaluator's lifecycle
         self.ohlcv_df = self.context.ohlcv_df
         self.historical_reports = self.context.historical_reports
         
     
     def _generate_actions(self, rule: Rule, action_mapper: _BaseActionMapper) -> Dict[datetime, Action]:
-        """
-        Hàm hỗ trợ: Lặp qua các báo cáo lịch sử, thực thi Rule, và
-        sử dụng ActionMapper để tạo ra một dictionary các hành động.
+        """Helper function: Iterate through historical reports, execute Rule, and
+        use ActionMapper to generate a dictionary of actions.
+        
+        Args:
+            rule (Rule): Rule to execute
+            action_mapper (_BaseActionMapper): Action mapper to use
+            
+        Returns:
+            Dict[datetime, Action]: Dictionary of actions indexed by datetime
         """
         actions_dict: Dict[datetime, Action] = {}
         start_date, end_date = self.ohlcv_df.index.min(), self.ohlcv_df.index.max()
@@ -102,13 +131,22 @@ class SingleContextEvaluator(Evaluator):
         return actions_dict
         
     def _evaluate_each_scenario(self, rule: Rule, scenario: EvaluateScenario) -> BacktestPerformanceMetrics:
+        """Evaluate a rule for a specific scenario.
+        
+        Args:
+            rule (Rule): Rule to evaluate
+            scenario (EvaluateScenario): Scenario to evaluate with
+            
+        Returns:
+            BacktestPerformanceMetrics: Performance metrics for the scenario
+        """
         logger.debug(f"Evaluating rule '{rule.name}' for ticker '{self.context.ticker}' with scenario {str(scenario.action_mapper)}...")
         actions_dict = self._generate_actions(rule, scenario.action_mapper)
-        # Bước 2: Chạy mô phỏng backtest.
+        # Step 2: Run backtest simulation.
         simulator = BacktestSimulator(self.context.ticker, self.ohlcv_df, actions_dict)
         trade_log = simulator.run()
 
-        # Bước 3: Phân tích kết quả từ nhật ký giao dịch.
+        # Step 3: Analyze results from trade log.
         metrics_calculator = PerformanceMetrics(trade_log)
         performance_metrics = metrics_calculator.summary()
         
@@ -118,6 +156,14 @@ class SingleContextEvaluator(Evaluator):
     
     def _aggerate_obj_from_scenarios(self, 
                                      scenario_results: Dict[EvaluateScenario, BacktestPerformanceMetrics]) -> BacktestPerformanceMetrics:
+        """Aggregate objectives from multiple scenarios.
+        
+        Args:
+            scenario_results (Dict[EvaluateScenario, BacktestPerformanceMetrics]): Results from each scenario
+            
+        Returns:
+            BacktestPerformanceMetrics: Aggregated performance metrics
+        """
         final_metrics_dict = BacktestPerformanceMetrics().model_dump()
         total_weight = sum(scenario.weight for scenario in scenario_results.keys())
         
@@ -141,16 +187,16 @@ class SingleContextEvaluator(Evaluator):
             
 
     def evaluate(self, rule: Rule) -> BacktestPerformanceMetrics:
-        """
-        Hàm chính: Thực hiện quy trình đánh giá end-to-end cho một Rule.
-
+        """Main function: Execute end-to-end evaluation process for a Rule.
+        
         Args:
-            rule (Rule): Đối tượng Rule cần được đánh giá.
-
+            rule (Rule): Rule object to evaluate.
+            
         Returns:
-            Tuple[ObjectiveValues, BacktestPerformanceMetrics]: 
-                - Một tuple chứa các giá trị mục tiêu đã được chuẩn hóa.
-                - Một đối tượng chứa tất cả các chỉ số hiệu suất chi tiết (để lưu trữ).
+            BacktestPerformanceMetrisc: An object containing all detailed performance metrics (for storage).
+                
+        Raises:
+            ValueError: If no evaluation scenarios are provided
         """
         if not self.evaluate_scenarios:
             raise ValueError("Requires at least 1 scenarios")
@@ -162,19 +208,21 @@ class SingleContextEvaluator(Evaluator):
         return self._aggerate_obj_from_scenarios(scenario_results)
     
 class MultiContextEvaluator(Evaluator):
-    """
-    Điều phối việc đánh giá một Rule duy nhất trên NHIỀU context (tickers) khác nhau,
-    sau đó tổng hợp các kết quả thành một vector mục tiêu duy nhất.
+    """Coordinates the evaluation of a single Rule on MULTIPLE contexts (tickers),
+    then aggregates the results into a single target vector.
     """
     def __init__(self, contexts: List[BacktestContext], 
                  evaluate_scenarios: Optional[List[EvaluateScenario]] = None,
                  aggregation_method: Literal['mean', 'median', 'trim-mean'] = 'median'):
         """
-        Khởi tạo evaluator đa luồng.
-
+        Initialize multi-threaded evaluator.
+        
         Args:
-            contexts (List[BacktestContext]): Danh sách tất cả các context đã ở trạng thái 'READY_SERVE'.
-            action_mapper (_BaseActionMapper): Instance của chiến lược giao dịch sẽ được sử dụng.
+            contexts (List[BacktestContext]): List of all contexts in 'READY_SERVE' state.
+            evaluate_scenarios (Optional[List[EvaluateScenario]], optional): List of evaluation scenarios. 
+                Defaults to None.
+            aggregation_method (Literal[&#39;mean&#39;, &#39;median&#39;, &#39;trim, optional): Aggeration method use to combine
+                results from all contexts. Defaults to 'median'.
         """
         super().__init__(evaluate_scenarios)
         self.contexts = contexts
@@ -182,33 +230,54 @@ class MultiContextEvaluator(Evaluator):
         self.aggregation_method = aggregation_method
         
     def _evaluate_single_context_sync(self, context: BacktestContext, rule: Rule) -> BacktestPerformanceMetrics:
-        """
-        Hàm đồng bộ (synchronous) để thực thi việc đánh giá trên một context.
-        Hàm này sẽ được chạy trong một thread riêng bởi asyncio.to_thread.
+        """Synchronous function to execute evaluation on a single context.
+        
+        This function will run in a separate thread by asyncio.to_thread.
+        
+        Args:
+            context (BacktestContext): Context to evaluate
+            rule (Rule): Rule to evaluate
+            
+        Returns:
+            BacktestPerformanceMetrics: Performance metrics for the context
         """
         try:
-            # 2. Khởi tạo evaluator và chạy đánh giá
+            # 2. Initialize evaluator and run evaluation
             _evaluator = SingleContextEvaluator(context, self.evaluate_scenarios)
             return _evaluator.evaluate(rule)
         except Exception as e:
             logger.warn(f"Evaluation failed for rule '{rule.name}' on ticker '{context.ticker}': {e}")
-            # Trả về kết quả tệ nhất nếu có lỗi
+            # Return worst-case result if there's an error
             worst_metrics = BacktestPerformanceMetrics()
             return worst_metrics
 
     async def _evaluate_with_semaphore(self, context: BacktestContext, rule: Rule) -> BacktestPerformanceMetrics:
-        """
-        Hàm worker bất đồng bộ được kiểm soát bởi semaphore.
+        """Asynchronous worker function controlled by semaphore.
+        
+        Args:
+            context (BacktestContext): Context to evaluate
+            rule (Rule): Rule to evaluate
+            
+        Returns:
+            BacktestPerformanceMetrics: Performance metrics for the context
         """
         async with self.semaphore:
-            # Chờ để có một "slot" trống.
-            # Sau khi có slot, chạy tác vụ CPU-bound trong một thread riêng.
+            # Wait for an available "slot".
+            # After getting a slot, run the CPU-bound task in a separate thread.
             return await asyncio.to_thread(self._evaluate_single_context_sync, context, rule)
 
     async def evaluate_async(self, rule: Rule) -> BacktestPerformanceMetrics:
-        """
-        (Bất đồng bộ) Thực thi đánh giá một Rule trên tất cả các context một cách song song
-        và trả về một vector mục tiêu đã được tổng hợp.
+        """(Asynchronous) Execute evaluation of a Rule on all contexts in parallel
+        and return an aggregated target vector.
+        
+        Args:
+            rule (Rule): Rule to evaluate
+            
+        Returns:
+            BacktestPerformanceMetrics: Aggregated performance metrics
+            
+        Raises:
+            Exception: If all evaluations fail
         """
         if not self.contexts:
             logger.warn("No contexts to evaluate. Returning worst-case fitness.")
@@ -253,19 +322,29 @@ class MultiContextEvaluator(Evaluator):
 
         return aggregated_metrics
     
-    # --- YÊU CẦU 2: WRAPPER ĐỒNG BỘ ---
+    # --- REQUIREMENT 2: SYNCHRONOUS WRAPPER ---
     def evaluate(self, rule: Rule) -> BacktestPerformanceMetrics:
-        """
-        (Đồng bộ) Đây là hàm wrapper để gọi từ một môi trường đồng bộ (ví dụ: vòng lặp của thuật toán di truyền).
-        Nó sẽ khởi động event loop của asyncio, chạy hàm `evaluate_async`, và trả về kết quả.
+        """(Synchronous) This is a wrapper function to call from a synchronous environment 
+        (e.g., genetic algorithm loop).
+        
+        It will start the asyncio event loop, run the `evaluate_async` function, and return the result.
+        
+        Args:
+            rule (Rule): Rule to evaluate
+            
+        Returns:
+            BacktestPerformanceMetrics: Aggregated performance metrics
+            
+        Raises:
+            RuntimeError: If called from within a running asyncio event loop
         """
         try:
-            # Kiểm tra xem có event loop nào đang chạy không
+            # Check if there's a running event loop
             loop = asyncio.get_running_loop()
-            # Nếu có, ta không thể dùng asyncio.run(), phải tạo task và chạy trong loop đó
-            # (Trường hợp này phức tạp và ít xảy ra, tạm thời bỏ qua để đơn giản)
+            # If there is, we can't use asyncio.run(), must create a task and run it in that loop
+            # (This case is complex and rare, temporarily ignored for simplicity)
             raise RuntimeError("evaluate_sync cannot be called from within a running asyncio event loop.")
         except RuntimeError:
-            # Không có event loop nào đang chạy, đây là trường hợp thông thường.
-            # asyncio.run() sẽ tự động tạo một loop mới, chạy coroutine cho đến khi xong, và đóng loop.
+            # No running event loop, this is the normal case.
+            # asyncio.run() will automatically create a new loop, run the coroutine until completion, and close the loop.
             return asyncio.run(self.evaluate_async(rule))

@@ -1,4 +1,4 @@
-# algorithms/structures/operators/replacement.py
+"""Replacement operators for evolutionary algorithms."""
 
 import random
 from abc import ABC, abstractmethod
@@ -7,11 +7,24 @@ from typing import Any, Dict, Generic, List, Protocol, Tuple, Type
 from app.state import SingletonNameable, Stateful
 
 from ..pop import DominanceIndividual, Individual, IndividualType
-from ..comparator import Comparator, DominateComparator, non_dominated_sorting, crowding_distance_assignment
+from ..comparator import Comparator, DominateComparator
+from ..dominance import non_dominated_sorting, crowding_distance_assignment
 import app.core.config as cfg
 
+
 class ReplacementOperator(Stateful, SingletonNameable, Generic[IndividualType]):
+    """Abstract base class for replacement operators in evolutionary algorithms.
+    
+    Provides a framework for selecting individuals from parent and offspring populations 
+    to create the next generation.
+    """
+    
     def __init__(self, ind_cls: Type[IndividualType]):
+        """Initialize the replacement operator.
+        
+        Args:
+            ind_cls (Type[IndividualType]): Class of individuals to operate on
+        """
         self._random = random.Random(cfg.RANDOM_SEED)
         self.ind_cls = ind_cls
 
@@ -20,16 +33,15 @@ class ReplacementOperator(Stateful, SingletonNameable, Generic[IndividualType]):
                  population: List[IndividualType], 
                  offspring_population: List[IndividualType],
                  target_size: int) -> List[IndividualType]:
-        """
-        Chọn lọc các cá thể từ cha mẹ và con cái để tạo ra thế hệ tiếp theo.
-
+        """Select individuals from parents and offspring to create the next generation.
+        
         Args:
-            population (List[Individual]): Quần thể cha mẹ.
-            offspring_population (List[Individual]): Quần thể con cái.
-            target_size (int): Kích thước mục tiêu của quần thể mới.
-
+            population (List[Individual]): Parent population.
+            offspring_population (List[Individual]): Offspring population.
+            target_size (int): Target size of the new population.
+            
         Returns:
-            List[Individual]: Quần thể thế hệ tiếp theo.
+            List[Individual]: Next generation population.
         """
         pass
     
@@ -42,12 +54,19 @@ class ReplacementOperator(Stateful, SingletonNameable, Generic[IndividualType]):
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         self._random.setstate(fallback_state['random_state'])
 
+
 class NSGA2ReplacementOperator(ReplacementOperator[DominanceIndividual]):
+    """Performs full survival selection using the NSGA-II algorithm.
+    
+    This is the recommended method for multi-objective evolutionary algorithms.
     """
-    Thực hiện chọn lọc sinh tồn đầy đủ theo thuật toán NSGA-II.
-    Đây là phương pháp được khuyến nghị.
-    """
+    
     def __init__(self, comparator: DominateComparator):
+        """Initialize NSGA-II replacement operator.
+        
+        Args:
+            comparator (DominateComparator): Comparator to determine dominance relationships
+        """
         super().__init__(ind_cls=DominanceIndividual)
         self.comparator = comparator
     
@@ -55,30 +74,40 @@ class NSGA2ReplacementOperator(ReplacementOperator[DominanceIndividual]):
                  population: List[DominanceIndividual], 
                  offspring_population: List[DominanceIndividual],
                  target_size: int) -> List[DominanceIndividual]:
+        """Perform NSGA-II replacement selection.
         
-        # 1. Gộp quần thể cha mẹ và con cái
+        Args:
+            population (List[DominanceIndividual]): Parent population
+            offspring_population (List[DominanceIndividual]): Offspring population
+            target_size (int): Target size of the new population
+            
+        Returns:
+            List[DominanceIndividual]: Next generation population according to NSGA-II
+        """
+        
+        # 1. Merge parent and offspring populations
         combined_population = population + offspring_population
 
-        # 2. Phân loại toàn bộ quần thể gộp
+        # 2. Classify the entire merged population
         fronts = non_dominated_sorting(combined_population, dominate_comparator=self.comparator)
 
-        # 3. Xây dựng thế hệ tiếp theo
+        # 3. Build next generation
         next_generation: List[DominanceIndividual] = []
         for front in fronts:
-            # Nếu thêm cả mặt trận này vào vẫn chưa đủ...
+            # If adding this entire front still isn't enough...
             if len(next_generation) + len(front) <= target_size:
                 next_generation.extend(front)
             else:
-                # Đây là mặt trận cuối cùng được thêm vào một phần
-                # Tính toán crowding distance CHỈ cho mặt trận này
+                # This is the last partially added front
+                # Calculate crowding distance ONLY for this front
                 crowding_distance_assignment(front)
                 
-                # Sắp xếp mặt trận này theo crowding distance giảm dần
+                # Sort this front by crowding distance in descending order
                 front.sort(key=lambda ind: ind.crowding_distance, reverse=True)
                 
-                # Lấy số lượng cá thể cần thiết để lấp đầy
+                # Take the number of individuals needed to fill the target
                 num_needed = target_size - len(next_generation)
                 next_generation.extend(front[:num_needed])
-                break # Đã đủ, thoát khỏi vòng lặp
+                break # Enough, exit loop
         
         return next_generation

@@ -1,6 +1,9 @@
+"""NSGA-II evolutionary algorithm engine implementation."""
+
 from copy import deepcopy
 from ..pop import DominanceIndividual, Individual, Population
-from ..comparator import DominateComparator, non_dominated_sorting, crowding_distance_assignment
+from ..comparator import DominateComparator
+from ..dominance import non_dominated_sorting, crowding_distance_assignment
 from ..operators.construct import InitOperator
 from ..operators.crossover import CrossoverOperator
 from ..operators.mutation import MutationOperator
@@ -11,7 +14,7 @@ from app.backtest.evaluator import Evaluator
 
 import app.core.config as cfg
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Self, Tuple
 from ._base import BaseEvoEngine
 import random
 
@@ -22,7 +25,13 @@ from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger("NSGA-II Evo Engine")
 
+
 class NSGA2EvoEngine(BaseEvoEngine):
+    """NSGA-II (Non-dominated Sorting Genetic Algorithm II) evolutionary engine.
+    
+    Implements the NSGA-II algorithm for multi-objective optimization with 
+    adaptive operator selection and specialized genetic operators.
+    """
     
     def __init__(self, 
                  run_id: str,
@@ -34,6 +43,20 @@ class NSGA2EvoEngine(BaseEvoEngine):
                  lr: float = 0.5,
                  update_score_period: int = 50,
                  archive_each_gen: int = 50):
+        """Initialize NSGA-II evolutionary engine.
+        
+        Args:
+            run_id (str): Unique identifier for this evolutionary run
+            seeding_rules (Optional[List[Rule]], optional): Initial rules to seed the population. 
+                Defaults to None.
+            pop_size (int, optional): Population size. Defaults to 150.
+            num_gen (int, optional): Number of generations. Defaults to 500.
+            pc (float, optional): Crossover probability. Defaults to 0.8.
+            pm (float, optional): Mutation probability. Defaults to 0.2.
+            lr (float, optional): Learning rate for adaptive scoring. Defaults to 0.5.
+            update_score_period (int, optional): Period to update adaptive scores. Defaults to 50.
+            archive_each_gen (int, optional): Number of individuals to archive each generation. Defaults to 50.
+        """
         super().__init__(run_id, seeding_rules)
         self.pareto_front: List[DominanceIndividual] = None
         self.pop: Population[DominanceIndividual] = None
@@ -60,36 +83,61 @@ class NSGA2EvoEngine(BaseEvoEngine):
         self.archive_each_gen = archive_each_gen
         self._cur_gen = 0
         
-    def set_init_opr(self, init_opr: InitOperator[DominanceIndividual]):
+    def set_init_opr(self, init_opr: InitOperator[DominanceIndividual]) -> Self:
         return super().set_init_opr(init_opr)
     
-    def set_selection_opr(self, selection_opr: SelectionOperator[DominanceIndividual]):
+    def set_selection_opr(self, selection_opr: SelectionOperator[DominanceIndividual]) -> Self:
         self.selection_opr = selection_opr
         return self
     
-    def set_replacement_opr(self, replacement_opr: ReplacementOperator[DominanceIndividual]):
+    def set_replacement_opr(self, replacement_opr: ReplacementOperator[DominanceIndividual]) -> Self:
         self.replacement_opr = replacement_opr
         return self
     
-    def add_crossover_opr(self, crossover_opr: CrossoverOperator[DominanceIndividual], init_score: float = 1.0):
+    def add_crossover_opr(self, crossover_opr: CrossoverOperator[DominanceIndividual], init_score: float = 1.0) -> Self:
+        """Add a crossover operator to the NSGA-II engine.
+        
+        Args:
+            crossover_opr (CrossoverOperator[DominanceIndividual]): Crossover operator to add
+            init_score (float, optional): Initial score for adaptive selection. Defaults to 1.0.
+            
+        Returns:
+            NSGA2EvoEngine: Self for method chaining
+        """
         self.crossover_oprs[crossover_opr.singleton_name] = crossover_opr
         self.crossover_adap.init_score(crossover_opr, init_score)
         return self
     
-    def add_mutation_opr(self, mutation_opr: MutationOperator[DominanceIndividual], init_score: float = 1.0):
+    def add_mutation_opr(self, mutation_opr: MutationOperator[DominanceIndividual], init_score: float = 1.0) -> Self:
+        """Add a mutation operator to the NSGA-II engine.
+        
+        Args:
+            mutation_opr (MutationOperator[DominanceIndividual]): Mutation operator to add
+            init_score (float, optional): Initial score for adaptive selection. Defaults to 1.0.
+            
+        Returns:
+            NSGA2EvoEngine: Self for method chaining
+        """
         self.mutation_oprs[mutation_opr.singleton_name] = mutation_opr
         self.mutation_adap.init_score(mutation_opr, init_score)
         return self
     
-    def set_dominate_comparator(self, dominate_comparator: DominateComparator):
+    def set_dominate_comparator(self, dominate_comparator: DominateComparator) -> Self:
+
         self.dominate_comparator = dominate_comparator
         return self
         
-    def set_adaptive_obj_extractor(self, adaptive_obj_extractor: SingleObjectiveExtractor):
+    def set_adaptive_obj_extractor(self, adaptive_obj_extractor: SingleObjectiveExtractor) -> Self:
+
         self.adaptive_obj_extractor = adaptive_obj_extractor
         return self
     
     def _check_ready_oprs(self) -> bool:
+        """Check if all required operators are ready for NSGA-II execution.
+        
+        Returns:
+            bool: True if all required operators are set, False otherwise
+        """
         super_check = super()._check_ready_oprs()
         if not super_check:
             return False
@@ -105,8 +153,12 @@ class NSGA2EvoEngine(BaseEvoEngine):
             return False
         return True
         
-    def _classify_pop(self):
-        # Mỗi cá thể đã được gán rank trong chính hàm non dominated sorting
+    def _classify_pop(self) -> None:
+        """Classify population into non-dominated fronts with crowding distances.
+        
+        Each individual is assigned a rank during the non-dominated sorting process.
+        """
+        # Each individual has already been assigned rank in the non-dominated sorting function itself
         fronts = non_dominated_sorting(self.pop.population, self.dominate_comparator)
         for front in fronts:
             crowding_distance_assignment(front)
@@ -115,8 +167,17 @@ class NSGA2EvoEngine(BaseEvoEngine):
     def _apply_mutation(self, mutation_opr: MutationOperator[DominanceIndividual],
                         ind: DominanceIndividual, pm: float, force: bool = False) -> DominanceIndividual | None:
         """
-        Áp dụng đột biến cho một cá thể. 
-        'force=True' sẽ đảm bảo đột biến được thực hiện.
+        Apply mutation to an individual.
+        'force=True' will ensure mutation is performed.
+        
+        Args:
+            mutation_opr (MutationOperator[DominanceIndividual]): Mutation operator to apply
+            ind (DominanceIndividual): Individual to mutate
+            pm (float): Mutation probability
+            force (bool, optional): Force mutation regardless of probability. Defaults to False.
+            
+        Returns:
+            DominanceIndividual | None: Mutated individual or None if mutation failed
         """
         if force or self._random.random() < pm:
             mutated_ind = mutation_opr(ind)
@@ -132,6 +193,16 @@ class NSGA2EvoEngine(BaseEvoEngine):
     def _gen_offs_each_epoch(self, last_pop: List[DominanceIndividual],
                              pc: float,
                              pm: float) -> Population:
+        """Generate offspring population for each epoch/generation.
+        
+        Args:
+            last_pop (List[DominanceIndividual]): Parent population
+            pc (float): Crossover probability
+            pm (float): Mutation probability
+            
+        Returns:
+            Population: Offspring population
+        """
         offs: List[DominanceIndividual] = []
         
         while len(offs) < len(last_pop):
@@ -186,11 +257,18 @@ class NSGA2EvoEngine(BaseEvoEngine):
         
         offs = offs[:len(last_pop)]  
         
-        offs_pop = Population(len(offs), ind_cls=DominanceIndividual)
+        offs_pop = Population(max_population_size=len(offs), ind_cls=DominanceIndividual)
         offs_pop.population = offs
         return offs_pop
     
-    def _run_each_gen(self, pop_size: int, pc: float, pm: float):
+    def _run_each_gen(self, pop_size: int, pc: float, pm: float) -> None:
+        """Run one generation of the NSGA-II algorithm.
+        
+        Args:
+            pop_size (int): Target population size
+            pc (float): Crossover probability
+            pm (float): Mutation probability
+        """
         logger.info("Generating offspring population...")
         # Generate offsprings
         offs = self._gen_offs_each_epoch(self.pop.population, pc, pm)
@@ -200,16 +278,27 @@ class NSGA2EvoEngine(BaseEvoEngine):
         
         # Create new population
         logger.info("Performing survival selection...")
-        self.pop.population = self.replacement_opr(population=self.pop.population, 
+        new_pop = self.replacement_opr(population=self.pop.population, 
                                                     offspring_population=offs.population, 
                                                     target_size=pop_size)
         
+        self.pop.reassign(new_pop)
+        
     
-        # 4. Phân loại quần thể mới cho thế hệ tiếp theo
+        # 4. Classify new population for next generation
         logger.info("Classifying new population...")
         return self._classify_pop()
     
-    def run(self, **kwargs):
+    def run(self, **kwargs) -> List[DominanceIndividual]:
+        """Run the complete NSGA-II evolutionary algorithm.
+        
+        Args:
+            **kwargs: Additional configuration parameters. Required:
+                - stop_gen (int, optional): Generation to stop at. Defaults to num_gen.
+                
+        Returns:
+            List[DominanceIndividual]: Pareto front individuals from final generation
+        """
         pop_size = self.pop_size
         num_gen = self.num_gen
         pc = self.pc
@@ -221,8 +310,8 @@ class NSGA2EvoEngine(BaseEvoEngine):
         
         logger.info(f"Calculating fitness for initial population of {self.pop.population_size} individuals...")
         self.pop.cal_fitness(self.evaluator, self.obj_extractor)
-        self.archived = Population(population_size=pop_size*10, ind_cls=self.pop.ind_cls)
-        self.archived.population.extend(self.pop.population)
+        self.archived = Population(max_population_size=cfg.MAX_ARCHIVED_RULES, ind_cls=self.pop.ind_cls)
+        self.archived.extend_pop(self.pop.population)
         
         logger.info("Classifing into fronts ...")
         
@@ -243,8 +332,19 @@ class NSGA2EvoEngine(BaseEvoEngine):
         
         return self.pareto_front
     
-    def rerun(self,**kwargs):
+    def rerun(self,**kwargs) -> List[DominanceIndividual]:
+        """Rerun the NSGA-II evolutionary algorithm from current state.
         
+        Args:
+            **kwargs: Additional configuration parameters. Required
+                - next_stop_gen (int, optional): Generation to stop at. Defaults to num_gen.
+                
+        Returns:
+            List[DominanceIndividual]: Pareto front individuals from final generation
+            
+        Raises:
+            ValueError: If current generation is not in valid range [1, next_stop_gen]
+        """
         pop_size = self.pop_size
         num_gen = self.num_gen
         pc = self.pc

@@ -34,6 +34,8 @@ INIT_TERMINAL_PROB = 0.15
 
 NEW_RULE_NAME_TEMPLATE = 'evo_{algorithm}'
 
+MAX_ARCHIVED_RULES = 10000
+
 FOR_TEST_CONTEXTS = [
     # Tăng trưởng, biến động cao,
     'NVDA',

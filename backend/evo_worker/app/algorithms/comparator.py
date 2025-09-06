@@ -1,42 +1,64 @@
+"""Comparison utilities for evolutionary algorithms."""
+
 import math
 from typing import List, Dict, Tuple
 from abc import ABC, abstractmethod
 from .pop import DominanceIndividual, Individual
 
+
 class Comparator(ABC):
+    """Abstract base class for comparing individuals in evolutionary algorithms."""
     
     @abstractmethod
     def __call__(self, ind1: Individual, ind2: Individual) -> bool: 
         """ 
-        Return `True` if ind1 "better" ind2 
+        Return `True` if ind1 is "better" than ind2.
+        
+        Args:
+            ind1 (Individual): First individual to compare
+            ind2 (Individual): Second individual to compare
+            
+        Returns:
+            bool: True if ind1 is better than ind2
         """
         pass
 
+
 class DominateComparator(Comparator):
+    """Abstract base class for dominance comparison in multi-objective optimization."""
     
     @abstractmethod
     def __call__(self, ind1: DominanceIndividual, ind2: DominanceIndividual) -> bool: 
         """ 
-        Return `True` if ind1 "dominate" ind2 
+        Return `True` if ind1 "dominates" ind2.
+        
+        Args:
+            ind1 (DominanceIndividual): First individual to compare
+            ind2 (DominanceIndividual): Second individual to compare
+            
+        Returns:
+            bool: True if ind1 dominates ind2
         """
         pass
     
+
 class FixedDominateComparator(DominateComparator):
+    """Fixed dominance comparator implementing standard Pareto dominance."""
     
     def __call__(self, ind1: DominanceIndividual, ind2: DominanceIndividual) -> bool:
         """
-        Kiểm tra xem cá thể 1 (ind1) có trội hơn (dominate) cá thể 2 (ind2) hay không.
-
-        Một cá thể `p` trội hơn `q` nếu:
-        1. `p` không tệ hơn `q` ở bất kỳ mục tiêu nào.
-        2. `p` tốt hơn `q` ở ít nhất một mục tiêu.
-
+        Check if individual 1 (ind1) dominates individual 2 (ind2).
+        
+        An individual `p` dominates `q` if:
+        1. `p` is not worse than `q` in any objective.
+        2. `p` is better than `q` in at least one objective.
+        
         Args:
-            ind1 (Individual): Cá thể p.
-            ind2 (Individual): Cá thể q.
-
+            ind1 (Individual): Individual p.
+            ind2 (Individual): Individual q.
+            
         Returns:
-            bool: True nếu ind1 trội hơn ind2, ngược lại là False.
+            bool: True if ind1 dominates ind2, otherwise False.
         """
         if not isinstance(ind1.fitness, tuple):
             return ind1.fitness > ind2.fitness
@@ -49,8 +71,23 @@ class FixedDominateComparator(DominateComparator):
                 
         return is_better_in_one
     
+
 class RankAndCrowdingComparator(DominateComparator):
-    def __call__(self, ind1: DominanceIndividual, ind2: DominanceIndividual):
+    """Compare individuals based on rank and crowding distance."""
+    
+    def __call__(self, ind1: DominanceIndividual, ind2: DominanceIndividual) -> bool:
+        """Compare two individuals based on rank and crowding distance.
+        
+        Args:
+            ind1 (DominanceIndividual): First individual to compare
+            ind2 (DominanceIndividual): Second individual to compare
+            
+        Returns:
+            bool: True if ind1 is better than ind2 based on rank/crowding criteria
+            
+        Raises:
+            ValueError: If individuals are not ranked
+        """
         if ind1.rank < 0 or ind2.rank < 0:
             raise ValueError("Individuals must be ranked!")
         if ind1.rank > ind2.rank:
@@ -59,20 +96,26 @@ class RankAndCrowdingComparator(DominateComparator):
             return False
         return ind1.crowding_distance > ind2.crowding_distance
     
+
 class EpsilonBoxDominateComparator(DominateComparator):
     """
-    So sánh hai cá thể dựa trên khái niệm Epsilon-Box Dominance.
-    Lượng tử hóa không gian mục tiêu thành một lưới các "hộp" và so sánh
-    vị trí của các cá thể trên lưới đó.
+    Compare two individuals based on Epsilon-Box Dominance concept.
+    
+    Quantizes the objective space into a grid of "boxes" and compares
+    the positions of individuals on that grid.
     """
+    
     def __init__(self, epsilons: Tuple[float, ...]):
         """
-        Khởi tạo comparator với một vector epsilon.
-
+        Initialize comparator with an epsilon vector.
+        
         Args:
-            epsilons (Tuple[float, ...]): Một tuple các giá trị epsilon,
-                                         mỗi giá trị cho một mục tiêu tương ứng.
-                                         Độ dài phải bằng số lượng mục tiêu.
+            epsilons (Tuple[float, ...]): A tuple of epsilon values,
+                                         one for each corresponding objective.
+                                         Length must equal number of objectives.
+                                         
+        Raises:
+            ValueError: If any epsilon value is not positive
         """
         if not all(e > 0 for e in epsilons):
             raise ValueError("All epsilon values must be positive.")
@@ -80,11 +123,18 @@ class EpsilonBoxDominateComparator(DominateComparator):
 
     def __call__(self, ind1: DominanceIndividual, ind2: DominanceIndividual) -> bool:
         """ 
-        Trả về True nếu ind1 ε-trội hơn ind2.
+        Return True if ind1 ε-dominates ind2.
+        
+        Args:
+            ind1 (DominanceIndividual): First individual to compare
+            ind2 (DominanceIndividual): Second individual to compare
+            
+        Returns:
+            bool: True if ind1 ε-dominates ind2
         """
         if not isinstance(ind1.fitness, tuple):
-            # Nếu là đơn mục tiêu, epsilon không có ý nghĩa nhiều,
-            # quay về so sánh thông thường.
+            # If single objective, epsilon has little meaning,
+            # fall back to standard comparison.
             return ind1.fitness > ind2.fitness
 
         if len(ind1.fitness) != len(self.epsilons):
@@ -93,113 +143,16 @@ class EpsilonBoxDominateComparator(DominateComparator):
                 f"and number of epsilons ({len(self.epsilons)})."
             )
 
-        # Chuyển đổi fitness của mỗi cá thể thành "tọa độ hộp"
+        # Convert each individual's fitness to "box coordinates"
         box1 = [math.floor(f / e) for f, e in zip(ind1.fitness, self.epsilons)]
         box2 = [math.floor(f / e) for f, e in zip(ind2.fitness, self.epsilons)]
         
-        # Áp dụng Pareto dominance tiêu chuẩn trên "tọa độ hộp"
+        # Apply standard Pareto dominance on "box coordinates"
         is_better_in_one = False
         for b1, b2 in zip(box1, box2):
-            if b1 < b2: # Tọa độ hộp của ind1 thấp hơn -> không thể trội hơn
+            if b1 < b2: # Box coordinate of ind1 is lower -> cannot dominate
                 return False
-            if b1 > b2: # Tọa độ hộp của ind1 cao hơn
+            if b1 > b2: # Box coordinate of ind1 is higher
                 is_better_in_one = True
                 
         return is_better_in_one
-
-def non_dominated_sorting(inds: List[DominanceIndividual],
-                          dominate_comparator: DominateComparator) -> List[List[DominanceIndividual]]:
-    """
-    Thực hiện thuật toán non-dominated sorting trên một quần thể.
-    Phân loại các cá thể vào các "mặt trận" (fronts) không bị trội.
-
-    Args:
-        inds (List[Individual]): Quần thể cần được sắp xếp.
-
-    Returns:
-        List[List[Individual]]: Một danh sách các mặt trận (fronts).
-                                Front đầu tiên (index 0) là tốt nhất.
-    """
-    
-    domination_counts = {id(ind): 0 for ind in inds}
-    dominated_sets = {id(ind): [] for ind in inds}
-    fronts = [[]]
-    
-    ind_map = {id(ind): ind for ind in inds}
-    
-    # Lặp qua mọi cặp để tính toán quan hệ trội / bị trội
-    for i in range(len(inds)):
-        for j in range(i + 1, len(inds)):
-            p = inds[i]
-            q = inds[j]
-            
-            if dominate_comparator(p, q):
-                dominated_sets[id(p)].append(id(q))
-                domination_counts[id(q)] += 1
-            elif dominate_comparator(q, p):
-                dominated_sets[id(q)].append(id(p))
-                domination_counts[id(p)] += 1
-                
-    # Tìm front đầu tiên (F1)
-    for ind_id, cnt in domination_counts.items():
-        if cnt == 0:
-            fronts[0].append(ind_map[ind_id])
-            ind_map[ind_id].rank = 0
-            
-    # Xây các front tiếp
-    front_idx = 0
-    while fronts[front_idx]:
-        next_front = []
-        for p_ind in fronts[front_idx]:
-            for q_id in dominated_sets[id(p_ind)]:
-                domination_counts[q_id] -= 1
-                
-                if domination_counts[q_id] == 0:
-                    next_front.append(ind_map[q_id])
-                    ind_map[q_id].rank = front_idx + 1
-                    
-        front_idx += 1
-        
-        if next_front:
-            fronts.append(next_front)
-        else:
-            break
-    
-    return fronts
-
-def crowding_distance_assignment(front: List[DominanceIndividual]) -> None:
-    """
-    Tính toán và gán crowding distance cho mỗi cá thể trong một mặt trận.
-    Hàm này sửa đổi các cá thể tại chỗ (in-place) bằng cách thêm thuộc tính
-    `crowding_distance`.
-
-    Args:
-        front (List[Individual]): Một mặt trận duy nhất (một danh sách các cá thể).
-    """
-    
-    if not front:
-        return
-    
-    num_inds = len(front)
-    num_objs = len(front[0].fitness)
-    
-    for ind in front:
-        ind.crowding_distance = 0.0
-        
-    for m in range(num_objs):
-        front.sort(key=lambda ind: ind.fitness[m])
-        
-        min_val = front[0].fitness[m]
-        max_val = front[-1].fitness[m]
-        
-        front[0].crowding_distance = float('inf')
-        front[-1].crowding_distance = float('inf')
-        
-        if max_val == min_val or num_inds <= 2:
-            return
-        
-        for i in range(1, num_inds - 1):
-            distance = front[i + 1].fitness[m] - front[i - 1].fitness[m]
-            normalized_distance = distance / (max_val - min_val)
-            
-            front[i].crowding_distance += normalized_distance

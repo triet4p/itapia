@@ -1,3 +1,5 @@
+"""Backtest context management for handling the lifecycle of backtest data for individual tickers."""
+
 import asyncio
 from datetime import datetime, timedelta
 import pandas as pd
@@ -16,28 +18,36 @@ from itapia_common.schemas.entities.backtest import BACKTEST_CONTEXT_STATUS
 
 logger = ITAPIALogger('Backtest Context')
 
+
 class BacktestContext:
-    """
-    Quản lý toàn bộ vòng đời của dữ liệu backtest cho một ticker duy nhất.
+    """Manage the complete lifecycle of backtest data for a single ticker.
     
-    Bao gồm việc chọn ngày, yêu cầu tạo báo cáo, chờ đợi hoàn thành,
-    và tải dữ liệu cuối cùng vào bộ nhớ.
+    Includes selecting dates, requesting report generation, waiting for completion,
+    and loading final data into memory.
     """
 
     def __init__(self, ticker: str, data_preparer: BacktestDataPreparer,
                  selector: BacktestPointSelector,
                  is_ready: bool = False):
+        """Initialize backtest context for a ticker.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            data_preparer (BacktestDataPreparer): Data preparer instance
+            selector (BacktestPointSelector): Point selector instance
+            is_ready (bool, optional): Whether context is pre-loaded. Defaults to False
+        """
         self.ticker = ticker
         self.data_preparer = data_preparer
         self.selector = selector
         
-        self.job_id: Optional[str] = None # ID của tác vụ tạo dữ liệu|
+        self.job_id: Optional[str] = None  # Job ID for data generation task
 
-        # Dữ liệu sẽ được tải vào đây
+        # Data will be loaded here
         self.ohlcv_df: Optional[pd.DataFrame] = None
         self.historical_reports: List[QuickCheckAnalysisReport] = []
 
-        # Các biến quản lý trạng thái
+        # Status management variables
         self.status: BACKTEST_CONTEXT_STATUS = 'IDLE'
         self.data_ready_event = asyncio.Event()
         
@@ -45,10 +55,10 @@ class BacktestContext:
             self.status = 'READY_LOAD'
             self.data_ready_event.set()
 
-    async def prepare_data_async(self):
-        """
-        Hàm điều phối chính: Kích hoạt toàn bộ quy trình chuẩn bị dữ liệu.
-        Đây là điểm vào duy nhất từ bên ngoài.
+    async def prepare_data_async(self) -> None:
+        """Main coordinator function: Trigger the complete data preparation process.
+        
+        This is the sole entry point from outside.
         """
         if self.status != 'IDLE':
             logger.warn(f"Preparation for ticker {self.ticker} already started. Current status: {self.status}")
@@ -58,12 +68,12 @@ class BacktestContext:
         self.status = 'PREPARING'
         
         try:
-            # 1. Lấy dữ liệu OHLCV thô
+            # 1. Get raw OHLCV data
             self.ohlcv_df = self.data_preparer.get_daily_ohlcv_for_ticker(self.ticker, limit=5000)
             if self.ohlcv_df.empty:
                 raise ValueError("Failed to fetch OHLCV data.")
 
-            # 2. Chọn các điểm backtest
+            # 2. Select backtest points
             
             timestamps_to_request = self.selector.get_points_as_timestamps()
             
@@ -73,26 +83,24 @@ class BacktestContext:
                 self.data_ready_event.set()
                 return
 
-            # 3. Gửi yêu cầu tạo báo cáo đến AI Service Quick
+            # 3. Send request to generate reports to AI Service Quick
             response = await api_caller.trigger_backtest_generation_task(
                 ticker=self.ticker,
                 timestamps=timestamps_to_request,
             )
             self.job_id = response.job_id
             
-            # 4. Bắt đầu vòng lặp hỏi thăm (polling) để chờ hoàn thành
+            # 4. Start polling loop to wait for completion
             await self._poll_for_completion()
 
         except Exception as e:
             logger.err(f"Failed to prepare data for {self.ticker}: {e}")
             self.status = 'FAILED'
-            # Vẫn set event để bất kỳ ai đang chờ không bị treo, nhưng họ sẽ thấy status là FAILED
+            # Still set event so anyone waiting won't hang, but they'll see status is FAILED
             self.data_ready_event.set()
 
-    async def _poll_for_completion(self):
-        """
-        Vòng lặp bất đồng bộ để kiểm tra trạng thái của tác vụ tạo dữ liệu.
-        """
+    async def _poll_for_completion(self) -> None:
+        """Asynchronous polling loop to check status of data generation task."""
         if not self.job_id:
             raise BacktestError(msg='Cannot poll for completion without a job_id.')
         
@@ -109,15 +117,15 @@ class BacktestContext:
                     #await self._load_reports_from_db()
                     self.status = 'READY_LOAD'
                     self.data_ready_event.set()
-                    break # Thoát khỏi vòng lặp
+                    break  # Exit loop
                 
                 elif response.status == 'FAILED':
                     logger.err("Backtest generation task failed on AI Service Quick.")
                     self.status = 'FAILED'
                     self.data_ready_event.set()
-                    break # Thoát khỏi vòng lặp
+                    break  # Exit loop
                     
-                # Nếu vẫn đang 'RUNNING' hoặc 'IDLE', đợi và thử lại
+                # If still 'RUNNING' or 'IDLE', wait and try again
                 await asyncio.sleep(polling_interval)
                 
             except Exception as e:
@@ -127,6 +135,8 @@ class BacktestContext:
                 break
             
     def _choose_reports_from_selector(self, reports: List[QuickCheckAnalysisReport]) -> List[QuickCheckAnalysisReport]:
+        """Select reports based on selector criteria.
+        """
         if not reports:
             return []
         
@@ -140,10 +150,14 @@ class BacktestContext:
         
         return [reports[i] for i in sorted(list(valid_indices))]
 
-    async def load_data_into_memory(self, max_reports: Optional[int] = None):
-        """
-        Hàm mới: Tải tất cả dữ liệu cần thiết (OHLCV và reports) vào RAM.
-        Đây là một hàm async.
+    async def load_data_into_memory(self, max_reports: Optional[int] = None) -> None:
+        """Load all required data (OHLCV and reports) into RAM.
+        
+        This is an async function.
+        
+        Args:
+            max_reports (Optional[int], optional): Maximum number of reports to load. 
+                Defaults to None (no limit).
         """
         
         await self.data_ready_event.wait()
@@ -153,7 +167,7 @@ class BacktestContext:
         logger.info(f"Lazy loading data for ticker: {self.ticker}")
         loop = asyncio.get_running_loop()
 
-        # Tải OHLCV và Reports song song
+        # Load OHLCV and Reports in parallel
         ohlcv_task = loop.run_in_executor(None, self.data_preparer.get_daily_ohlcv_for_ticker, self.ticker, 5000)
         reports_task = loop.run_in_executor(None, self.data_preparer.get_backtest_reports_for_ticker, self.ticker)
         
@@ -168,10 +182,10 @@ class BacktestContext:
         self.historical_reports = relevant_reports
 
         logger.info(f"Successfully loaded {len(self.historical_reports)} reports and OHLCV data for {self.ticker}.")
-        self.status = 'READY_SERVE' # Trạng thái cuối cùng: dữ liệu đã nằm trong RAM
+        self.status = 'READY_SERVE'  # Final state: data resides in RAM
 
-    def clear_data_from_memory(self):
-        """Xóa dữ liệu nặng khỏi bộ nhớ để giải phóng RAM."""
+    def clear_data_from_memory(self) -> None:
+        """Clear heavy data from memory to free up RAM."""
         logger.info(f"Clearing in-memory data for ticker: {self.ticker}")
         self.historical_reports = []
         self.ohlcv_df = None
@@ -180,19 +194,35 @@ class BacktestContext:
     
 
 class BacktestContextManager:
+    """Manager that coordinates backtest data preparation, running in parallel
+    with a limited number to avoid overloading AI Service Quick.
     """
-    Quản đốc điều phối việc chuẩn bị dữ liệu backtest, chạy song song với
-    số lượng giới hạn để không làm quá tải AI Service Quick.
-    """
+    
     def __init__(self, data_preparer: BacktestDataPreparer):
+        """Initialize backtest context manager.
+        
+        Args:
+            data_preparer (BacktestDataPreparer): Data preparer instance
+        """
         self.data_preparer = data_preparer
         self.contexts: Dict[str, BacktestContext] = {}
         self.selector: Dict[str, BacktestPointSelector] = {}
         
     def get_all_ticker_contexts(self) -> List[str]:
+        """Get all ticker symbols with contexts.
+        
+        Returns:
+            List[str]: List of all ticker symbols
+        """
         return self.data_preparer.get_all_tickers()
         
-    def add_context(self, ticker: str, selector: BacktestPointSelector):
+    def add_context(self, ticker: str, selector: BacktestPointSelector) -> None:
+        """Add a context for a specific ticker.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            selector (BacktestPointSelector): Point selector for the ticker
+        """
         context = BacktestContext(
             ticker=ticker,
             data_preparer=self.data_preparer,
@@ -202,12 +232,15 @@ class BacktestContextManager:
         self.contexts[ticker] = context
         self.selector[ticker] = selector
 
-    async def _prepare_single_context(self, ticker: str, semaphore: asyncio.Semaphore):
+    async def _prepare_single_context(self, ticker: str, semaphore: asyncio.Semaphore) -> None:
+        """Worker function: Execute complete process for a single ticker,
+        controlled by a semaphore.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            semaphore (asyncio.Semaphore): Semaphore controlling concurrency
         """
-        Hàm worker: Thực hiện toàn bộ quy trình cho một ticker duy nhất,
-        được kiểm soát bởi một semaphore.
-        """
-        async with semaphore: # Chờ để có một "slot" trống
+        async with semaphore:  # Wait for an available "slot"
             logger.info(f"Starting preparation for ticker: {ticker}...")
             context = BacktestContext(
                 ticker=ticker,
@@ -215,16 +248,15 @@ class BacktestContextManager:
                 selector=self.selector[ticker]
             )
             self.contexts[ticker] = context
-            # prepare_data_async giờ đây sẽ là phiên bản gửi yêu cầu cho 1 ticker
-            # và poll cho đến khi hoàn thành
+            # prepare_data_async will now send requests for 1 ticker
+            # and poll until completion
             await context.prepare_data_async() 
 
-    async def prepare_all_contexts(self):
+    async def prepare_all_contexts(self) -> None:
+        """Initialize and run data preparation process for all tickers in parallel,
+        with concurrency limits.
         """
-        Khởi tạo và chạy quá trình chuẩn bị dữ liệu cho tất cả các ticker song song,
-        với mức độ song song được giới hạn.
-        """
-        # Giới hạn chỉ chạy 5 ticker cùng một lúc để không làm quá tải AI Quick
+        # Limit to running 5 tickers at once to avoid overloading AI Quick
         concurrency_limit = cfg.PARALLEL_CONCURRENCY_LIMIT
         semaphore = asyncio.Semaphore(concurrency_limit)
         tickers = self.data_preparer.get_all_tickers()
@@ -240,20 +272,28 @@ class BacktestContextManager:
         self.log_summary()
         
     def get_context(self, ticker: str) -> Optional[BacktestContext]:
-        """
-        Lấy context đã được chuẩn bị cho một ticker cụ thể.
+        """Get prepared context for a specific ticker.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            
+        Returns:
+            Optional[BacktestContext]: Prepared context or None if not found
         """
         return self.contexts.get(ticker)
 
     def get_ready_contexts(self) -> List[BacktestContext]:
-        """
-        Trả về một danh sách tất cả các context đã ở trạng thái 'READY_SERVE'.
-        Đây là danh sách mà FitnessEvaluator sẽ làm việc.
+        """Return a list of all contexts in 'READY_SERVE' state.
+        
+        This is the list that FitnessEvaluator will work with.
+        
+        Returns:
+            List[BacktestContext]: List of ready contexts
         """
         return [ctx for ctx in self.contexts.values() if ctx.status == 'READY_SERVE']
 
-    def log_summary(self):
-        """Ghi log tóm tắt về trạng thái của tất cả các context."""
+    def log_summary(self) -> None:
+        """Log summary of all context statuses."""
         total = len(self.contexts)
         ready_count = len([ctx for ctx in self.contexts.values() if ctx.status == 'READY_LOAD'])
         failed_count = len([ctx for ctx in self.contexts.values() if ctx.status == 'FAILED'])

@@ -1,4 +1,4 @@
-# Mở/Tạo file app/dependencies.py
+# Create file app/dependencies.py
 
 from typing import Optional
 
@@ -12,27 +12,25 @@ from itapia_common.dblib.services import (
 )
 from itapia_common.dblib.session import get_rdbms_session, get_redis_connection
 
-# Biến global được "bảo vệ" bằng dấu gạch dưới, chỉ được truy cập qua các hàm getter
+# Global variable "protected" by underscore, only accessed through getter functions
 _backtest_context_manager: Optional[BacktestContextManager] = None
 
 def create_dependencies():
-    """
-    Hàm "nhà máy" này được gọi MỘT LẦN DUY NHẤT trong lifespan để khởi tạo tất cả các đối tượng.
-    """
+    """Factory function called ONLY ONCE in lifespan to initialize all objects."""
     global _backtest_context_manager
     
-    # Chỉ khởi tạo nếu chưa có
+    # Only initialize if not already done
     if _backtest_context_manager is not None:
         return
 
-    # Logic khởi tạo DB và services
+    # DB and services initialization logic
     db_session_gen = get_rdbms_session()
     redis_gen = get_redis_connection()
     db = next(db_session_gen)
     redis = next(redis_gen)
     
-    # Logic khởi tạo này có thể gây ra lỗi nếu DB không kết nối được
-    # Nên bọc trong try...finally để đảm bảo session được đóng
+    # This initialization logic can cause errors if DB connection fails
+    # Should be wrapped in try...finally to ensure sessions are closed
     try:
         metadata_service = APIMetadataService(rdbms_session=db)
         prices_service = APIPricesService(rdbms_session=db, redis_client=redis, metadata_service=metadata_service)
@@ -44,7 +42,7 @@ def create_dependencies():
             metadata_service=metadata_service
         )
         
-        # Khởi tạo và gán vào biến global
+        # Initialize and assign to global variable
         _backtest_context_manager = BacktestContextManager(data_preparer=backtest_data_preparer)
     finally:
         db.close()
@@ -52,17 +50,21 @@ def create_dependencies():
 
 
 def get_backtest_context_manager() -> BacktestContextManager:
-    """
-    Hàm Dependency Injector cho FastAPI.
-    Nó trả về instance đã được tạo trong lifespan.
+    """FastAPI Dependency Injector function.
+    
+    Returns the instance created in lifespan.
+    
+    Returns:
+        BacktestContextManager: The initialized backtest context manager
+        
+    Raises:
+        RuntimeError: If BacktestContextManager has not been initialized
     """
     if _backtest_context_manager is None:
         raise RuntimeError("BacktestContextManager has not been initialized. Check lifespan event.")
     return _backtest_context_manager
 
 def close_dependencies():
-    """
-    Hàm dọn dẹp, được gọi khi ứng dụng tắt.
-    """
+    """Cleanup function called when the application shuts down."""
     global _backtest_context_manager
     _backtest_context_manager = None

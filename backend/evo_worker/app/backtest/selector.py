@@ -1,3 +1,5 @@
+"""Backtest point selector for identifying significant dates for backtesting."""
+
 import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
@@ -8,26 +10,27 @@ from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Backtest Point Selector')
 
+
 class BacktestPointSelector:
+    """An intelligent class to select "special" dates worthy of backtesting from
+    historical OHLCV data, using Pandas-based calculations without TA-Lib dependency.
+    
+    Supports method chaining to build a set of backtest points.
+    """
+    
     DEFAULT_CONFIG = {
         'volatility_quantile': 0.95,
         'recency_weight': 0.5,
     }
-    """
-    Một class thông minh để lựa chọn các ngày "đặc biệt" đáng để backtest từ
-    dữ liệu lịch sử OHLCV, sử dụng các hàm tính toán của Pandas, không phụ thuộc TA-Lib.
     
-    Hỗ trợ chaining methods để xây dựng một tập hợp các điểm backtest.
-    """
     def __init__(self, ticker: str, data_preparer: BacktestDataPreparer,
                  config: Dict = None):
-        """
-        Khởi tạo selector với DataFrame OHLCV.
+        """Initialize selector with OHLCV DataFrame.
         
         Args:
-            ohlcv_df (pd.DataFrame): DataFrame chứa dữ liệu giá lịch sử,
-                                     phải có DatetimeIndex và các cột 'open', 'high', 'low', 'close'.
-            config (Dict, optional): Một dictionary để tinh chỉnh các tham số.
+            ohlcv_df (pd.DataFrame): DataFrame containing historical price data,
+                                     must have DatetimeIndex and columns 'open', 'high', 'low', 'close'.
+            config (Dict, optional): A dictionary to fine-tune parameters.
         """
         
         ohlcv_df = data_preparer.get_daily_ohlcv_for_ticker(ticker, limit=5000)
@@ -39,78 +42,77 @@ class BacktestPointSelector:
         
         self.df = ohlcv_df.copy()
     
-        # 1. Chuẩn bị dữ liệu và các chỉ báo MỘT LẦN DUY NHẤT
+        # 1. Prepare data and indicators ONCE
         self._calculate_indicators()
         
-        # 2. Sử dụng một Set để lưu trữ các điểm được chọn, tự động xử lý trùng lặp
+        # 2. Use a Set to store selected points, automatically handling duplicates
         self.selected_points: Set[pd.Timestamp] = set()
 
     def _calculate_indicators(self):
-        """Tính toán tất cả các chỉ báo cần thiết để phát hiện sự kiện bằng Pandas."""
+        """Calculate all required indicators to detect events using Pandas."""
         logger.info("Calculating base indicators for point selection using Pandas...")
         
-        # Tính RSI bằng Pandas
+        # Calculate RSI using Pandas
         delta = self.df['close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / loss
         self.df['rsi'] = 100 - (100 / (1 + rs))
 
-        # Tính SMA bằng Pandas
+        # Calculate SMA using Pandas
         self.df['sma_50'] = self.df['close'].rolling(window=50).mean()
         self.df['sma_200'] = self.df['close'].rolling(window=200).mean()
 
-        # Tính % thay đổi giá hàng ngày
+        # Calculate % daily price change
         self.df['daily_change_pct'] = self.df['close'].pct_change().abs() * 100
         
-        # Bỏ qua các hàng NaN được tạo ra bởi các chỉ báo (chủ yếu là do SMA_200)
+        # Remove rows with NaN created by indicators (mainly due to SMA_200)
         self.df.dropna(inplace=True)
 
     def add_monthly_points(self, day_of_month: int, max_points: int = 100,          
                             selector_start: datetime|None = None,
                             selector_end: datetime|None = None) -> 'BacktestPointSelector':
-        """
-        Thêm các điểm backtest định kỳ hàng tháng, ưu tiên những ngày gần nhất.
+        """Add periodic monthly backtest points, prioritizing recent dates.
 
         Args:
-            day_of_month (int): Ngày trong tháng để nhắm đến.
-            max_points (int): Số lượng điểm định kỳ tối đa cần lấy.
+            day_of_month (int): Day of month to target.
+            max_points (int): Maximum number of periodic points to fetch.
         """
         logger.info(f"Adding up to {max_points} monthly points on day {day_of_month}, prioritizing recent dates...")
         
         selector_start = selector_start.replace(tzinfo=timezone.utc) if selector_start else self.df.index.min().to_pydatetime()
         selector_end = selector_end.replace(tzinfo=timezone.utc) if selector_end else self.df.index.max().to_pydatetime()
         
-        # --- BƯỚC 1: TẠO RA TẤT CẢ CÁC ỨNG CỬ VIÊN NGÀY ĐỊNH KỲ ---
+        # --- STEP 1: CREATE ALL PERIODIC CANDIDATE DATES ---
         
         candidate_target_dates: List[pd.Timestamp] = []
-        # Lặp qua tất cả các tháng trong khoảng thời gian
+        # Iterate through all months in the time range
         for month_start_date in pd.date_range(start=selector_start, end=selector_end, freq='MS'):
-            # Xử lý trường hợp ngày không tồn tại (ví dụ: ngày 31 tháng 2)
+            # Handle case where date doesn't exist (e.g., Feb 31)
             day = min(day_of_month, month_start_date.days_in_month)
             target_date = month_start_date.replace(day=day)
             candidate_target_dates.append(target_date)
             
-        # Sắp xếp các ngày ứng cử viên theo thứ tự GIẢM DẦN (từ gần nhất đến xa nhất)
+        # Sort candidate dates in DESCENDING order (from most recent to oldest)
         candidate_target_dates.sort(reverse=True)
         
-        # --- BƯỚC 2: TÌM NGÀY GIAO DỊCH THỰC TẾ GẦN NHẤT VÀ LỌC ---
+        # --- STEP 2: FIND ACTUAL TRADING DATES NEAREST AND FILTER ---
         
         target_dates_to_find = pd.to_datetime(candidate_target_dates[:max_points], utc=True)
 
-        # --- BƯỚC 2: TÌM NGÀY GIAO DỊCH THỰC TẾ GẦN NHẤT ---
+        # --- STEP 2: FIND NEAREST ACTUAL TRADING DATES ---
         
-        # SỬA LỖI Ở ĐÂY: Dùng get_indexer thay vì get_loc
-        # get_indexer nhận một danh sách các ngày và trả về một danh sách các vị trí
+        # FIX ERROR HERE: Use get_indexer instead of get_loc
+        # get_indexer takes a list of dates and returns a list of positions
         indices = self.df.index.get_indexer(target_dates_to_find, method='ffill')
         
-        # Lọc ra các vị trí hợp lệ (khác -1) và không trùng lặp
+        # Filter out valid positions (not -1) and remove duplicates
         valid_indices = sorted(list(set(idx for idx in indices if idx != -1)))
         
-        # Lấy các ngày thực tế từ các vị trí hợp lệ
+        # Get actual dates from valid positions
         points_to_add = self.df.index[valid_indices]
         
-        # --- BƯỚC 3: CẬP NHẬT TẬP HỢP ĐIỂM CHÍNH ---
+        # --- STEP 3: UPDATE MAIN POINT SET ---
         
         self.selected_points.update(points_to_add)
         
@@ -119,8 +121,15 @@ class BacktestPointSelector:
     def add_significant_points(self, max_points: int = 100,
                                selector_start: datetime|None = None,
                                selector_end: datetime|None = None) -> 'BacktestPointSelector':
-        """
-        Thêm các điểm backtest "đặc biệt" dựa trên các sự kiện kỹ thuật.
+        """Add "special" backtest points based on technical events.
+        
+        Args:
+            max_points (int, optional): Maximum number of significant points to add. Defaults to 100.
+            selector_start (datetime | None, optional): Start date for selection. Defaults to None.
+            selector_end (datetime | None, optional): End date for selection. Defaults to None.
+            
+        Returns:
+            BacktestPointSelector: Self for method chaining
         """
         logger.info(f"Adding up to {max_points} significant points...")
         volatility_points = self._find_volatility_spikes()
@@ -152,34 +161,45 @@ class BacktestPointSelector:
         return self
 
     def get_points(self) -> List[datetime]:
-        """
-        Trả về danh sách cuối cùng của các điểm backtest đã được chọn, đã sắp xếp.
+        """Return the final list of selected backtest points, sorted.
+        
+        Returns:
+            List[datetime]: Sorted list of selected backtest dates
         """
         if not self.selected_points:
             return []
         return sorted([ts.to_pydatetime() for ts in self.selected_points])
 
     def get_points_as_timestamps(self) -> List[int]:
-        """
-        Trả về danh sách cuối cùng của các điểm backtest dưới dạng Unix timestamps (integer), đã sắp xếp.
-        Rất hữu ích để gửi qua API.
+        """Return the final list of selected backtest points as Unix timestamps (integer), sorted.
+        Very useful for sending through APIs.
         
         Returns:
-            List[int]: Danh sách các Unix timestamps.
+            List[int]: Sorted list of Unix timestamps
         """
         if not self.selected_points:
             return []
-        # Chuyển đổi thành integer timestamp và sắp xếp
+        # Convert to integer timestamp and sort
         return sorted([int(ts.timestamp()) for ts in self.selected_points])
     
-    # --- CÁC HÀM HỖ TRỢ (PRIVATE) ---
+    # --- HELPER METHODS (PRIVATE) ---
     def _find_volatility_spikes(self) -> pd.DataFrame:
+        """Find dates with significant volatility spikes.
+        
+        Returns:
+            pd.DataFrame: DataFrame with volatility spike dates and scores
+        """
         quantile = self.config.get('volatility_quantile', 0.95)
         spike_threshold = self.df['daily_change_pct'].quantile(quantile)
         spikes = self.df[self.df['daily_change_pct'] >= spike_threshold]
         return pd.DataFrame({'date': spikes.index, 'event_score': 0.7})
 
     def _find_trend_changes(self) -> pd.DataFrame:
+        """Find dates with trend changes (Golden/Death crosses).
+        
+        Returns:
+            pd.DataFrame: DataFrame with trend change dates and scores
+        """
         df = self.df
         golden_cross = (df['sma_50'] > df['sma_200']) & (df['sma_50'].shift(1) <= df['sma_200'].shift(1))
         death_cross = (df['sma_50'] < df['sma_200']) & (df['sma_50'].shift(1) >= df['sma_200'].shift(1))
@@ -187,6 +207,11 @@ class BacktestPointSelector:
         return pd.DataFrame({'date': crosses.index, 'event_score': 1.0})
 
     def _find_momentum_extremes(self) -> pd.DataFrame:
+        """Find dates with momentum extremes (RSI overbought/oversold).
+        
+        Returns:
+            pd.DataFrame: DataFrame with momentum extreme dates and scores
+        """
         df = self.df
         overbought = (df['rsi'] > 70) & (df['rsi'].shift(1) <= 70)
         oversold = (df['rsi'] < 30) & (df['rsi'].shift(1) >= 30)
@@ -194,6 +219,11 @@ class BacktestPointSelector:
         return pd.DataFrame({'date': extremes.index, 'event_score': 0.8})
 
     def _apply_recency_bias(self, candidates_df: pd.DataFrame):
+        """Apply recency bias to candidate points to favor recent events.
+        
+        Args:
+            candidates_df (pd.DataFrame): DataFrame with candidate dates and scores
+        """
         recency_weight = self.config.get('recency_weight', 0.5)
         min_date = candidates_df['date'].min()
         max_date = candidates_df['date'].max()

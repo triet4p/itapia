@@ -1,3 +1,5 @@
+"""Action definitions and mappers for backtesting trading strategies."""
+
 from typing import Dict, NamedTuple, Literal, Optional, Tuple
 from abc import ABC, abstractmethod
 import itapia_common.rules.names as nms
@@ -7,10 +9,11 @@ from itapia_common.schemas.entities.rules import SemanticType
 ACTION_TYPE = Literal['BUY', 'SELL', 'HOLD']
 
 class Action(NamedTuple):
+    """Represents a trading action with all its parameters."""
     action_type: ACTION_TYPE
-    # Tỉ lệ phần trăm vốn dùng cho action này
+    # Percentage of capital to use for this action
     position_size_pct: float = 1.0
-    # Thời gian hold nếu ko có tín hiệu thoát khác
+    # Hold time if no other exit signal
     duration_days: int = 365
     
     sl_pct: float = 1.0
@@ -20,11 +23,22 @@ class Action(NamedTuple):
         return f'Action(action_type={self.action_type}, position_size_pct={self.position_size_pct}, duration_days={self.duration_days}, sl_pct={self.sl_pct}, tp_pct={self.tp_pct})'
 
 class _BaseActionMapper(ABC):
+    """Abstract base class for action mappers."""
+    
     @abstractmethod
     def map_action(self, score_final: float) -> Action:
+        """Map a final score to a trading action.
+        
+        Args:
+            score_final (float): Final score from rule evaluation
+            
+        Returns:
+            Action: Trading action based on the score
+        """
         pass
         
 class LinearDecisionActionMapper(_BaseActionMapper):
+    """Linear decision action mapper that converts scores to trading actions."""
     
     DEFAULT_POSITION_SIZE_PCT_RANGE: Tuple[float, float] = (0.1, 0.9)
     DEFAULT_DURATION_DAYS_RANGE: Tuple[int, int] = (1, 90)
@@ -39,6 +53,22 @@ class LinearDecisionActionMapper(_BaseActionMapper):
                  tp_pct_range: Optional[Tuple[float, float]] = None,
                  min_buy_threshold: Optional[float] = None,
                  max_sell_threshold: Optional[float] = None):
+        """Initialize the linear decision action mapper.
+        
+        Args:
+            position_size_pct_range (Optional[Tuple[float, float]], optional): Position size range. 
+                Defaults to (0.1, 0.9).
+            duration_days_range (Optional[Tuple[int, int]], optional): Duration range in days. 
+                Defaults to (1, 90).
+            sl_pct_range (Optional[Tuple[float, float]], optional): Stop loss percentage range. 
+                Defaults to (0.02, 0.1).
+            tp_pct_range (Optional[Tuple[float, float]], optional): Take profit percentage range. 
+                Defaults to (0.04, 0.3).
+            min_buy_threshold (Optional[float], optional): Minimum threshold for buy signal. 
+                Defaults to 0.1.
+            max_sell_threshold (Optional[float], optional): Maximum threshold for sell signal. 
+                Defaults to -0.1.
+        """
         self.position_size_pct_range = position_size_pct_range if position_size_pct_range else self.DEFAULT_POSITION_SIZE_PCT_RANGE
         self.duration_days_range = duration_days_range if duration_days_range else self.DEFAULT_DURATION_DAYS_RANGE
         self.sl_pct_range = sl_pct_range if sl_pct_range else self.DEFAULT_SL_PCT_RANGE
@@ -46,7 +76,15 @@ class LinearDecisionActionMapper(_BaseActionMapper):
         self.min_buy_threshold = min_buy_threshold if min_buy_threshold else self.MIN_BUY_THRESHOLD
         self.max_sell_threshold = max_sell_threshold if max_sell_threshold else self.MAX_SELL_THRESHOLD
         
-    def map_action(self, score_final: float):
+    def map_action(self, score_final: float) -> Action:
+        """Map a final score to a trading action using linear interpolation.
+        
+        Args:
+            score_final (float): Final score from rule evaluation
+            
+        Returns:
+            Action: Trading action based on the score
+        """
         action_type: ACTION_TYPE 
         if score_final > self.min_buy_threshold:
             action_type = 'BUY'
@@ -100,4 +138,4 @@ MEDIUM_SWING_PESSIMISTIC_MAPPER = LinearDecisionActionMapper(
     max_sell_threshold=-0.03
 )
 
-# Sau này các mapper cho risk, opportunity được triển khai riêng
+# Later, mappers for risk and opportunity will be implemented separately
