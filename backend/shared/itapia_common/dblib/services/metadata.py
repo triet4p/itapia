@@ -20,11 +20,6 @@ class APIMetadataService:
     """Centralized service class for metadata-related API queries."""
     
     def __init__(self, rdbms_session: Session):
-        """Initialize the APIMetadataService with a database session.
-
-        Args:
-            rdbms_session (Session): The SQLAlchemy database session.
-        """
         self.rdbms_session = rdbms_session
         self.metadata_cache = get_ticker_metadata(rdbms_connection=rdbms_session)
         
@@ -88,11 +83,6 @@ class DataMetadataService:
     """Service class for data-level metadata operations."""
     
     def __init__(self, engine: Engine):
-        """Initialize the DataMetadataService with a database engine.
-
-        Args:
-            engine (Engine): The SQLAlchemy database engine.
-        """
         self.metadata_cache = get_ticker_metadata(rdbms_engine=engine)
     
     def get_all_tickers(self) -> list[str]:

@@ -11,18 +11,13 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
-from typing import Optional
+from typing import List, Optional
 from itapia_common.dblib.crud.backtest_reports import BacktestReportCRUD
 
 class BacktestReportService:
     """Service for managing backtest reports in the database."""
     
     def __init__(self, db_session: Session):
-        """Initialize the BacktestReportService with a database session.
-
-        Args:
-            db_session (Session): The SQLAlchemy database session.
-        """
         self.crud = BacktestReportCRUD(db_session)
 
     def save_quick_check_report(self, report: QuickCheckAnalysisReport,
@@ -73,14 +68,14 @@ class BacktestReportService:
 
         return QuickCheckAnalysisReport.model_validate(report_dict)
     
-    def get_all_backtest_reports(self, ticker: str) -> list[QuickCheckAnalysisReport]:
+    def get_all_backtest_reports(self, ticker: str) -> List[QuickCheckAnalysisReport]:
         """Retrieve all backtest reports for a given ticker.
 
         Args:
             ticker (str): The ticker symbol.
 
         Returns:
-            list[QuickCheckAnalysisReport]: A list of report objects.
+            List[QuickCheckAnalysisReport]: A list of report objects.
         """
         report_datas = self.crud.get_reports_by_ticker(ticker)
         reports = []

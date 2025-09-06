@@ -2,7 +2,7 @@
 """Provides CRUD operations for metadata entities like tickers and sectors."""
 
 from sqlalchemy.orm import Session
-from sqlalchemy import Engine, text, Connection
+from sqlalchemy import Engine, RowMapping, Sequence, text, Connection
 import pandas as pd
 from threading import Lock
 
@@ -81,7 +81,7 @@ def get_ticker_metadata(rdbms_connection: Session|Connection = None,
     )
 
 def get_all_sectors(rdbms_connection: Session|Connection = None,
-                    rdbms_engine: Engine = None) -> list[dict]:
+                    rdbms_engine: Engine = None) -> Sequence[RowMapping]:
     """Retrieve all sector information from the database.
 
     Args:
@@ -89,7 +89,7 @@ def get_all_sectors(rdbms_connection: Session|Connection = None,
         rdbms_engine (Engine, optional): Database engine.
 
     Returns:
-        list[dict]: A list of dictionaries containing sector information.
+        Sequence[RowMapping]: A list of dictionaries containing sector information.
 
     Raises:
         ValueError: If neither connection nor engine is provided.

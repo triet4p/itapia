@@ -8,11 +8,6 @@ class EvoService:
     """Service class for managing evolutionary algorithms and rules."""
     
     def __init__(self, rdbms_session: Session):
-        """Initialize the EvoService with database session and CRUD instances.
-        
-        Args:
-            rdbms_session (Session): The SQLAlchemy database session.
-        """
         self.run_crud = EvoRunCRUD(rdbms_session)
         self.rule_crud = EvoRuleCRUD(rdbms_session)
         

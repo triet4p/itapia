@@ -1,8 +1,8 @@
 """Provides CRUD operations for business rules entities."""
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import RowMapping, Sequence, text
 import uuid
 import json
 
@@ -10,25 +10,10 @@ class RuleCRUD:
     """CRUD operations for business rules stored in the database."""
     
     def __init__(self, db_session: Session):
-        """Initialize the RuleCRUD instance with a database session.
-
-        Args:
-            db_session (Session): The SQLAlchemy database session.
-        """
         self.db = db_session
 
     def create_or_update_rule(self, rule_id: str, rule_data: Dict[str, Any]) -> str:
-        """Create or update a rule in the database using raw data.
-        
-        This function uses PostgreSQL's `ON CONFLICT DO UPDATE` (UPSERT) feature.
 
-        Args:
-            rule_id (str): ID of the rule.
-            rule_data (Dict[str, Any]): Dictionary containing the complete rule definition.
-
-        Returns:
-            str: ID of the saved rule.
-        """
         # Extract fields into separate columns for querying
         name = rule_data.get("name", "Untitled Rule")
         description = rule_data.get("description", "")
@@ -64,15 +49,7 @@ class RuleCRUD:
         self.db.commit()
         return rule_id
 
-    def get_rule_by_id(self, rule_id: str) -> Dict[str, Any] | None:
-        """Get raw data (dict) of a rule by its ID.
-
-        Args:
-            rule_id (str): The ID of the rule to retrieve.
-
-        Returns:
-            Dict[str, Any] | None: The rule data as a dictionary, or None if not found.
-        """
+    def get_rule_by_id(self, rule_id: str) -> Optional[RowMapping]:
         stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root 
                     FROM rules WHERE rule_id = :rule_id;""")
         result = self.db.execute(stmt, {"rule_id": rule_id})
@@ -83,16 +60,7 @@ class RuleCRUD:
             return result.mappings().one()
         return None
 
-    def get_rules_by_purpose(self, purpose_name: str, rule_status: str) -> List[Dict[str, Any]]:
-        """Get a list of raw data (list of dicts) of active rules for a specific purpose.
-
-        Args:
-            purpose_name (str): The purpose to filter rules by.
-            rule_status (str): Status of rules.
-
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing rule data.
-        """
+    def get_rules_by_purpose(self, purpose_name: str, rule_status: str) -> Sequence[RowMapping]:
         # Postgres JSONB query: `->>` extracts field as text
         stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root 
                     FROM rules WHERE rule_status = :rule_status AND purpose = :purpose;""")
@@ -102,15 +70,7 @@ class RuleCRUD:
         # Return a list of dictionaries
         return results.mappings().all()
     
-    def get_all_rules(self, rule_status: str) -> List[Dict[str, Any]]:
-        """Get a list of raw data (list of dicts) of all active rules.
-
-        Args:
-            rule_status (str): Status of rules.
-
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing rule data.
-        """
+    def get_all_rules(self, rule_status: str) -> Sequence[RowMapping]:
         # Postgres JSONB query: `->>` extracts field as text
         stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root 
                     FROM rules WHERE rule_status = :rule_status;""")

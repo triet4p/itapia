@@ -27,12 +27,6 @@ class APINewsService:
     
     def __init__(self, rdbms_session: Session,
                  metadata_service: APIMetadataService):
-        """Initialize the APINewsService with database session and metadata service.
-
-        Args:
-            rdbms_session (Session): The SQLAlchemy database session.
-            metadata_service (APIMetadataService): The metadata service instance.
-        """
         self.rdbms_session = rdbms_session
         self.metadata_service = metadata_service
         
@@ -110,11 +104,6 @@ class DataNewsService:
     """Service class for data-level news operations."""
     
     def __init__(self, engine: Engine):
-        """Initialize the DataNewsService with a database engine.
-
-        Args:
-            engine (Engine): The SQLAlchemy database engine.
-        """
         self.engine = engine
         
     def add_news(self, data: list[dict],

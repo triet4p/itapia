@@ -1,6 +1,6 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import RowMapping, Sequence, text
 import uuid
 import json
 
@@ -8,24 +8,9 @@ class EvoRuleCRUD:
     """CRUD operations for evolutionary rules."""
     
     def __init__(self, db_session: Session):
-        """Initialize the EvoRuleCRUD instance with a database session.
-        
-        Args:
-            db_session (Session): The SQLAlchemy database session.
-        """
         self.db = db_session
 
     def create_or_update_rule(self, rule_id: str, rule_data: Dict[str, Any]) -> str:
-        """Create a new rule or update an existing rule in the database.
-        
-        Args:
-            rule_id (str): Unique identifier for the rule.
-            rule_data (Dict[str, Any]): Dictionary containing rule data including
-                name, description, rule_status, purpose, created_at, root, evo_run_id, and metrics.
-                
-        Returns:
-            str: The rule_id of the created or updated rule.
-        """
         # Extract fields into separate columns for querying
         name = rule_data.get("name", "Untitled Rule")
         description = rule_data.get("description", "")
@@ -67,16 +52,7 @@ class EvoRuleCRUD:
         self.db.commit()
         return rule_id
     
-    def get_all_rules_by_evo(self, rule_status: str, evo_run_id: str) -> List[Dict[str, Any]]:
-        """Get a list of raw data (list of dicts) of all rules for a specific evolution run.
-        
-        Args:
-            rule_status (str): Status of rules to retrieve.
-            evo_run_id (str): Identifier of the evolution run.
-            
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing rule data.
-        """
+    def get_all_rules_by_evo(self, rule_status: str, evo_run_id: str) -> Sequence[RowMapping]:
         # Postgres JSONB query: `->>` extracts field as text
         stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root, evo_run_id, metrics
                     FROM evo_rules WHERE rule_status = :rule_status AND evo_run_id = :evo_run_id;""")
@@ -86,15 +62,7 @@ class EvoRuleCRUD:
         # Return a list of dictionaries
         return results.mappings().all()
     
-    def get_all_rules(self, rule_status: str) -> List[Dict[str, Any]]:
-        """Get a list of raw data (list of dicts) of all active rules.
-        
-        Args:
-            rule_status (str): Status of rules to retrieve.
-            
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries containing rule data.
-        """
+    def get_all_rules(self, rule_status: str) -> Sequence[RowMapping]:
         # Postgres JSONB query: `->>` extracts field as text
         stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root, evo_run_id, metrics
                     FROM evo_rules WHERE rule_status = :rule_status;""")
@@ -104,28 +72,15 @@ class EvoRuleCRUD:
         # Return a list of dictionaries
         return results.mappings().all()
     
+    
+    
 class EvoRunCRUD:
     """CRUD operations for evolutionary runs."""
     
     def __init__(self, db_session: Session):
-        """Initialize the EvoRunCRUD instance with a database session.
-        
-        Args:
-            db_session (Session): The SQLAlchemy database session.
-        """
         self.db = db_session
         
     def save_evo_run(self, evo_run_id: str, evo_run_data: Dict[str, Any]) -> str:
-        """Save or update an evolutionary run in the database.
-        
-        Args:
-            evo_run_id (str): Unique identifier for the evolution run.
-            evo_run_data (Dict[str, Any]): Dictionary containing evolution run data including
-                status, config, fallback_state, and algorithm.
-                
-        Returns:
-            str: The run_id of the saved or updated evolution run.
-        """
         status = evo_run_data.get('status')
         config = json.dumps(evo_run_data.get('config'))
         fallback_state = evo_run_data.get('fallback_state')
@@ -153,15 +108,7 @@ class EvoRunCRUD:
         self.db.commit()
         return evo_run_id
     
-    def get_evo_run(self, evo_run_id: str) -> Dict[str, Any] | None:
-        """Retrieve an evolutionary run by its ID.
-        
-        Args:
-            evo_run_id (str): Identifier of the evolution run to retrieve.
-            
-        Returns:
-            Dict[str, Any] | None: Dictionary containing evolution run data or None if not found.
-        """
+    def get_evo_run(self, evo_run_id: str) -> Optional[RowMapping]:
         stmt = text("""SELECT run_id, status, config, fallback_state, algorithm
                     FROM evo_runs WHERE run_id = :run_id;""")
         result = self.db.execute(stmt, {'run_id': evo_run_id})
