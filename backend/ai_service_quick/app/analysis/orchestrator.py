@@ -1,3 +1,5 @@
+"""Analysis orchestrator for coordinating all quick check analysis modules."""
+
 import asyncio
 import time
 from datetime import datetime, timezone
@@ -21,35 +23,52 @@ from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Analysis Orchestrator')
 
+
 def clean_json_outliers(obj) -> dict:
-    """
-    Quét đệ quy qua một đối tượng (dict, list) và thay thế các giá trị
-    numpy/float đặc biệt (inf, -inf, nan) bằng None.
+    """Recursively scan through an object (dict, list) and replace special 
+    numpy/float values (inf, -inf, nan) with None.
+    
+    Args:
+        obj: Object to clean (dict, list, or numeric value)
+        
+    Returns:
+        dict: Cleaned object with special values replaced by None
     """
     if isinstance(obj, dict):
         return {k: clean_json_outliers(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [clean_json_outliers(elem) for elem in obj]
     elif isinstance(obj, (np.integer, np.floating, float)):
-        # Kiểm tra xem có phải là nan, inf, hoặc -inf không
+        # Check if it's nan, inf, or -inf
         if not np.isfinite(obj):
-            return None  # Thay thế bằng None (sẽ trở thành null trong JSON)
+            return None  # Replace with None (will become null in JSON)
     return obj
 
 
 class AnalysisOrchestrator:
+    """Super Orchestrator ("CEO") for the entire Quick Check Analysis process (async version).
+    
+    It coordinates the orchestrators of each major module to execute complete 
+    business processes.
     """
-    Super Orchestrator ("CEO") cho toàn bộ quy trình Quick Check (phiên bản Async).
-    Nó điều phối các orchestrator của từng module lớn để thực hiện các
-    quy trình nghiệp vụ hoàn chỉnh.
-    """
+    
     def __init__(self, data_preparer: DataPrepareOrchestrator,
                  tech_analyzer: TechnicalOrchestrator,
                  forecaster: ForecastingOrchestrator,
                  news_analyzer: NewsOrchestrator,
                  explainer: AnalysisExplainerOrchestrator,
                  backtest_orchestrator: BacktestOrchestrator):
-        # Khởi tạo các "Trưởng phòng"
+        """Initialize the AnalysisOrchestrator with all required sub-orchestrators.
+        
+        Args:
+            data_preparer (DataPrepareOrchestrator): Data preparation orchestrator
+            tech_analyzer (TechnicalOrchestrator): Technical analysis orchestrator
+            forecaster (ForecastingOrchestrator): Forecasting orchestrator
+            news_analyzer (NewsOrchestrator): News analysis orchestrator
+            explainer (AnalysisExplainerOrchestrator): Analysis explainer orchestrator
+            backtest_orchestrator (BacktestOrchestrator): Backtest orchestrator
+        """
+        # Initialize department heads
         self.data_preparer = data_preparer
         self.tech_analyzer = tech_analyzer
         self.forecaster = forecaster
@@ -58,20 +77,33 @@ class AnalysisOrchestrator:
         self.backtest_generator = backtest_orchestrator
         self.is_active = False
         
-    def get_all_tickers(self):
+    def get_all_tickers(self) -> list:
+        """Get all available tickers.
+        
+        Returns:
+            list: List of all available tickers
+        """
         return self.data_preparer.get_all_tickers()
 
-    # === HÀM TIỆN ÍCH CHO TỪNG MODULE (ASYNC HELPERS) ===
+    # === ASYNC HELPER METHODS FOR EACH MODULE ===
 
     def _prepare_and_run_technical_analysis(self, enriched_daily_df: pd.DataFrame, 
                                             enriched_intraday_df: pd.DataFrame, 
                                             daily_analysis_type: str, required_type: str) -> TechnicalReport:
-        """
-        Giai đoạn Phân tích Kỹ thuật (đồng bộ vì các tác vụ rất nhanh).
+        """Technical Analysis Phase (synchronous because tasks are very fast).
+        
+        Args:
+            enriched_daily_df (pd.DataFrame): Daily DataFrame with technical features
+            enriched_intraday_df (pd.DataFrame): Intraday DataFrame with technical features
+            daily_analysis_type (str): Type of daily analysis ('short', 'medium', 'long')
+            required_type (str): Type of analysis required ('daily', 'intraday', 'all')
+            
+        Returns:
+            TechnicalReport: Technical analysis report
         """
         logger.info("CEO -> TechAnalyzer: Performing technical analysis...")
 
-        # Đây là tác vụ nhanh, có thể chạy đồng bộ.
+        # This is a fast task, can run synchronously.
         return self.tech_analyzer.get_full_analysis(
             enriched_daily_df, 
             enriched_intraday_df,
@@ -80,53 +112,93 @@ class AnalysisOrchestrator:
         )
 
     async def _prepare_and_run_forecasting(self, ticker: str, enriched_daily_df: pd.DataFrame) -> ForecastingReport:
-        """
-        Giai đoạn Dự báo (bất đồng bộ).
+        """Forecasting Phase (asynchronous).
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            enriched_daily_df (pd.DataFrame): Daily DataFrame with technical features
+            
+        Returns:
+            ForecastingReport: Forecasting analysis report
         """
         logger.info("CEO -> Forecaster: Preparing data and running forecast...")
-        # 1. Chuẩn bị dữ liệu đầu vào (nhanh, đồng bộ)
+        # 1. Prepare input data (fast, synchronous)
         sector = self.data_preparer.get_sector_code_of(ticker)
         latest_features = enriched_daily_df.iloc[-1:]
 
-        # 2. Gọi hàm generate_report (nặng, bất đồng bộ)
+        # 2. Call generate_report function (heavy, asynchronous)
         return await self.forecaster.generate_report(latest_features, ticker, sector)
 
     async def _prepare_and_run_news_analysis(self, ticker: str) -> NewsAnalysisReport:
-        """
-        Giai đoạn Phân tích Tin tức (bất đồng bộ).
+        """News Analysis Phase (asynchronous).
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            
+        Returns:
+            NewsAnalysisReport: News analysis report
         """
         logger.info("CEO -> NewsAnalyzer: Preparing data and running news analysis...")
-        # 1. Chuẩn bị dữ liệu đầu vào (nhanh, đồng bộ)
+        # 1. Prepare input data (fast, synchronous)
         news_texts = self.data_preparer.get_all_news_text_for_ticker(ticker)
 
-        # 2. Gọi hàm generate_report (nặng, bất đồng bộ)
+        # 2. Call generate_report function (heavy, asynchronous)
         return await self.news_analyzer.generate_report(ticker, news_texts)
     
-    def check_service_health(self):
+    def check_service_health(self) -> None:
+        """Check if service is ready and active.
+        
+        Raises:
+            NotReadyServiceError: If service is not ready
+        """
         if not self.is_active:
             raise NotReadyServiceError('Service is not ready! Check after 5-10 minutes')
         
-    def check_data_avaiable(self, ticker: str):
+    def check_data_avaiable(self, ticker: str) -> None:
+        """Check if data is available for a given ticker.
+        
+        Args:
+            ticker (str): Stock ticker symbol to check
+            
+        Raises:
+            NoDataError: If no data is found for the ticker
+        """
         if not self.data_preparer.is_exist(ticker):
             raise NoDataError(f'Not found ticker {ticker}')
 
-    # === HÀM CHÍNH ĐIỀU PHỐI (QUY TRÌNH 1) ===
+    # === MAIN COORDINATION FUNCTIONS (PROCESS 1) ===
     
     async def get_technical_report(self, ticker: str,
                                    daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
                                    required_type: Literal['daily', 'intraday', 'all']='all'
                                    ) -> TechnicalReport:
+        """Get technical analysis report for a specific ticker.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            daily_analysis_type (Literal['short', 'medium', 'long'], optional): Type of daily analysis. 
+                Defaults to 'medium'.
+            required_type (Literal['daily', 'intraday', 'all'], optional): Type of analysis required. 
+                Defaults to 'all'.
+                
+        Returns:
+            TechnicalReport: Technical analysis report
+            
+        Raises:
+            NotReadyServiceError: If service is not ready
+            NoDataError: If no data is available for the ticker
+        """
         self.check_service_health()
         self.check_data_avaiable(ticker)
         
         logger.info(f"--- CEO (ASYNC): Initiating TECHNICAL-ONLY analysis for '{ticker}' ---")
         
-        # --- BƯỚC 1: LẤY DỮ LIỆU THÔ (ĐỒNG BỘ) ---
+        # --- STEP 1: FETCH RAW DATA (SYNCHRONOUS) ---
         logger.info("CEO -> DataPreparer: Fetching price data...")
         daily_df = self.data_preparer.get_daily_ohlcv_for_ticker(ticker)
         intraday_df = self.data_preparer.get_intraday_ohlcv_for_ticker(ticker)
 
-        if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
+        if daily_df.empty: # Only need to check daily_df because forecasting and technical mainly rely on it
             logger.err(f"No daily data available for ticker {ticker}.")
             raise NoDataError(f"No daily data available for ticker {ticker}.")
         
@@ -141,16 +213,28 @@ class AnalysisOrchestrator:
         return report
     
     async def get_forecasting_report(self, ticker: str) -> ForecastingReport:
+        """Get forecasting report for a specific ticker.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            
+        Returns:
+            ForecastingReport: Forecasting analysis report
+            
+        Raises:
+            NotReadyServiceError: If service is not ready
+            NoDataError: If no data is available for the ticker
+        """
         self.check_service_health()
         self.check_data_avaiable(ticker)
         
         logger.info(f"--- CEO (ASYNC): Initiating FORECASTING-ONLY analysis for '{ticker}' ---")
         
-        # --- BƯỚC 1: LẤY DỮ LIỆU THÔ (ĐỒNG BỘ) ---
+        # --- STEP 1: FETCH RAW DATA (SYNCHRONOUS) ---
         logger.info("CEO -> DataPreparer: Fetching price data...")
         daily_df = self.data_preparer.get_daily_ohlcv_for_ticker(ticker)
 
-        if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
+        if daily_df.empty: # Only need to check daily_df because forecasting and technical mainly rely on it
             logger.err(f"No daily data available for ticker {ticker}.")
             raise NoDataError(f"No daily data available for ticker {ticker}.")
         
@@ -159,6 +243,18 @@ class AnalysisOrchestrator:
         return await self._prepare_and_run_forecasting(ticker, enriched_daily_df)
     
     async def get_news_report(self, ticker: str) -> NewsAnalysisReport:
+        """Get news analysis report for a specific ticker.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            
+        Returns:
+            NewsAnalysisReport: News analysis report
+            
+        Raises:
+            NotReadyServiceError: If service is not ready
+            NoDataError: If no data is available for the ticker
+        """
         self.check_service_health()
         self.check_data_avaiable(ticker)
         
@@ -170,55 +266,69 @@ class AnalysisOrchestrator:
                                        daily_analysis_type: Literal['short', 'medium', 'long'] = 'medium',
                                        required_type: Literal['daily', 'intraday', 'all']='all'
                                       ) -> QuickCheckAnalysisReport:
-        """
-        Tạo báo cáo phân tích A-Z cho một ticker, chạy các module nặng song song.
+        """Create a complete A-Z analysis report for a ticker, running heavy modules in parallel.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            daily_analysis_type (Literal['short', 'medium', 'long'], optional): Type of daily analysis. 
+                Defaults to 'medium'.
+            required_type (Literal['daily', 'intraday', 'all'], optional): Type of analysis required. 
+                Defaults to 'all'.
+                
+        Returns:
+            QuickCheckAnalysisReport: Complete analysis report
+            
+        Raises:
+            NotReadyServiceError: If service is not ready
+            NoDataError: If no data is available for the ticker
+            MissingReportError: If any analysis module fails
         """
         self.check_service_health()
         self.check_data_avaiable(ticker)
         
         logger.info(f"--- CEO (ASYNC): Initiating full analysis for ticker '{ticker}' ---")
         
-        # --- BƯỚC 1: LẤY DỮ LIỆU THÔ (ĐỒNG BỘ) ---
+        # --- STEP 1: FETCH RAW DATA (SYNCHRONOUS) ---
         logger.info("CEO -> DataPreparer: Fetching price data...")
         daily_df = self.data_preparer.get_daily_ohlcv_for_ticker(ticker)
         intraday_df = self.data_preparer.get_intraday_ohlcv_for_ticker(ticker)
 
-        if daily_df.empty: # Chỉ cần kiểm tra daily_df vì forecasting và technical chính dựa vào nó
+        if daily_df.empty: # Only need to check daily_df because forecasting and technical mainly rely on it
             logger.err(f"No daily data available for ticker {ticker}.")
             raise NoDataError(f"No daily data available for ticker {ticker}.")
         
         enriched_daily_df = self.tech_analyzer.get_daily_features(daily_df)
         enriched_intraday_df = self.tech_analyzer.get_intraday_features(intraday_df)
 
-        # --- BƯỚC 2: CHẠY TẤT CẢ CÁC MODULE SONG SONG ---
+        # --- STEP 2: RUN ALL MODULES IN PARALLEL ---
         logger.info("CEO: Dispatching all analysis modules to run in parallel...")
         
-        # Chạy Phân tích Kỹ thuật (tác vụ nhanh) trong executor để không block
-        # Mặc dù nhanh, đưa vào executor là cách làm an toàn nhất để đảm bảo non-blocking.
+        # Run Technical Analysis (fast task) in executor to avoid blocking
+        # Although fast, putting it in executor is the safest way to ensure non-blocking.
         loop = asyncio.get_running_loop()
         technical_task = loop.run_in_executor(
             None, self._prepare_and_run_technical_analysis, 
             enriched_daily_df, enriched_intraday_df, daily_analysis_type, required_type
         )
 
-        # Tạo các task cho các module nặng
+        # Create tasks for heavy modules
         forecasting_task = self._prepare_and_run_forecasting(ticker, enriched_daily_df)
         news_task = self._prepare_and_run_news_analysis(ticker)
 
-        # Sử dụng gather để chờ tất cả hoàn thành
+        # Use gather to wait for all to complete
         results = await asyncio.gather(
             technical_task, 
             forecasting_task, 
             news_task,
-            return_exceptions=True # Rất quan trọng để xử lý lỗi
+            return_exceptions=True # Very important for error handling
         )
 
-        # --- BƯỚC 3: KIỂM TRA LỖI VÀ TỔNG HỢP KẾT QUẢ ---
+        # --- STEP 3: CHECK ERRORS AND CONSOLIDATE RESULTS ---
         
-        # Giải nén kết quả
+        # Unpack results
         technical_report, forecasting_report, news_report = results
 
-        # Kiểm tra xem có module nào bị lỗi không
+        # Check if any modules failed
         if isinstance(technical_report, Exception):
             logger.err(f"Technical analysis failed for {ticker}: {technical_report}")
             raise MissingReportError(f"Technical analysis module failed.")
@@ -229,7 +339,7 @@ class AnalysisOrchestrator:
             logger.err(f"News analysis failed for {ticker}: {news_report}")
             raise MissingReportError(f"News analysis module failed.")
 
-        # --- BƯỚC 4: TẠO BÁO CÁO CUỐI CÙNG ---
+        # --- STEP 4: CREATE FINAL REPORT ---
         generate_time = datetime.now(tz=timezone.utc)
         final_report = QuickCheckAnalysisReport(
             ticker=ticker.upper(),
@@ -242,7 +352,7 @@ class AnalysisOrchestrator:
         
         logger.info(f"--- CEO (ASYNC): Full analysis for '{ticker}' complete. ---")
         
-        # Dọn dẹp các giá trị NaN/inf trước khi trả về
+        # Clean up NaN/inf values before returning
         cleaned_report_dict = clean_json_outliers(final_report.model_dump())
         return QuickCheckAnalysisReport.model_validate(cleaned_report_dict)
     
@@ -253,17 +363,28 @@ class AnalysisOrchestrator:
         required_type: Literal['daily', 'intraday', 'all']='all',
         explain_type: ExplainReportType = 'all'
     ) -> str:
-        """
-        Tái sử dụng báo cáo JSON đầy đủ và tạo ra một bản tóm tắt plain-text.
+        """Reuse the full JSON report and create a plain-text summary.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            daily_analysis_type (Literal['short', 'medium', 'long'], optional): Type of daily analysis. 
+                Defaults to 'medium'.
+            required_type (Literal['daily', 'intraday', 'all'], optional): Type of analysis required. 
+                Defaults to 'all'.
+            explain_type (ExplainReportType, optional): Type of explanation to generate. 
+                Defaults to 'all'.
+                
+        Returns:
+            str: Plain-text explanation of the analysis report
         """
         logger.info(f"--- CEO: Initiating PLAIN-TEXT explanation for '{ticker}' ---")
         
-        # BƯỚC 1: Gọi hàm chính để lấy dữ liệu có cấu trúc
+        # STEP 1: Call the main function to get structured data
         json_report = await self.get_full_analysis_report(
             ticker, daily_analysis_type, required_type
         )
 
-        # BƯỚC 2: Gọi đến Explainer Orchestrator để "dịch" báo cáo
+        # STEP 2: Call the Explainer Orchestrator to "translate" the report
         explanation_text = self.explainer.explain(
             report=json_report, 
             report_type=explain_type
@@ -271,30 +392,32 @@ class AnalysisOrchestrator:
         
         return explanation_text
     
-    async def preload_all_caches(self):
-        """
-        Kích hoạt song song quy trình làm nóng cache cho TẤT CẢ các sub-module.
+    async def preload_all_caches(self) -> None:
+        """Activate parallel cache warming process for ALL sub-modules.
+        
+        Raises:
+            Exception: If any module fails during pre-warming
         """
         logger.info("--- CEO: Starting PARALLEL pre-warming for all sub-modules ---")
         
-        # Chuẩn bị các tham số cần thiết
+        # Prepare required parameters
         sectors = self.data_preparer.get_all_sectors_code()
         #sectors = ['TECH']
-        # 1. Tạo một danh sách các "công việc lớn" cần thực hiện
-        # Mỗi công việc là một lần gọi đến hàm preload của một "trưởng phòng"
+        # 1. Create a list of "major tasks" to execute
+        # Each task is a call to a department head's preload function
         tasks = [
             self.forecaster.preload_caches_for_all_sectors(sectors),
             self.news_analyzer.preload_caches()
-            # Trong tương lai có thể thêm các module khác ở đây
+            # In the future, other modules can be added here
             # self.another_module.preload()
         ]
 
-        # 2. Sử dụng asyncio.gather để chạy tất cả các công việc song song và CHỜ chúng
-        # SỬA LỖI QUAN TRỌNG: Thêm `await` ở phía trước
-        # Dùng return_exceptions=True để một module lỗi không làm sập toàn bộ quá trình
+        # 2. Use asyncio.gather to run all tasks in parallel and WAIT for them
+        # IMPORTANT FIX: Add `await` at the front
+        # Use return_exceptions=True so one module error doesn't crash the entire process
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # (Tùy chọn nhưng khuyến khích) Kiểm tra kết quả để ghi log nếu có lỗi
+        # (Optional but recommended) Check results to log if there are errors
         module_names = ["News Analysis"]
         has_errors = False
         for result, name in zip(results, module_names):
@@ -304,7 +427,7 @@ class AnalysisOrchestrator:
             else:
                 logger.info(f"  - Pre-warming complete for module '{name}'.")
 
-        # 3. Chỉ sau khi TẤT CẢ đã hoàn thành, mới đặt trạng thái là active
+        # 3. Only after ALL have completed, set status to active
         if not has_errors:
             self.is_active = True
             logger.info("--- CEO: All modules pre-warmed successfully. Service is now active. ---")
@@ -312,13 +435,18 @@ class AnalysisOrchestrator:
             logger.warn("--- CEO: Pre-warming process completed with errors. Service might not be fully functional. ---")
             
     def prepare_training_data_for_sector(self, sector_code: str) -> pd.DataFrame:
-        """
-        QUY TRÌNH 2: Chuẩn bị một DataFrame lớn, sẵn sàng để huấn luyện,
-        cho tất cả các ticker trong một nhóm ngành.
+        """PROCESS 2: Prepare a large DataFrame ready for training,
+        for all tickers in a sector group.
+        
+        Args:
+            sector_code (str): Sector code to prepare training data for
+            
+        Returns:
+            pd.DataFrame: DataFrame with training-ready data for the sector
         """
         logger.info(f"--- CEO: Preparing training data for sector '{sector_code}' ---")
         
-        # BƯỚC 1: LẤY DỮ LIỆU GỘP CỦA CẢ NGÀNH
+        # STEP 1: FETCH AGGREGATED SECTOR DATA
         logger.info("CEO -> DataPreparer: Fetching and transforming sector data...")
         sector_ohlcv_df = self.data_preparer.get_daily_ohlcv_for_sector(sector_code)
         
@@ -326,8 +454,8 @@ class AnalysisOrchestrator:
             logger.err(f"No data found for sector {sector_code}.")
             return pd.DataFrame()
 
-        # BƯỚC 2: TẠO FEATURES CHO DỮ LIỆU ĐÃ GỘP
-        # Lưu ý: Cần lặp qua từng ticker để tạo feature cho đúng
+        # STEP 2: CREATE FEATURES FOR AGGREGATED DATA
+        # Note: Need to iterate through each ticker to create correct features
         logger.info("CEO -> TechAnalyzer: Generating features for sector data...")
         all_enriched_dfs = []
         for ticker, group_df in sector_ohlcv_df.groupby('ticker'):
@@ -337,28 +465,37 @@ class AnalysisOrchestrator:
         
         enriched_sector_df = pd.concat(all_enriched_dfs)
 
-        # BƯỚC 3 (TƯƠNG LAI): TẠO TARGETS
+        # STEP 3 (FUTURE): CREATE TARGETS
         # training_ready_df = self.forecasting_pipeline.create_targets(enriched_sector_df)
         
         logger.info(f"--- CEO: Training data for '{sector_code}' is ready. ---")
-        return enriched_sector_df # Tạm thời trả về df đã có features
+        return enriched_sector_df # Temporarily return df with features
     
-    def export_local_data_for_sector(self, sector_code: str):
+    def export_local_data_for_sector(self, sector_code: str) -> None:
+        """Export local training data for a sector to CSV file.
+        
+        Args:
+            sector_code (str): Sector code to export data for
+        """
         df = self.prepare_training_data_for_sector(sector_code)
         df.to_csv(f'/ai-service-quick/local/training_{sector_code}.csv')
         
     # =================================================================
-    # SECTION: BACKTESTING DATA GENERATION - ĐÃ TÁI CẤU TRÚC
+    # SECTION: BACKTESTING DATA GENERATION - REFACTORED
     # =================================================================
 
-    async def _process_single_ticker_for_backtest(self, ticker: str, sector: str, backtest_dates: list[datetime]):
-        """
-        Hàm hỗ trợ: Thực hiện toàn bộ quy trình tạo dữ liệu backtest cho MỘT ticker duy nhất.
+    async def _process_single_ticker_for_backtest(self, ticker: str, sector: str, backtest_dates: list[datetime]) -> None:
+        """Helper function: Execute the entire backtest data creation process for a SINGLE ticker.
+        
+        Args:
+            ticker (str): Stock ticker symbol to process
+            sector (str): Sector code for the ticker
+            backtest_dates (list[datetime]): List of dates to backtest
         """
         logger.info(f"  -> Processing Ticker: '{ticker}' for {len(backtest_dates)} dates")
         loop = asyncio.get_running_loop()
 
-        # 1. Lấy dữ liệu lịch sử và các điểm cần backtest
+        # 1. Get historical data and backtest points
         full_daily_df = self.data_preparer.get_daily_ohlcv_for_ticker(ticker, limit=5000)
         if full_daily_df.empty:
             logger.warn(f"  No daily data for '{ticker}'. Skipping ticker.")
@@ -383,7 +520,7 @@ class AnalysisOrchestrator:
             logger.warn(f"  No valid historical data points for '{ticker}'. Skipping ticker.")
             return
 
-        # 2. Chạy module nặng nhất (Forecasting) một lần cho tất cả các điểm dữ liệu
+        # 2. Run the heaviest module (Forecasting) once for all data points
         forecasting_reports = await self.forecaster.get_history_reports(
             latest_enriched_datas=selected_datas, ticker=ticker, sector=sector
         )
@@ -391,29 +528,29 @@ class AnalysisOrchestrator:
             logger.err(f"  Mismatch between selected data points ({len(selected_datas)}) and forecasts ({len(forecasting_reports)}). Skipping ticker.")
             return
 
-        # 3. Chuẩn bị các tác vụ Technical và News để chạy song song
+        # 3. Prepare Technical and News tasks to run in parallel
         tasks_to_gather = []
         for iloc_pos in valid_target_ilocs:
-            # Chuẩn bị dữ liệu slice cho technical
+            # Prepare data slice for technical
             historical_slice_df = enriched_daily_df.iloc[:iloc_pos]
             current_date_ohlcv = enriched_daily_df.iloc[iloc_pos]
             
-            # Tạo task cho Technical Analysis (chạy trong executor vì là sync)
+            # Create task for Technical Analysis (run in executor because it's sync)
             tech_task = loop.run_in_executor(None, self.tech_analyzer.get_full_past_analysis, 
                                              historical_slice_df, current_date_ohlcv)
             tasks_to_gather.append(tech_task)
 
-            # Tạo task cho News Analysis (bản thân nó là async)
+            # Create task for News Analysis (it's async itself)
             backtest_date = current_date_ohlcv.name.to_pydatetime()
             news_texts = self.data_preparer.get_history_news_for_ticker(ticker, backtest_date)
             news_task = self.news_analyzer.generate_report(ticker, news_texts)
             tasks_to_gather.append(news_task)
             
-        # 4. Chạy song song tất cả các tác vụ Technical và News
+        # 4. Run all Technical and News tasks in parallel
         logger.info(f"  Running {len(tasks_to_gather)} Technical/News tasks in parallel for '{ticker}'...")
         other_reports = await asyncio.gather(*tasks_to_gather, return_exceptions=True)
 
-        # 5. Lắp ráp và lưu từng báo cáo
+        # 5. Assemble and save each report
         logger.info(f"  Assembling and saving {len(selected_datas)} reports for '{ticker}'...")
         for i, iloc_pos in enumerate(valid_target_ilocs):
             backtest_date: datetime = enriched_daily_df.iloc[iloc_pos].name.to_pydatetime()
@@ -422,7 +559,7 @@ class AnalysisOrchestrator:
             news_report_result = other_reports[i * 2 + 1]
             forecasting_report = forecasting_reports[i]
 
-            # Kiểm tra lỗi từ gather
+            # Check errors from gather
             if isinstance(tech_report_result, Exception):
                 logger.err(f"    - Technical analysis failed for {ticker} at {backtest_date.date()}: {tech_report_result}")
                 continue
@@ -430,7 +567,7 @@ class AnalysisOrchestrator:
                 logger.err(f"    - News analysis failed for {ticker} at {backtest_date.date()}: {news_report_result}")
                 continue
             
-            # Lắp ráp báo cáo cuối cùng
+            # Assemble final report
             final_report = QuickCheckAnalysisReport(
                 ticker=ticker.upper(),
                 generated_at_utc=datetime.now(tz=timezone.utc).isoformat(),
@@ -440,16 +577,19 @@ class AnalysisOrchestrator:
                 news_report=news_report_result
             )
             
-            # Dọn dẹp và lưu vào CSDL
+            # Clean and save to database
             cleaned_report_dict = clean_json_outliers(final_report.model_dump())
             report_to_save = QuickCheckAnalysisReport.model_validate(cleaned_report_dict)
             self.backtest_generator.save_report(report_to_save, backtest_date)
 
         logger.info(f"  -> SUCCESS: Finished processing reports for '{ticker}'.")
 
-    async def generate_backtest_data(self, ticker: str, backtest_dates: list[datetime]):
-        """
-        Hàm chính: Điều phối toàn bộ quy trình tạo và lưu trữ dữ liệu backtest.
+    async def generate_backtest_data(self, ticker: str, backtest_dates: list[datetime]) -> None:
+        """Main function: Coordinate the entire process of creating and storing backtest data.
+        
+        Args:
+            ticker (str): Stock ticker symbol to generate backtest data for
+            backtest_dates (list[datetime]): List of dates to backtest
         """
         start = time.time()
         logger.info("====== STARTING BACKTEST DATA GENERATION PROCESS ======")

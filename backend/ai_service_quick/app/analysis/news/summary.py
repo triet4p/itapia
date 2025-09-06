@@ -1,8 +1,21 @@
+"""Result summarizer for news analysis reports."""
+
 from typing import List
 from itapia_common.schemas.entities.analysis.news import SingleNewsAnalysisReport, SummaryReport
 
+
 class ResultSummarizer:
-    def summary(self, reports: List[SingleNewsAnalysisReport]):
+    """Summarizes multiple news analysis reports into a consolidated summary."""
+    
+    def summary(self, reports: List[SingleNewsAnalysisReport]) -> SummaryReport:
+        """Generate a summary report from individual news analysis reports.
+        
+        Args:
+            reports (List[SingleNewsAnalysisReport]): List of individual news analysis reports
+            
+        Returns:
+            SummaryReport: Consolidated summary report
+        """
         if len(reports) == 0:
             return SummaryReport(
                 num_positive_sentiment=0,

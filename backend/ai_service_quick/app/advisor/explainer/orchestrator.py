@@ -1,39 +1,66 @@
-# ai_service_quick/app/explainer/advisor/orchestrator.py
+"""Advisor explainer orchestrator for generating natural language summaries of advisor results."""
 
 from typing import List
 
-# Import các schema và lớp cần thiết
+# Import required schemas and classes
 from itapia_common.schemas.entities.advisor import AdvisorReportSchema, FinalRecommendation, TriggeredRuleInfo
 
+
 class _FinalRecommendationExplainer:
-    """Explainer cấp thấp, giải thích một khối FinalRecommendation duy nhất."""
+    """Low-level explainer, explains a single FinalRecommendation block."""
     
-    # <<< THAY ĐỔI: Bỏ các template cũ, chỉ giữ lại những gì cần thiết
+    # <<< CHANGE: Remove old templates, keep only what's needed
     _TEMPLATE = "The final {purpose_text} score is {final_score:.2f}, leading to a recommendation of '{recommend_label}'."
     _EVIDENCE_TEMPLATE = " This was primarily driven by signals from: {top_rules_str}."
 
     def _get_purpose_text(self, purpose: str) -> str:
-        if "DECISION" in purpose: return "decision"
-        if "RISK" in purpose: return "risk"
-        if "OPPORTUNITY" in purpose: return "opportunity"
+        """Get human-readable purpose text from purpose code.
+        
+        Args:
+            purpose (str): Purpose code string
+            
+        Returns:
+            str: Human-readable purpose description
+        """
+        if "DECISION" in purpose: 
+            return "decision"
+        if "RISK" in purpose: 
+            return "risk"
+        if "OPPORTUNITY" in purpose: 
+            return "opportunity"
         return "overall"
 
     def _format_top_rules_str(self, rules: List[TriggeredRuleInfo]) -> str:
-        """Lấy tên của tối đa 3 quy tắc có ảnh hưởng nhất."""
+        """Get names of up to 3 most influential rules.
+        
+        Args:
+            rules (List[TriggeredRuleInfo]): List of triggered rules
+            
+        Returns:
+            str: Formatted string of top rule names
+        """
         if not rules:
             return "no specific signals"
-        # Sắp xếp các quy tắc theo giá trị tuyệt đối của điểm số
+        # Sort rules by absolute score value
         sorted_rules = sorted(rules, key=lambda r: abs(r.score), reverse=True)
-        # Lấy tên của 3 quy tắc hàng đầu
+        # Get names of top 3 rules
         rule_names = [f"'{r.name}'" for r in sorted_rules[:3]]
         return ", ".join(rule_names)
 
     def explain(self, report: FinalRecommendation) -> str:
+        """Generate natural language explanation for a FinalRecommendation.
+        
+        Args:
+            report (FinalRecommendation): Final recommendation to explain
+            
+        Returns:
+            str: Natural language explanation
+        """
         if not report.triggered_rules:
-            purpose_text = self._get_purpose_text(report.purpose) # Cố gắng đoán purpose
+            purpose_text = self._get_purpose_text(report.purpose)  # Try to guess purpose
             return f"No specific signals were triggered for the {purpose_text} assessment, resulting in a neutral stance."
 
-        # Lấy purpose từ quy tắc đầu tiên (tất cả đều có cùng purpose)
+        # Get purpose from first rule (all have the same purpose)
         purpose_text = self._get_purpose_text(report.triggered_rules[0].purpose)
         
         explanation = self._TEMPLATE.format(
@@ -47,22 +74,34 @@ class _FinalRecommendationExplainer:
             
         return explanation
 
+
 class AdvisorExplainerOrchestrator:
+    """Generates natural language summaries for Advisor results.
+    
+    Provides both aggregated explanations and individual rule explanations.
     """
-    Tạo ra các bản tóm tắt bằng ngôn ngữ tự nhiên cho kết quả của Advisor.
-    Cung cấp cả giải thích tổng hợp và giải thích cho từng quy tắc riêng lẻ.
-    """
+    
     _HEADER_TEMPLATE = "Advisor Recommendation for {ticker}:"
     _MAIN_RECOMMENDATION_TEMPLATE = "=> Main Recommendation: {decision_recommendation}"
-    _CONTEXT_TEMPLATE = "\nAnalysis Context:\n- {risk_recommendation}\n- {opportunity_recommendation}"
+    _CONTEXT_TEMPLATE = """
+Analysis Context:
+- {risk_recommendation}
+- {opportunity_recommendation}
+"""
 
     def __init__(self):
-        # <<< THAY ĐỔI: Nhận dependency injection
+        """Initialize the advisor explainer orchestrator."""
+        # <<< CHANGE: Receive dependency injection
         self.rec_explainer = _FinalRecommendationExplainer()
 
     def explain_report(self, report: AdvisorReportSchema) -> str:
-        """
-        Tạo ra một chuỗi văn bản giải thích TỔNG HỢP cho AdvisorReport.
+        """Generate a comprehensive natural language explanation for an AdvisorReport.
+        
+        Args:
+            report (AdvisorReportSchema): Advisor report to explain
+            
+        Returns:
+            str: Comprehensive natural language explanation
         """
         if not isinstance(report, AdvisorReportSchema):
             return "Invalid advisor report format provided for explanation."

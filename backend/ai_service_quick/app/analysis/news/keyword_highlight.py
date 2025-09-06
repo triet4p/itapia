@@ -1,43 +1,42 @@
+"""Word-based keyword highlighting model for extracting sentiment evidence from news texts."""
+
 from typing import List, Union, Set
 
-# Import các schema Pydantic đã định nghĩa
+# Import predefined Pydantic schemas
 from itapia_common.schemas.entities.analysis.news import (
     KeywordHighlightingReport
 )
 
-class WordBasedKeywordHighlightingModel:
-    """
-    Trích xuất các từ khóa tình cảm (bằng chứng) từ văn bản
-    dựa trên các bộ từ điển được cung cấp.
-    """
-    def __init__(self, positive_dictionary: Set[str], negative_dictionary: Set[str]):
-        """
-        Khởi tạo model với các bộ từ điển đã được tải.
 
+class WordBasedKeywordHighlightingModel:
+    """Extracts sentiment keywords (evidence) from text based on provided dictionaries."""
+    
+    def __init__(self, positive_dictionary: Set[str], negative_dictionary: Set[str]):
+        """Initialize model with loaded dictionaries.
+        
         Args:
-            positive_dictionary (Set[str]): Một set chứa các từ tích cực.
-            negative_dictionary (Set[str]): Một set chứa các từ tiêu cực.
+            positive_dictionary (Set[str]): A set containing positive words
+            negative_dictionary (Set[str]): A set containing negative words
         """
         self.positive_words = positive_dictionary
         self.negative_words = negative_dictionary
 
     def extract(self, texts: List[str]) -> List[KeywordHighlightingReport]:
-        """
-        Trích xuất bằng chứng tình cảm cho một hoặc nhiều văn bản (đã được tiền xử lý).
-
+        """Extract sentiment evidence for one or more texts (preprocessed).
+        
         Args:
-            texts (Union[str, List[str]]): Một chuỗi hoặc một danh sách các chuỗi đã được chuẩn hóa.
-
+            texts (List[str]): A list of normalized texts to analyze
+            
         Returns:
-            Union[KeywordHighlightingEvidence, List[KeywordHighlightingEvidence]]: Bằng chứng trích xuất được.
+            List[KeywordHighlightingReport]: Extracted evidence reports
         """
 
         reports = []
         for text in texts:
-            # Bẻ văn bản thành các từ duy nhất để chỉ highlight mỗi từ một lần
+            # Split text into unique words to highlight each word only once
             words_in_text = set(text.split())
             
-            # Tìm các từ trùng với từ điển
+            # Find words matching dictionaries
             found_positive = [
                 word
                 for word in words_in_text if word in self.positive_words

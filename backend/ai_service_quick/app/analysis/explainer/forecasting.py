@@ -5,9 +5,8 @@ from itapia_common.schemas.entities.analysis.forecasting import (
     SHAPExplaination, TopFeature
 )
 
-# --- MAPPING DICTIONARIES ĐỂ DỊCH TÊN KỸ THUẬT ---
+# Mapping to translate technical name to friendly name
 
-# --- MAPPING DICTIONARIES (giữ nguyên, đã rất tốt) ---
 PROBLEM_ID_TO_NAME = {
     "triple-barrier": "Triple Barrier Classification",
     "ndays-distribution": "Price Distribution Regression"
@@ -56,7 +55,7 @@ class _SHAPExplainer:
 
         return base_explanation
 
-# --- SINGLE TASK EXPLAINER (ĐÃ ĐƯỢC SỬA LẠI HOÀN TOÀN) ---
+# --- SINGLE TASK EXPLAINER ---
 class _SingleTaskForecastExplainer:
     def __init__(self):
         self.shap_explainer = _SHAPExplainer()
@@ -64,10 +63,9 @@ class _SingleTaskForecastExplainer:
     def _explain_triple_barrier(self, report: SingleTaskForecastReport) -> str:
         metadata: TripleBarrierTaskMetadata = report.task_metadata
         
-        # SỬA LỖI: Lấy dự đoán nhãn lớp trực tiếp từ mảng prediction
-        prediction_label = report.prediction[0] # Ví dụ: -1, 0, hoặc 1
+        prediction_label = report.prediction[0]
         
-        # Mapping nhãn số thành văn bản
+        # Mapping
         prediction_text_map = {
             1: "a 'Win' (price increase)",
             -1: "a 'Loss' (price decrease)",
@@ -81,12 +79,10 @@ class _SingleTaskForecastExplainer:
             f"This is based on a profit target of {metadata.tp_pct*100:.1f}% and a stop-loss of {metadata.sl_pct*100:.1f}%."
         )
         
-        # Phần evidence bây giờ đơn giản hơn vì chỉ có một target để giải thích
         evidence_to_explain = report.evidence[0] if report.evidence else None
 
         evidence_text = ""
         if evidence_to_explain:
-            # Sửa lại 'unit' thành report.units để khớp với schema
             evidence_text = " " + self.shap_explainer.explain(evidence_to_explain, report.units)
 
         return task_intro + evidence_text
@@ -99,10 +95,9 @@ class _SingleTaskForecastExplainer:
             "the model forecasts the following percentage price changes:"
         )
 
-        # Tạo một dictionary để dễ dàng tra cứu dự đoán theo tên target
+        # Create a dictionary to easily look up predictions by target name
         prediction_map = {ev.for_target.split('_')[0]: pred_val for ev, pred_val in zip(report.evidence, report.prediction)}
         
-        # Chỉ chắt lọc và trình bày các thông tin quan trọng nhất
         mean_change = prediction_map.get('mean')
         q25 = prediction_map.get('q25')
         q75 = prediction_map.get('q75')

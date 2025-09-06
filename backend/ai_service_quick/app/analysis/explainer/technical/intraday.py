@@ -1,6 +1,3 @@
-from typing import List, Dict, Any
-
-# Import các schema Pydantic tương ứng từ thư viện chung
 from itapia_common.schemas.entities.analysis.technical.intraday import (
     IntradayAnalysisReport,
     CurrentStatusReport,
@@ -8,13 +5,13 @@ from itapia_common.schemas.entities.analysis.technical.intraday import (
     MomentumReport
 )
 
-# --- Explainer Cấp Thấp (Leaf Explainers) ---
+# --- (Leaf Explainers) ---
 
 class _CurrentStatusExplainer:
     _TEMPLATE = "Currently, the price is trading '{open_status}' the opening price. Compared to the Volume-Weighted Average Price (VWAP), it is '{vwap_status}'. The short-term RSI suggests the stock is in a '{rsi_status}' state."
 
     def explain(self, report: CurrentStatusReport) -> str:
-        # Thay thế "undefined" bằng một cụm từ thân thiện hơn
+        # Replace "undefined" with a friendlier phrase.
         vwap_status_text = "at an undefined level" if report.vwap_status == 'undefined' else report.vwap_status
         
         return self._TEMPLATE.format(
@@ -27,7 +24,6 @@ class _KeyLevelsExplainer:
     _TEMPLATE = "Key intraday levels to watch are the day's high at {day_high:.2f}, the day's low at {day_low:.2f}, and the VWAP at {vwap:.2f}."
 
     def explain(self, report: KeyLevelsReport) -> str:
-        # Chỉ giải thích nếu có VWAP, vì đó là mức động quan trọng nhất
         if report.vwap is None:
             return f"Key intraday levels are the day's high at {report.day_high:.2f} and the day's low at {report.day_low:.2f}."
             
@@ -49,7 +45,6 @@ class _MomentumExplainer:
             return ", and the price remains inside the opening range"
 
     def explain(self, report: MomentumReport) -> str:
-        # Chuyển đổi 'bull'/'bear' thành các từ có ý nghĩa hơn
         macd_crossover_text = "neutral"
         if report.macd_crossover == 'bull':
             macd_crossover_text = "bullish crossover"
@@ -79,15 +74,6 @@ class IntradayAnalysisExplainer:
         self.levels_explainer = _KeyLevelsExplainer()
 
     def explain(self, report: IntradayAnalysisReport) -> str:
-        """
-        Tạo ra một đoạn văn giải thích hoàn chỉnh.
-
-        Args:
-            report (IntradayAnalysisReport): Đối tượng báo cáo Pydantic.
-
-        Returns:
-            str: Một chuỗi văn bản giải thích.
-        """
         if report is None:
             return "No intraday analysis is available."
 

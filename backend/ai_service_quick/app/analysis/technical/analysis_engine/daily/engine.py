@@ -1,3 +1,5 @@
+"""Daily technical analysis engine for coordinating various technical analysis components."""
+
 import pandas as pd
 
 from typing import Literal, Optional
@@ -12,15 +14,16 @@ from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Daily Analysis Engine')
 
-class DailyAnalysisEngine:
-    """Facade điều phối các chuyên gia phân tích dữ liệu hàng ngày.
 
-    Lớp này nhận một DataFrame đã có đặc trưng và điều phối các analyzer con
-    (Trend, Support/Resistance, Pattern) để tạo ra một báo cáo phân tích
-    kỹ thuật tổng hợp. Nó cho phép tùy chỉnh "phong cách phân tích"
-    (short, medium, long) bằng cách truyền các bộ tham số khác nhau xuống
-    các lớp con.
+class DailyAnalysisEngine:
+    """Facade that coordinates daily technical analysis experts.
+    
+    This class receives a feature-enriched DataFrame and coordinates the subordinate analyzers
+    (Trend, Support/Resistance, Pattern) to create a comprehensive technical analysis report.
+    It allows customization of "analysis style" (short, medium, long) by passing different
+    parameter sets to the subordinate classes.
     """
+    
     PARAMS_BY_PERIOD = {
         "short": {
             "history_window": 30,
@@ -53,15 +56,20 @@ class DailyAnalysisEngine:
                  lookback_period: Optional[int] = None,
                  top_patterns: Optional[int] = None,
                  analysis_type: Literal['manual', 'short', 'medium', 'long'] = 'manual'):
-        """
-        Khởi tạo với DataFrame đã được làm giàu bởi FeatureEngine.
-
+        """Initialize with a DataFrame enriched by FeatureEngine.
+        
         Args:
-            feature_df (pd.DataFrame): DataFrame chứa các đặc trưng.
-            history_window (int): Số ngày lịch sử để các analyzer xem xét.
-            prominence_pct (float): Ngưỡng độ nổi bật cho PatternRecognizer.
-            distance (int): Khoảng cách tối thiểu giữa các đỉnh/đáy cho PatternRecognizer.
-            lookback_period (int): Cửa số trong quá khứ để tính các Pattern
+            feature_df (pd.DataFrame): DataFrame containing technical features
+            history_window (int, optional): Number of historical days for analyzers to consider
+            prominence_pct (float, optional): Prominence threshold for PatternRecognizer
+            distance (int, optional): Minimum distance between peaks/troughs for PatternRecognizer
+            lookback_period (int, optional): Lookback window in the past to calculate patterns
+            top_patterns (int, optional): Number of top patterns to identify
+            analysis_type (Literal['manual', 'short', 'medium', 'long']): Analysis profile type
+            
+        Raises:
+            ValueError: If feature_df is not a valid DataFrame or has insufficient data
+            TypeError: If DataFrame index is not a DatetimeIndex
         """
         if not isinstance(feature_df, pd.DataFrame):
             raise ValueError(f"AnalysisEngine requires a non-empty pandas DataFrame with at least {history_window} rows.")
@@ -80,8 +88,8 @@ class DailyAnalysisEngine:
                                                                                      top_patterns,
                                                                                      analysis_type)
         
-        # --- KHỞI TẠO TẤT CẢ CÁC CHUYÊN GIA ---
-        # Truyền các tham số cấu hình xuống các lớp con tương ứng.
+        # --- INITIALIZE ALL EXPERTS ---
+        # Pass configuration parameters to corresponding subordinate classes
         self.trend_analyzer = DailyTrendAnalyzer(self.df)
         self.sr_identifier = DailySRIdentifier(self.df, history_window=history_window)
         self.pattern_recognizer = DailyPatternRecognizer(self.df, 
@@ -96,42 +104,60 @@ class DailyAnalysisEngine:
                     prominence_pct: Optional[float],
                     distance: Optional[int],
                     lookback_period: Optional[int],
-                    top_pattenrs: Optional[int],
-                    analysis_type: Literal['manual', 'short', 'medium', 'long'] = 'manual'):
+                    top_patterns: Optional[int],
+                    analysis_type: Literal['manual', 'short', 'medium', 'long'] = 'manual') -> tuple:
+        """Set parameters based on analysis type.
+        
+        Args:
+            history_window (int, optional): Number of historical days to analyze
+            prominence_pct (float, optional): Prominence threshold for pattern recognition
+            distance (int, optional): Minimum distance between peaks/troughs
+            lookback_period (int, optional): Lookback period for pattern analysis
+            top_patterns (int, optional): Number of top patterns to identify
+            analysis_type (Literal): Analysis profile type
+            
+        Returns:
+            tuple: Tuple of (history_window, prominence_pct, distance, lookback_period, top_patterns)
+            
+        Raises:
+            ValueError: If manual type is specified but required parameters are missing
+        """
         if analysis_type == 'manual':
             if history_window is None or prominence_pct is None or distance is None \
-                or lookback_period is None or top_pattenrs is None:
-                raise ValueError("Manual type requires some parameters.")
-            return history_window, prominence_pct, distance, lookback_period, top_pattenrs
+                or lookback_period is None or top_patterns is None:
+                raise ValueError("Manual type requires all parameters to be specified.")
+            return history_window, prominence_pct, distance, lookback_period, top_patterns
 
-        # Nếu không phải manual, luôn lấy từ profile
+        # If not manual, always get from profile
         logger.info(f"Using pre-defined parameters for '{analysis_type}' profile.")
         params = self.PARAMS_BY_PERIOD[analysis_type]
         return params['history_window'], params['prominence_pct'], params['distance'], \
             params['lookback_period'], params['top_patterns']
 
-    def get_analysis_report(self):
-        """
-        Tạo báo cáo tình trạng kỹ thuật tổng hợp bằng cách gọi các chuyên gia.
+    def get_analysis_report(self) -> DailyAnalysisReport:
+        """Generate a comprehensive technical analysis report by calling the experts.
+        
+        Returns:
+            DailyAnalysisReport: Complete daily technical analysis report
         """
         logger.info("Generating Full Analysis Report ...")
         
-        # --- GỌI CÁC CHUYÊN GIA ĐỂ LẤY KẾT QUẢ PHÂN TÍCH ---
+        # --- CALL EXPERTS TO GET ANALYSIS RESULTS ---
         logger.info("Trend Analyzer: Analyzing Trend ...")
         trend_report = self.trend_analyzer.analyze_trend()
         
-        logger.info("Support Resistance Identifier: Identifing levels ...")
+        logger.info("Support Resistance Identifier: Identifying levels ...")
         sr_report = self.sr_identifier.identify_levels()
         
-        logger.info("Pattern Recoginizer: Finding patterns ...")
-        patterns_report = self.pattern_recognizer.find_patterns() # Thay thế placeholder
+        logger.info("Pattern Recognizer: Finding patterns ...")
+        patterns_report = self.pattern_recognizer.find_patterns()  # Replace placeholder
         logger.info('Success')
 
-        # --- NÂNG CẤP TRONG TƯƠNG LAI (v2) ---
-        # Có thể truyền kết quả của recognizer vào sr_identifier để có S/R chính xác hơn
+        # --- FUTURE ENHANCEMENT (v2) ---
+        # Could pass recognizer results to sr_identifier for more accurate S/R levels
         # sr_report_v2 = self.sr_identifier.identify_levels_v2(self.pattern_recognizer)
 
-        # --- TỔNG HỢP THÀNH BÁO CÁO CUỐI CÙNG ---
+        # --- COMPILE INTO FINAL REPORT ---
         return DailyAnalysisReport(
             key_indicators=self._extract_key_indicators(),
             trend_report=trend_report,
@@ -139,9 +165,11 @@ class DailyAnalysisEngine:
             pattern_report=patterns_report
         )
 
-    def _extract_key_indicators(self):
-        """
-        Trích xuất các giá trị chỉ báo quan trọng để hỗ trợ cả phân tích trung và dài hạn.
+    def _extract_key_indicators(self) -> KeyIndicators:
+        """Extract key indicator values to support both medium and long-term analysis.
+        
+        Returns:
+            KeyIndicators: Object containing key technical indicator values
         """
         indicators_to_extract = [
             'SMA_20', 'SMA_50', 'SMA_200', 
@@ -152,12 +180,12 @@ class DailyAnalysisEngine:
         logger.info("Extracting key indicators for multi-timeframe analysis...")
         key_indicators = {}
         for indicator in indicators_to_extract:
-            # Chuyển tên cột sang chữ thường để tìm kiếm nhất quán
+            # Convert column name to lowercase for consistent search
             indicator_lower = indicator.lower()
             if indicator_lower in self.latest_row.index and pd.notna(self.latest_row[indicator_lower]):
                 key_indicators[indicator] = round(self.latest_row[indicator_lower], 2)
             else:
-                # Thử tìm với tên gốc (viết hoa) phòng trường hợp FeatureEngine thay đổi
+                # Try with original name (uppercase) in case FeatureEngine changes
                 if indicator in self.latest_row.index and pd.notna(self.latest_row[indicator]):
                     key_indicators[indicator] = round(self.latest_row[indicator], 2)
                 else:

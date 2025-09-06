@@ -1,6 +1,5 @@
 from typing import List, Dict, Any
 
-# Import các schema Pydantic tương ứng từ thư viện chung
 from itapia_common.schemas.entities.analysis.technical.daily import (
     DailyAnalysisReport,
     KeyIndicators,
@@ -14,13 +13,13 @@ from itapia_common.schemas.entities.analysis.technical.daily import (
     PatternObj
 )
 
-# --- Explainer Cấp Thấp Nhất (Leaf Explainers) ---
+# --- (Leaf Explainers) ---
 
 class _KeyIndicatorsExplainer:
     _TEMPLATE = "Key indicators show an RSI(14) of {rsi_14:.2f}. The price is currently trading between the Bollinger Bands® at {bbl_20:.2f} (lower) and {bbu_20:.2f} (upper)."
 
     def explain(self, indicators: KeyIndicators) -> str:
-        # Kiểm tra xem các giá trị cần thiết có tồn tại không
+        # Check important indicators
         if indicators.rsi_14 is None or indicators.bbl_20 is None or indicators.bbu_20 is None:
             return "Key indicator data is incomplete for a full explanation."
         
@@ -60,7 +59,7 @@ class _SRExplainer:
     def _format_levels(self, levels: List[SRIdentifyLevelObj]) -> str:
         if not levels:
             return "no significant levels"
-        # Chỉ lấy 2 mức quan trọng nhất để câu văn gọn gàng
+        
         level_values = [f"{lvl.level:.2f}" for lvl in levels[:2]]
         return " and ".join(level_values)
 
@@ -81,7 +80,6 @@ class _PatternExplainer:
             return "no significant patterns identified."
         
         summaries = []
-        # Chỉ giải thích 2 mẫu hình quan trọng nhất
         for pattern in patterns[:2]:
             sentiment_text = "a bullish" if pattern.sentiment == 'bull' else "a bearish"
             summaries.append(f"{sentiment_text} '{pattern.name}' ({pattern.pattern_type}) pattern")
@@ -93,7 +91,7 @@ class _PatternExplainer:
         
         return self._TEMPLATE.format(patterns_summary=patterns_summary)
 
-# --- Explainer Cấp Trung Gian (Composite Explainers) ---
+# --- (Composite Explainers) ---
 
 class _TrendExplainer:
     _TEMPLATE = "{mid_term_exp} {long_term_exp} {strength_exp}"
@@ -114,12 +112,9 @@ class _TrendExplainer:
             strength_exp=strength_exp
         )
 
-# --- Explainer Cấp Cao Nhất (Main Explainer for this file) ---
+# --- (Main Explainer for this file) ---
 
 class DailyAnalysisExplainer:
-    """
-    Tạo ra một bản tóm tắt bằng ngôn ngữ tự nhiên cho toàn bộ DailyAnalysisReport.
-    """
     _TEMPLATE = "Daily Technical Analysis Summary:\n{key_indicators_exp}\n{trend_exp}\n{sr_exp}\n{pattern_exp}"
 
     def __init__(self):
@@ -130,15 +125,6 @@ class DailyAnalysisExplainer:
         self.pattern_explainer = _PatternExplainer()
 
     def explain(self, report: DailyAnalysisReport) -> str:
-        """
-        Tạo ra một đoạn văn giải thích hoàn chỉnh.
-
-        Args:
-            report (DailyAnalysisReport): Đối tượng báo cáo Pydantic.
-
-        Returns:
-            str: Một chuỗi văn bản giải thích.
-        """
         key_indicators_exp = self.key_indicators_explainer.explain(report.key_indicators)
         trend_exp = self.trend_explainer.explain(report.trend_report)
         sr_exp = self.sr_explainer.explain(report.sr_report)

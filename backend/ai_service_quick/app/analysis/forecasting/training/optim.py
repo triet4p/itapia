@@ -1,3 +1,5 @@
+"""Hyperparameter optimization utilities for forecasting models."""
+
 import math
 from typing import Generator, List, Literal, Tuple
 import numpy as np
@@ -8,7 +10,10 @@ from sklearn.multioutput import MultiOutputRegressor
 from app.analysis.forecasting.model import ForecastingModel, ScikitLearnForecastingModel
 from lightgbm import LGBMClassifier, LGBMRegressor
 
+
 class OptunaObjective:
+    """Base class for Optuna hyperparameter optimization objectives."""
+    
     def __init__(self, model: ForecastingModel,
                  full_df: pd.DataFrame,
                  direction: Literal['minimize', 'maximize'],
@@ -16,6 +21,17 @@ class OptunaObjective:
                  time_weighted: Literal['balance', 'new-prior'],
                  weight_bias: int = 1,
                  max_cv: int|None = 3):
+        """Initialize Optuna objective.
+        
+        Args:
+            model (ForecastingModel): Forecasting model to optimize
+            full_df (pd.DataFrame): Full dataset
+            direction (Literal['minimize', 'maximize']): Optimization direction
+            generator (Generator): Data split generator for cross-validation
+            time_weighted (Literal['balance', 'new-prior']): Weighting strategy
+            weight_bias (int, optional): Bias for weighting. Defaults to 1
+            max_cv (int | None, optional): Maximum number of cross-validation folds. Defaults to 3
+        """
         self.model = model
         if self.model.task is None:
             raise ValueError('Model must have been assigned to solve a task!')
@@ -29,19 +45,53 @@ class OptunaObjective:
             self.weight_bias = 0
         
     def __call__(self, trial) -> float:
+        """Evaluate objective function for a trial.
+        
+        Args:
+            trial: Optuna trial object
+            
+        Returns:
+            float: Objective value
+        """
         pass
     
     def _cal_metric(self, y_true, y_pred) -> float:
+        """Calculate evaluation metric.
+        
+        Args:
+            y_true: True values
+            y_pred: Predicted values
+            
+        Returns:
+            float: Metric value
+        """
         pass
     
     def _store_cv(self, generator: Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None],
-                  max_cv: int|None):
+                  max_cv: int|None) -> List[Tuple[pd.DataFrame, pd.DataFrame]]:
+        """Store cross-validation splits.
+        
+        Args:
+            generator (Generator): Data split generator
+            max_cv (int | None): Maximum number of CV folds to store
+            
+        Returns:
+            List[Tuple[pd.DataFrame, pd.DataFrame]]: List of CV splits
+        """
         cvs: List[Tuple[pd.DataFrame, pd.DataFrame]] = []
         for train_fold_df, valid_fold_df in generator:
             cvs.append((train_fold_df, valid_fold_df))
         return cvs if max_cv is None else cvs[-max_cv:]
     
     def _run_validate_kernel_model(self, kernel_model) -> float:
+        """Run validation for a kernel model.
+        
+        Args:
+            kernel_model: Model to validate
+            
+        Returns:
+            float: Average evaluation score
+        """
         task = self.model.task
         evaluation_results = [0]
         weighted = [1]
@@ -63,31 +113,62 @@ class OptunaObjective:
             evaluation_results.append(score)
             weighted.append(weighted[-1] + self.weight_bias)
 
-        # Gán kết quả vào đối tượng model
+        # Assign results to model object
         final_obj = np.average(evaluation_results, weights=weighted)
         return final_obj
     
+
 class LGBMClassifierObjective(OptunaObjective):
+    """Optuna objective for LGBM classifier hyperparameter optimization."""
+    
     def __init__(self, model: ScikitLearnForecastingModel,
                  full_df: pd.DataFrame, direction: Literal['minimize', 'maximize'],
                  generator: Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None],
                  time_weighted: Literal['balance', 'new-prior'],
                  weight_bias: int = 1,
                  max_cv: int|None = 3):
+        """Initialize LGBM classifier objective.
+        
+        Args:
+            model (ScikitLearnForecastingModel): LGBM classifier model to optimize
+            full_df (pd.DataFrame): Full dataset
+            direction (Literal['minimize', 'maximize']): Optimization direction
+            generator (Generator): Data split generator for cross-validation
+            time_weighted (Literal['balance', 'new-prior']): Weighting strategy
+            weight_bias (int, optional): Bias for weighting. Defaults to 1
+            max_cv (int | None, optional): Maximum number of cross-validation folds. Defaults to 3
+        """
         super().__init__(model, full_df, direction, generator, time_weighted, weight_bias, max_cv)
     
-    def _cal_metric(self, y_true, y_pred):
+    def _cal_metric(self, y_true, y_pred) -> float:
+        """Calculate F1 score metric.
+        
+        Args:
+            y_true: True values
+            y_pred: Predicted values
+            
+        Returns:
+            float: Weighted F1 score
+        """
         return f1_score(y_true, y_pred, average='weighted')
     
-    def __call__(self, trial):
+    def __call__(self, trial) -> float:
+        """Evaluate objective function for LGBM classifier trial.
+        
+        Args:
+            trial: Optuna trial object
+            
+        Returns:
+            float: Objective value (F1 score)
+        """
         params = {
-            # --- Các tham số cố định ---
-            'objective': trial.suggest_categorical('objective', ['multiclass']),  # Hoặc 'binary' tùy thuộc vào bài toán
+            # --- Fixed parameters ---
+            'objective': trial.suggest_categorical('objective', ['multiclass']),  # Or 'binary' depending on the problem
             'n_jobs': trial.suggest_categorical('n_jobs', [-1]),
             'random_state': trial.suggest_categorical('random_state', [42]),
             'verbose': trial.suggest_categorical('verbose', [-1]),
             
-            # --- Các tham số được Optuna tối ưu ---
+            # --- Parameters optimized by Optuna ---
             # np.arange(32, 300, 7) -> suggest_int(low, high, step)
             'num_leaves': trial.suggest_int('num_leaves', 32, 298, step=7),
             
@@ -122,7 +203,10 @@ class LGBMClassifierObjective(OptunaObjective):
         kernel_model = LGBMClassifier(**params)
         return self._run_validate_kernel_model(kernel_model)
     
+
 class MultiOutLGBMRegressionObjective(OptunaObjective):
+    """Optuna objective for multi-output LGBM regression hyperparameter optimization."""
+    
     def __init__(self, model: ForecastingModel,
                  full_df: pd.DataFrame,
                  direction: Literal['minimize', 'maximize'],
@@ -130,20 +214,48 @@ class MultiOutLGBMRegressionObjective(OptunaObjective):
                  time_weighted: Literal['balance', 'new-prior'],
                  weight_bias: int = 1,
                  max_cv: int|None = 3):
+        """Initialize multi-output LGBM regression objective.
+        
+        Args:
+            model (ForecastingModel): LGBM regression model to optimize
+            full_df (pd.DataFrame): Full dataset
+            direction (Literal['minimize', 'maximize']): Optimization direction
+            generator (Generator): Data split generator for cross-validation
+            time_weighted (Literal['balance', 'new-prior']): Weighting strategy
+            weight_bias (int, optional): Bias for weighting. Defaults to 1
+            max_cv (int | None, optional): Maximum number of cross-validation folds. Defaults to 3
+        """
         super().__init__(model, full_df, direction, generator, time_weighted, weight_bias, max_cv)
         
-    def _cal_metric(self, y_true, y_pred):
+    def _cal_metric(self, y_true, y_pred) -> float:
+        """Calculate RMSE metric.
+        
+        Args:
+            y_true: True values
+            y_pred: Predicted values
+            
+        Returns:
+            float: Root mean squared error
+        """
         return math.sqrt(mean_squared_error(y_true, y_pred, multioutput='uniform_average'))
         
-    def __call__(self, trial):
+    def __call__(self, trial) -> float:
+        """Evaluate objective function for multi-output LGBM regression trial.
+        
+        Args:
+            trial: Optuna trial object
+            
+        Returns:
+            float: Objective value (RMSE)
+        """
         params = {
-            # --- Các tham số cố định ---
-            'objective': trial.suggest_categorical('objective', ['regression_l1']),  # Hoặc 'binary' tùy thuộc vào bài toán
+            # --- Fixed parameters ---
+            'objective': trial.suggest_categorical('objective', ['regression_l1']),  # Or 'binary' depending on the problem
             'n_jobs': trial.suggest_categorical('n_jobs', [1]),
             'random_state': trial.suggest_categorical('random_state', [42]),
             'verbose': trial.suggest_categorical('verbose', [-1]),
 
-            # --- Các tham số được Optuna tối ưu ---
+            # --- Parameters optimized by Optuna ---
             'num_leaves': trial.suggest_int('num_leaves', 32, 298, step=7),
             'reg_lambda': trial.suggest_float('reg_lambda', 1e-5, 5.0, log=True),
             'reg_alpha': trial.suggest_float('reg_alpha', 1e-5, 5.0, log=True),
@@ -158,16 +270,25 @@ class MultiOutLGBMRegressionObjective(OptunaObjective):
             'max_bin': trial.suggest_categorical('max_bin', [63, 255, 511])
         }
 
-        # 2. Tạo đối tượng model cho trial này
-        # Tạo LGBMRegressor cơ sở
+        # 2. Create model object for this trial
+        # Create base LGBMRegressor
         base_estimator = LGBMRegressor(**params)
-        # Bọc nó trong MultiOutputRegressor
+        # Wrap it in MultiOutputRegressor
         kernel_model = MultiOutputRegressor(estimator=base_estimator, n_jobs=-1)
         return self._run_validate_kernel_model(kernel_model)
     
 
 def get_best_params_for_kernel_model(obj: OptunaObjective,
-                                     n_trials: int = 500):
+                                     n_trials: int = 500) -> dict:
+    """Get best hyperparameters for a kernel model using Optuna optimization.
+    
+    Args:
+        obj (OptunaObjective): Optuna objective function
+        n_trials (int, optional): Number of optimization trials. Defaults to 500
+        
+    Returns:
+        dict: Best hyperparameters found
+    """
     study = optuna.create_study(direction=obj.direction)
     study.optimize(obj, n_trials=n_trials)
     best_params = study.best_params

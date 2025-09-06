@@ -1,4 +1,5 @@
-# ai_service_quick/app/advisor/orchestrator.py
+"""Advisor orchestrator for coordinating advice generation processes."""
+
 import asyncio
 from typing import Any, Callable, Dict, List, Tuple
 from datetime import datetime, timezone
@@ -14,16 +15,24 @@ from .explainer import AdvisorExplainerOrchestrator
 
 logger = ITAPIALogger('Advisor Orchestrator')
 
+
 class AdvisorOrchestrator:
+    """Deputy CEO responsible for Providing Advice.
+    
+    Orchestrates department heads to create a complete advisory report.
     """
-    Phó CEO chuyên trách việc Đưa ra Lời khuyên.
-    Điều phối các "Trưởng phòng" để tạo ra một báo cáo tư vấn hoàn chỉnh.
-    """
+    
     def __init__(
         self, 
         agg_orc: AggregationOrchestrator,
         explainer: AdvisorExplainerOrchestrator
     ):
+        """Initialize the advisor orchestrator with required components.
+        
+        Args:
+            agg_orc (AggregationOrchestrator): Aggregation orchestrator instance
+            explainer (AdvisorExplainerOrchestrator): Advisor explainer instance
+        """
         self.agg_orc = agg_orc
         self.explainer = explainer
         logger.info("Advisor Orchestrator initialized with its department heads.")
@@ -33,19 +42,31 @@ class AdvisorOrchestrator:
                                  risk_results: Tuple[List[float], List[TriggeredRuleInfo]],
                                  opportunity_results: Tuple[List[float], List[TriggeredRuleInfo]],
                                  meta_weights: Dict[str, float]) -> AdvisorReportSchema:
+        """Generate advisor report based on analysis results and rule evaluations.
+        
+        Args:
+            analysis_report (QuickCheckAnalysisReport): Analysis report to base advice on
+            decision_results (Tuple[List[float], List[TriggeredRuleInfo]]): Decision rule results
+            risk_results (Tuple[List[float], List[TriggeredRuleInfo]]): Risk rule results
+            opportunity_results (Tuple[List[float], List[TriggeredRuleInfo]]): Opportunity rule results
+            meta_weights (Dict[str, float]): Meta-rule weights for final synthesis
+            
+        Returns:
+            AdvisorReportSchema: Complete advisor report
+        """
         logger.info(f"Advisor -> Generating advice for {analysis_report.ticker}...")
         
-        # Giải nén kết quả
+        # Unpack results
         (decision_scores, triggered_d) = decision_results
         (risk_scores, triggered_r) = risk_results
         (opportunity_scores, triggered_o) = opportunity_results
 
-        # BƯỚC 3: TỔNG HỢP (Đồng bộ)
+        # STEP 3: AGGREGATION (Synchronous)
         agg_scores = self.agg_orc.aggregate_raw_scores(decision_scores, risk_scores, opportunity_scores)
         final_scores = self.agg_orc.synthesize_final_decision(agg_scores, meta_weights)
         mapped_labels = self.agg_orc.map_final_scores(final_scores)
 
-        # BƯỚC 4: XÂY DỰNG BÁO CÁO CUỐI CÙNG
+        # STEP 4: BUILD FINAL REPORT
         generate_time = datetime.now(timezone.utc)
         return AdvisorReportSchema(
             final_decision=FinalRecommendation(final_score=final_scores[SemanticType.DECISION_SIGNAL], purpose=SemanticType.DECISION_SIGNAL.name,
@@ -70,7 +91,19 @@ class AdvisorOrchestrator:
                                  risk_results: Tuple[List[float], List[TriggeredRuleInfo]],
                                  opportunity_results: Tuple[List[float], List[TriggeredRuleInfo]],
                                  meta_weights: Dict[str, float]) -> str:
-        # Hàm này vẫn đúng, nó tuần tự một cách hợp lý
+        """Generate full natural language explanation for advisor recommendations.
+        
+        Args:
+            analysis_report (QuickCheckAnalysisReport): Analysis report to base advice on
+            decision_results (Tuple[List[float], List[TriggeredRuleInfo]]): Decision rule results
+            risk_results (Tuple[List[float], List[TriggeredRuleInfo]]): Risk rule results
+            opportunity_results (Tuple[List[float], List[TriggeredRuleInfo]]): Opportunity rule results
+            meta_weights (Dict[str, float]): Meta-rule weights for final synthesis
+            
+        Returns:
+            str: Natural language explanation of the advisor recommendations
+        """
+        # This function is still correct, it sequences logically
         advisor_report = await self.get_advisor_report(analysis_report, 
                                                        decision_results,
                                                        risk_results,

@@ -1,4 +1,4 @@
-# forecasting/training/orchestrator.py
+"""Training orchestrator for forecasting models."""
 
 import math
 import pandas as pd
@@ -16,17 +16,23 @@ from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('TrainingOrchestrator')
 
+
 class TrainingOrchestrator:
+    """Orchestrator for managing the complete forecasting model training pipeline."""
+    
     def __init__(self, df: pd.DataFrame):
-        """
-        Khởi tạo Orchestrator với DataFrame chứa các đặc trưng đã làm giàu.
-        DataFrame này được coi là bất biến.
-        """
-        self.raw_df = df.copy() # Lưu trữ DF gốc, bất biến
-        self.df_with_targets: pd.DataFrame = None # Sẽ được tạo sau
+        """Initialize Orchestrator with a DataFrame containing enriched features.
         
-        # Cấu trúc cốt lõi: Quản lý các cặp (Model, Task)
-        # Key là task_id để dễ dàng truy cập
+        The DataFrame is considered immutable.
+        
+        Args:
+            df (pd.DataFrame): Input DataFrame with enriched features
+        """
+        self.raw_df = df.copy()  # Store original DF, immutable
+        self.df_with_targets: pd.DataFrame = None  # Will be created later
+        
+        # Core structure: Manage (Model, Task) pairs
+        # Key is task_id for easy access
         self.models_to_train: Dict[str, ForecastingModel] = {}
         
         self._train_df: pd.DataFrame = None
@@ -34,22 +40,32 @@ class TrainingOrchestrator:
         
         self.feature_selected_tasks = set()
         
-    def _create_id_for_orchestrate(self, model: ForecastingModel, task: ForecastingTask):
+    def _create_id_for_orchestrate(self, model: ForecastingModel, task: ForecastingTask) -> str:
+        """Create a unique identifier for model-task orchestration.
+        
+        Args:
+            model (ForecastingModel): Model instance
+            task (ForecastingTask): Task instance
+            
+        Returns:
+            str: Unique identifier string
+        """
         return f'{model.name}-for-{task.task_id}'
         
         
     def register_model_for_task(self, model: ForecastingModel, task: ForecastingTask):
-        """
-        Đăng ký một cặp Model và Task. Đây là điểm khởi đầu chính.
+        """Register a Model-Task pair. This is the main entry point.
+        
+        Args:
+            model (ForecastingModel): Model to register
+            task (ForecastingTask): Task to register
         """
         logger.info(f"Registering Model '{model.name}' for Task '{task.task_id}'")
         model.assign_task(task)
         self.models_to_train[self._create_id_for_orchestrate(model, task)] = model
 
     def prepare_all_targets(self):
-        """
-        Tạo target cho tất cả các task đã đăng ký và tạo ra một DataFrame hoàn chỉnh.
-        """
+        """Create targets for all registered tasks and generate a complete DataFrame."""
         logger.info("--- STEP 1: Preparing targets for all registered tasks ---")
         if not self.models_to_train:
             logger.warn("No models/tasks registered. Nothing to do.")
@@ -60,13 +76,17 @@ class TrainingOrchestrator:
             targets = model.task.create_targets(self.raw_df, base_price_col='close')
             all_targets_list.append(targets)
             
-        # Nối tất cả các target vào DF gốc để tạo ra một DF hoàn chỉnh
+        # Concatenate all targets to the original DF to create a complete DF
         self.df_with_targets = pd.concat([self.raw_df] + all_targets_list, axis=1)
         print(f"All targets created. New DataFrame shape: {self.df_with_targets.shape}")
 
     def run_feature_selection(self, weights: Dict, bonus_features: List[str], bonus_multiplier: float):
-        """
-        Chạy lựa chọn đặc trưng cho tất cả các cặp (Model, Task) đã đăng ký.
+        """Run feature selection for all registered (Model, Task) pairs.
+        
+        Args:
+            weights (Dict): Weights for different feature ranking methods
+            bonus_features (List[str]): Features to apply bonus multiplier
+            bonus_multiplier (float): Multiplier for bonus features
         """
         logger.info("--- STEP 2: Running feature selection for all tasks ---")
         feature_cols = [c for c in self.raw_df.columns if c != 'ticker']
@@ -75,7 +95,7 @@ class TrainingOrchestrator:
             logger.info(f"- Selecting features for task: {id}")
             task = model.task
             if task.task_id in self.feature_selected_tasks:
-                logger.info('- This task is runned feature selection')
+                logger.info('- This task has already run feature selection')
                 continue
             
             target_col = task.target_for_selection
@@ -89,12 +109,17 @@ class TrainingOrchestrator:
             
             selected = select_k_plus_l_features(ranked_df, task.non_cdl_features_cnt, task.cdl_features_cnt)
             
-            # Gán danh sách feature đã chọn vào Task (vì nó thuộc về định nghĩa bài toán)
+            # Assign selected features to Task (as it belongs to the problem definition)
             task.selected_features = selected
             self.feature_selected_tasks.add(task.task_id)
 
     def split_data(self, train_test_split_date: datetime, test_last_date: datetime = datetime.now()):
-        """Chia dữ liệu đã có target thành tập train và test."""
+        """Split target-enriched data into train and test sets.
+        
+        Args:
+            train_test_split_date (datetime): Date to split train and test sets
+            test_last_date (datetime, optional): Last date for test set. Defaults to datetime.now()
+        """
         logger.info("--- STEP 3: Splitting data into train and test sets ---")
         if self.df_with_targets is None:
             raise RuntimeError("Targets must be prepared before splitting data. Run `prepare_all_targets()` first.")
@@ -103,7 +128,12 @@ class TrainingOrchestrator:
 
     def run_walk_forward_validation(self, validation_months: int,
                                     max_train_months: int|None = None):
-        """Chạy Walk-Forward Validation cho tất cả các model."""
+        """Run Walk-Forward Validation for all models.
+        
+        Args:
+            validation_months (int): Number of months for validation in each fold
+            max_train_months (int | None, optional): Maximum training months. Defaults to None
+        """
         logger.info("--- STEP 4: Running Walk-Forward Validation ---")
         if self._train_df is None:
             raise RuntimeError("Data must be split before running validation. Run `split_data()` first.")
@@ -141,12 +171,16 @@ class TrainingOrchestrator:
                 
                 evaluation_results.append({'fold': i+1, metric_name: score})
 
-            # Gán kết quả vào đối tượng model
+            # Assign results to model object
             model.metrics = evaluation_results
             print(f"  - Finished validation. Collected {len(model.snapshot_models)} snapshots.")
 
     def run_final_training_and_registration(self, kaggle_username: str):
-        """Huấn luyện model cuối cùng trên toàn bộ tập train và đăng ký lên Kaggle."""
+        """Train final model on entire training set and register to Kaggle.
+        
+        Args:
+            kaggle_username (str): Kaggle username for model registration
+        """
         logger.info("--- STEP 5: Final Training and Registration ---")
         if self._train_df is None:
             raise RuntimeError("Data must be split before final training. Run `split_data()` first.")
@@ -176,5 +210,5 @@ class TrainingOrchestrator:
                 
             model.metrics.append({'fold': 'all', metric_name: score})
             
-            # Ra lệnh cho model tự đăng ký
+            # Instruct model to self-register
             model.register_model_to_kaggle(kaggle_username=kaggle_username)

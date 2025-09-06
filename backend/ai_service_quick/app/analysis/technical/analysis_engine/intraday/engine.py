@@ -1,3 +1,5 @@
+"""Intraday technical analysis engine for coordinating various intraday analysis components."""
+
 import pandas as pd
 from typing import Dict, Any
 
@@ -11,12 +13,23 @@ from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('Intraday Analysis Engine')
 
+
 class IntradayAnalysisEngine:
+    """Facade that analyzes feature-enriched intraday DataFrame and generates reports.
+    
+    It coordinates intraday analysis experts.
     """
-    Facade: Phân tích DataFrame intraday đã có đặc trưng và tạo báo cáo.
-    Nó điều phối các chuyên gia phân tích intraday.
-    """
+    
     def __init__(self, feature_df: pd.DataFrame):
+        """Initialize with a feature-enriched DataFrame.
+        
+        Args:
+            feature_df (pd.DataFrame): DataFrame with technical features for intraday analysis
+            
+        Raises:
+            ValueError: If feature_df is not a valid DataFrame or is empty
+            TypeError: If DataFrame index is not a DatetimeIndex
+        """
         if not isinstance(feature_df, pd.DataFrame) or feature_df.empty:
             raise ValueError("IntradayAnalysisEngine requires a non-empty pandas DataFrame.")
         if not isinstance(feature_df.index, pd.DatetimeIndex):
@@ -25,21 +38,23 @@ class IntradayAnalysisEngine:
         self.df = feature_df
         self.latest_row = self.df.iloc[-1]
 
-        # Khởi tạo các chuyên gia intraday
+        # Initialize intraday experts
         self.status_analyzer = IntradayStatusAnalyzer(self.df)
         self.level_identifier = IntradayLevelIdentifier(self.df)
         self.momentum_analyzer = IntradayMomentumAnalyzer(self.df)
 
-    def get_analysis_report(self):
-        """
-        Tạo báo cáo phân tích intraday tổng hợp.
+    def get_analysis_report(self) -> IntradayAnalysisReport:
+        """Generate a comprehensive intraday analysis report.
+        
+        Returns:
+            IntradayAnalysisReport: Complete intraday analysis report
         """
         logger.info("Generating Intraday Report ---")
         
         logger.info("Status Analyzer: Analyzing current status ...")
         current_status = self.status_analyzer.analyze_current_status()
         
-        logger.info("Level Identifier: Identifing key levels ...")
+        logger.info("Level Identifier: Identifying key levels ...")
         key_levels = self.level_identifier.identify_key_levels()
         
         logger.info("Momentum Analyzer: Analyzing momentum and volume ...")
@@ -52,24 +67,32 @@ class IntradayAnalysisEngine:
         )
         
     @staticmethod
-    def get_mock_report(daily_ohlcv: pd.Series):
-        # === 1. Tạo KeyLevelsReport ===
-        # Đây là phần dễ nhất vì chúng ta có thể suy ra trực tiếp từ nến ngày.
+    def get_mock_report(daily_ohlcv: pd.Series) -> IntradayAnalysisReport:
+        """Generate a mock intraday report from daily OHLCV data.
+        
+        Args:
+            daily_ohlcv (pd.Series): Daily OHLCV data series
+            
+        Returns:
+            IntradayAnalysisReport: Mock intraday analysis report
+        """
+        # === 1. Create KeyLevelsReport ===
+        # This is the easiest part because we can derive directly from the daily candle.
         key_levels = KeyLevelsReport(
             day_high=daily_ohlcv['high'],
             day_low=daily_ohlcv['low'],
             open_price=daily_ohlcv['open'],
-            vwap=None,            # Không thể biết VWAP trong ngày, để là None (undefined).
-            or_30m_high=None,     # Không có dữ liệu 30 phút đầu, để là None.
-            or_30m_low=None       # Không có dữ liệu 30 phút đầu, để là None.
+            vwap=None,            # Cannot know intraday VWAP, set to None (undefined).
+            or_30m_high=None,     # No 30-minute opening data, set to None.
+            or_30m_low=None       # No 30-minute opening data, set to None.
         )
 
-        # === 2. Tạo CurrentStatusReport ===
-        # Giả định giá đóng cửa của ngày là "giá hiện tại" để so sánh.
+        # === 2. Create CurrentStatusReport ===
+        # Assume the day's close price is the "current price" for comparison.
         current_status = CurrentStatusReport(
-            vwap_status='undefined', # Vì VWAP không xác định.
+            vwap_status='undefined', # Since VWAP is undefined.
             open_status='above' if daily_ohlcv['close'] >= daily_ohlcv['open'] else 'below',
-            rsi_status='neutral',    # Giả định RSI trong ngày là trung tính (50).
+            rsi_status='neutral',    # Assume neutral intraday RSI (50).
             evidence={
                 "mock_reason": "Data simulated from daily candle.",
                 "last_price": daily_ohlcv['close'],
@@ -78,20 +101,20 @@ class IntradayAnalysisEngine:
             }
         )
         
-        # === 3. Tạo MomentumReport ===
-        # Chọn các giá trị an toàn nhất, không tạo ra tín hiệu mạnh.
+        # === 3. Create MomentumReport ===
+        # Choose the safest values, without creating strong signals.
         momentum = MomentumReport(
-            macd_crossover='neutral', # Không có tín hiệu giao cắt MACD.
-            volume_status='normal',   # Giả định không có đột biến volume trong ngày.
-            opening_range_status='inside', # Giả định giá vẫn nằm trong vùng mở cửa.
+            macd_crossover='neutral', # No MACD crossover signal.
+            volume_status='normal',   # Assume no volume spikes during the day.
+            opening_range_status='inside', # Assume price remains within opening range.
             evidence={
                 "mock_reason": "Data simulated from daily candle.",
-                "volume_ratio": 1.0, # Tỷ lệ volume trung bình.
+                "volume_ratio": 1.0, # Average volume ratio.
                 "macd_signal_status": "No intraday data for comparison."
             }
         )
 
-        # === 4. Lắp ráp báo cáo cuối cùng ===
+        # === 4. Assemble final report ===
         mock_report = IntradayAnalysisReport(
             current_status_report=current_status,
             momentum_report=momentum,

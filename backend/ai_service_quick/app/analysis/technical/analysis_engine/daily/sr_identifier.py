@@ -1,35 +1,43 @@
+"""Daily support and resistance identification engine."""
+
 import pandas as pd
 from typing import Any, List
 
 from itapia_common.schemas.entities.analysis.technical.daily import SRIdentifyLevelObj, SRReport
 
-class DailySRIdentifier:
-    """
-    Chuyên gia xác định các mức Hỗ trợ (Support) và Kháng cự (Resistance).
-    Phiên bản 1 (v1) tập trung vào các phương pháp không phụ thuộc vào PatternRecognizer.
-    """
-    def __init__(self, feature_df: pd.DataFrame, history_window: int = 90):
-        """
-        Khởi tạo với DataFrame đã được làm giàu.
 
+class DailySRIdentifier:
+    """Expert for identifying Support and Resistance levels.
+    
+    Version 1 (v1) focuses on methods that do not depend on PatternRecognizer.
+    """
+    
+    def __init__(self, feature_df: pd.DataFrame, history_window: int = 90):
+        """Initialize with a feature-enriched DataFrame.
+        
         Args:
-            feature_df (pd.DataFrame): DataFrame từ FeatureEngine.
-            history_window (int): Số ngày lịch sử để xem xét cho các phân tích.
+            feature_df (pd.DataFrame): DataFrame from FeatureEngine
+            history_window (int): Number of historical days to consider for analysis
+            
+        Raises:
+            ValueError: If feature_df is empty or has insufficient data
         """
         if feature_df.empty or len(feature_df) < history_window:
             raise ValueError(f"Input DataFrame must not be empty and have at least {history_window} rows.")
         
         self.df = feature_df
-        # Lấy một cửa sổ dữ liệu để phân tích
+        # Get a data window for analysis
         self.analysis_df = self.df.tail(history_window).copy()
         self.latest_row = self.analysis_df.iloc[-1]
         self.current_price = self.latest_row['close']
         
         self.history_window = history_window
         
-    def identify_levels(self):
-        """
-        Hàm chính, tổng hợp các mức S/R từ nhiều phương pháp.
+    def identify_levels(self) -> SRReport:
+        """Main function that aggregates S/R levels from multiple methods.
+        
+        Returns:
+            SRReport: Report containing identified support and resistance levels
         """
         
         all_levels_with_source: List[SRIdentifyLevelObj] = []
@@ -52,15 +60,18 @@ class DailySRIdentifier:
             resistances=sorted(resistance_objects, key=lambda x: x.level)
         )
 
-    # --- CÁC HÀM CỦA PHIÊN BẢN 1 ---
+    # --- VERSION 1 METHODS ---
     
     def _get_dynamic_levels_from_ma_bb(self) -> List[SRIdentifyLevelObj]:
-        """
-        Lấy các mức S/R động từ các đường MA và Bollinger Bands.
-        Đây là các mức thay đổi mỗi ngày.
+        """Get dynamic S/R levels from Moving Averages and Bollinger Bands.
+        
+        These are levels that change daily.
+        
+        Returns:
+            List[SRIdentifyLevelObj]: List of dynamic support/resistance levels
         """
         levels = []
-        # Các cột cần trích xuất từ dòng dữ liệu cuối cùng
+        # Columns to extract from the last data row
         dynamic_level_cols = [
             'SMA_20', 'SMA_50', 'SMA_200',
             'BBU_20_2.0', 'BBL_20_2.0', 'BBM_20_2.0'
@@ -73,8 +84,10 @@ class DailySRIdentifier:
         return levels
 
     def _get_pivot_point_levels(self) -> List[SRIdentifyLevelObj]:
-        """
-        Tính toán các mức Pivot Points cổ điển dựa trên dữ liệu của ngày hôm trước.
+        """Calculate classic Pivot Points based on the previous day's data.
+        
+        Returns:
+            List[SRIdentifyLevelObj]: List of pivot point levels
         """
         if len(self.analysis_df) < 2:
             return []
@@ -100,11 +113,13 @@ class DailySRIdentifier:
         return levels
 
     def _get_simple_fibonacci_levels(self) -> List[SRIdentifyLevelObj]:
+        """Version 1: Calculate Fibonacci Retracement levels based on
+        the highest and lowest points in the analysis window.
+        
+        Returns:
+            List[SRIdentifyLevelObj]: List of Fibonacci retracement levels
         """
-        Phiên bản 1: Tính các mức Fibonacci Retracement dựa trên
-        điểm cao nhất và thấp nhất trong cửa sổ phân tích.
-        """
-        # Xác định "con sóng" một cách đơn giản
+        # Identify the "wave" in a simple way
         swing_high = self.analysis_df['high'].max()
         swing_low = self.analysis_df['low'].min()
         
@@ -112,56 +127,63 @@ class DailySRIdentifier:
         if price_range == 0:
             return []
 
-        # Các tỷ lệ Fibonacci kinh điển
+        # Classic Fibonacci ratios
         fib_ratios = [0.236, 0.382, 0.5, 0.618, 0.786]
         
         levels = []
-        # Giả định một xu hướng tăng (tính các mức hỗ trợ)
+        # Assume an uptrend (calculate support levels)
         for ratio in fib_ratios:
             levels.append(SRIdentifyLevelObj(level=round(swing_high - price_range * ratio, 2), 
                                              source=f'Fibonacci Ratio {ratio:.4f}'))
             
-            # Thêm cả các mức mở rộng (có thể là kháng cự)
+            # Also add extension levels (could be resistance)
             levels.append(SRIdentifyLevelObj(level=round(swing_high + price_range * ratio, 2), 
                                              source=f'Fibonacci Ratio {-ratio:.4f}'))
         
         return levels
     
-    # --- CÁC HÀM PLACEHOLDER CHO PHIÊN BẢN 2 ---
+    # --- PLACEHOLDER METHODS FOR VERSION 2 ---
 
     def _get_levels_from_extrema_v2(self, recognizer: Any = None) -> List[SRIdentifyLevelObj]:
-        """
-        Phiên bản 2: Sẽ lấy các mức S/R tĩnh từ các đỉnh/đáy lịch sử
-        do PatternRecognizer cung cấp.
+        """Version 2: Will get static S/R levels from historical peaks/troughs
+        provided by PatternRecognizer.
         
         Args:
-            recognizer: Một instance của PatternRecognizer.
+            recognizer: An instance of PatternRecognizer
+            
+        Returns:
+            List[SRIdentifyLevelObj]: List of S/R levels from extrema
         """
-        # Trong phiên bản 1, hàm này không làm gì cả.
-        # Nó là một placeholder cho việc nâng cấp trong tương lai.
+        # In version 1, this function does nothing.
+        # It is a placeholder for future enhancement.
         pass
         
-        # --- VÍ DỤ VỀ CODE SẼ CÓ TRONG PHIÊN BẢN 2 ---
+        # --- EXAMPLE CODE THAT WILL BE IN VERSION 2 ---
         # if recognizer is None:
         #     return []
         #
-        # # Lấy các đỉnh và đáy từ recognizer
+        # # Get peaks and troughs from recognizer
         # peaks = recognizer.peaks
         # troughs = recognizer.troughs
         #
-        # # Mức giá của các đỉnh/đáy chính là các mức S/R
+        # # Price levels of peaks/troughs are the S/R levels
         # peak_prices = peaks['price'].tolist()
         # trough_prices = troughs['price'].tolist()
         #
         # return peak_prices + trough_prices
         
-        return [] # Trả về danh sách rỗng trong v1
+        return []  # Return empty list in v1
         
     def _get_advanced_fibonacci_levels_v2(self, recognizer: Any = None) -> List[SRIdentifyLevelObj]:
+        """Version 2: Will calculate Fibonacci based on important peaks/troughs
+        rather than just min/max.
+        
+        Args:
+            recognizer: An instance of PatternRecognizer
+            
+        Returns:
+            List[SRIdentifyLevelObj]: List of advanced Fibonacci levels
         """
-        Phiên bản 2: Sẽ tính Fibonacci dựa trên các đỉnh/đáy quan trọng
-        thay vì chỉ dùng min/max.
-        """
-        # Placeholder cho phiên bản 2
+        # Placeholder for version 2
         pass
         return []

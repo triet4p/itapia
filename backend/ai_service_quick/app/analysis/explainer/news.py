@@ -10,7 +10,7 @@ from itapia_common.schemas.entities.analysis.news import (
     KeywordHighlightingReport
 )
 
-# --- Explainer Cấp Thấp (Leaf Explainers) ---
+# --- (Leaf Explainers) ---
 
 class _SentimentExplainer:
     _TEMPLATE = "The overall sentiment is '{label}' with a confidence score of {score_pct:.0f}%."
@@ -28,7 +28,7 @@ class _NERExplainer:
         if not report or not report.entities:
             return None
         
-        # Nhóm các thực thể theo loại để tóm tắt tốt hơn
+        # Group entities by type for better summarization
         entities_by_group: Dict[str, List[str]] = {}
         for entity in report.entities:
             group = entity.entity_group
@@ -41,7 +41,7 @@ class _NERExplainer:
         if not entities_by_group:
             return None
 
-        # Chỉ ưu tiên hiển thị các loại thực thể quan trọng nhất (ORG, PER)
+        # Prior important entities
         summary_parts = []
         if 'ORG' in entities_by_group:
             orgs = ", ".join(entities_by_group['ORG'][:3]) # Lấy tối đa 3 tổ chức
@@ -85,9 +85,8 @@ class _EvidenceExplainer:
     _TEMPLATE = "Key sentiment drivers include positive words like '{positive_str}' and negative words like '{negative_str}'."
     
     def explain(self, report: KeywordHighlightingReport) -> str:
-        # Chỉ tạo giải thích nếu có ít nhất một loại từ khóa
         if not report or (not report.positive_keywords and not report.negative_keywords):
-            return "" # Trả về chuỗi rỗng nếu không có bằng chứng
+            return "" 
 
         positive_str = ", ".join(report.positive_keywords[:3]) if report.positive_keywords else "none"
         negative_str = ", ".join(report.negative_keywords[:3]) if report.negative_keywords else "none"
@@ -106,7 +105,6 @@ class _SingleNewsExplainer:
         self.evidence_explainer = _EvidenceExplainer()
 
     def explain(self, report: SingleNewsAnalysisReport) -> str:
-        # Trích xuất tiêu đề từ 20 từ đầu tiên của văn bản
         title = " ".join(report.text.split()[:20]) + "..."
         title = title.capitalize()
 
@@ -133,17 +131,15 @@ class NewsAnalysisExplainer:
         if not report or not report.reports:
             return self._NO_NEWS
         
-        # Chỉ giải thích chi tiết cho 2-3 tin tức quan trọng nhất
-        # (Sắp xếp theo tác động, sau đó theo độ mạnh của tình cảm)
         def sort_key(r: SingleNewsAnalysisReport):
             impact_order = {'high': 0, 'moderate': 1, 'low': 2, 'unknown': 3}
             impact = impact_order.get(r.impact_assessment.level, 3)
-            sentiment_score = abs(r.sentiment_analysis.score - 0.5) # Độ mạnh của tình cảm
+            sentiment_score = abs(r.sentiment_analysis.score - 0.5) 
             return (impact, -sentiment_score)
 
         sorted_reports = sorted(report.reports, key=sort_key)
         
-        summaries = [self.single_news_explainer.explain(r) for r in sorted_reports[:3]] # Lấy 3 tin tức hàng đầu
+        summaries = [self.single_news_explainer.explain(r) for r in sorted_reports[:3]] 
         
         # Tạo một bản tóm tắt tổng thể
         num_reports = len(report.reports)

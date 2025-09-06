@@ -10,8 +10,8 @@ logger = ITAPIALogger('Data Prepare Orchestrator')
 
 class DataPrepareOrchestrator:
     """
-    Điều phối toàn bộ quy trình chuẩn bị dữ liệu.
-    Đây là giao diện duy nhất mà các module AI khác nên sử dụng để lấy dữ liệu.
+    Orchestrate the entire data preparation process. 
+    This is the single interface that other AI modules should use to fetch data.
     """
     
     def __init__(self, metadata_service: APIMetadataService,
@@ -23,7 +23,7 @@ class DataPrepareOrchestrator:
         
     def get_all_tickers(self) -> List[str]:
         """
-        Lấy danh sách tất cả các tickers và trả về dưới dạng List các string.
+        Get all tickers available in ITAPIA system.
         """
         logger.info(f"Preparing ticker list...")
         ticker_lst = list(self.metadata_service.metadata_cache.keys())
@@ -31,7 +31,9 @@ class DataPrepareOrchestrator:
 
     def get_daily_ohlcv_for_ticker(self, ticker: str, limit: int = 2000) -> pd.DataFrame:
         """
-        Lấy và chuyển đổi dữ liệu giá hàng ngày cho một ticker duy nhất.
+        Get and transform daily OHLCV data of a single ticker into validated DataFrame.
+        
+        If any error occured, return empty DataFrame.
         """
         logger.info(f"Preparing daily OHLCV for ticker '{ticker}'...")
         res = self.prices_service.get_daily_prices(ticker, limit=limit, skip=0)
@@ -43,15 +45,15 @@ class DataPrepareOrchestrator:
         try:
             df = transform_single_ticker_response(json_res)
             return df
-        except ValueError as e:
+        except KeyError as e:
             logger.err(f"Could not process a response. Error: {e}. Skipping.")
             return pd.DataFrame()
 
     def get_daily_ohlcv_for_sector(self, sector_code: str, limit_per_ticker: int = 2000) -> pd.DataFrame:
         """
-        Lấy và chuyển đổi dữ liệu giá hàng ngày cho tất cả các ticker trong một nhóm ngành,
-        sau đó gộp chúng lại thành một DataFrame lớn.
-        Rất hữu ích cho việc huấn luyện mô hình theo nhóm ngành.
+        Get and transform daily OHLCV data for all tickers of a sector, then concat them into a big and validated DataFrame.
+        
+        If any error occured, return empty DataFrame.
         """
         logger.info(f"Preparing daily OHLCV for sector '{sector_code}'...")
         res_lst = self.prices_service.get_daily_prices_by_sector(sector_code, limit=limit_per_ticker, skip=0)
@@ -65,7 +67,9 @@ class DataPrepareOrchestrator:
 
     def get_intraday_ohlcv_for_ticker(self, ticker: str) -> pd.DataFrame:
         """
-        Lấy và chuyển đổi dữ liệu giá trong ngày cho một ticker duy nhất.
+        Get and transform intraday OHLCV data of a single ticker into validated DataFrame.
+        
+        If any error occured, return empty DataFrame.
         """
         logger.info(f"Preparing intraday OHLCV for ticker '{ticker}'...")
         json_res = self.prices_service.get_intraday_prices(ticker).model_dump()
@@ -81,9 +85,6 @@ class DataPrepareOrchestrator:
             return pd.DataFrame()
         
     def get_all_sectors_as_df(self) -> pd.DataFrame:
-        """
-        Lấy danh sách tất cả các nhóm ngành và trả về dưới dạng DataFrame.
-        """
         logger.info(f"Preparing sector list...")
         sector_list = self.metadata_service.get_all_sectors()
         sector_list = [x.model_dump() for x in sector_list]
@@ -94,9 +95,6 @@ class DataPrepareOrchestrator:
         return pd.DataFrame(sector_list)
     
     def get_all_sectors_code(self) -> List[str]:
-        """
-        Lấy danh sách các nhóm ngành và trả về dưới dạng List các code (string).
-        """
         logger.info(f"Preparing sector list...")
         sector_list = self.metadata_service.get_all_sectors()
         sector_list = [x.sector_code for x in sector_list]
@@ -123,6 +121,21 @@ class DataPrepareOrchestrator:
         return text
     
     def get_all_news_text_for_ticker(self, ticker: str) -> List[str]:
+        """
+        Fetch and combine all news for a ticker, contains:
+        
+        L1: Relevant news
+        
+        L2: Contextual universal news
+        
+        L3: Macro universal news
+
+        Args:
+            ticker (str): Ticker to fetch data.
+
+        Returns:
+            List[str]: List of all news, each news element is made up of its `title` and `summary`
+        """
         
         logger.info(f"Preparing combined news feed for ticker: {ticker}")
         sector_list = self.metadata_service.get_all_sectors()
@@ -165,6 +178,20 @@ class DataPrepareOrchestrator:
         return [x[0] for x in all_news_text_with_time[:cfg.NEWS_TOTAL_LIMIT]]
     
     def get_history_news_for_ticker(self, ticker: str, before_date: datetime) -> List[str]:
+        """
+        Fetch and combine all history news for a ticker, serve for backtesting, contains:
+        
+        L2: Contextual universal news
+        
+        L3: Macro universal news
+
+        Args:
+            ticker (str): Ticker to fetch data.
+            before_date (datetime): Time bound to fetch news
+
+        Returns:
+            List[str]: List of all news, each news element is made up of its `title` and `summary`
+        """
         logger.info(f"Preparing combined news feed for ticker: {ticker}")
         sector_list = self.metadata_service.get_all_sectors()
         sector_code = self.get_sector_code_of(ticker)

@@ -1,17 +1,39 @@
+"""Daily trend analysis engine for identifying market trends across multiple timeframes."""
+
 import pandas as pd
 
 from itapia_common.schemas.entities.analysis.technical.daily import MidTermTrendReport, \
     LongTermTrendReport, OverallStrengthTrendReport, TrendReport
 
+
 class DailyTrendAnalyzer:
+    """Analyzes market trends using multiple technical indicators and timeframes."""
+    
     def __init__(self, feature_df: pd.DataFrame):
+        """Initialize the trend analyzer with feature data.
+        
+        Args:
+            feature_df (pd.DataFrame): DataFrame with technical features
+            
+        Raises:
+            ValueError: If feature_df is empty
+        """
         if feature_df.empty:
             raise ValueError("Input DataFrame for TrendAnalyzer cannot be empty.")
         
         self.df = feature_df
         self.latest_row = self.df.iloc[-1]
         
-    def _analyze_ma_trend(self, short_ma_col: str, long_ma_col: str):
+    def _analyze_ma_trend(self, short_ma_col: str, long_ma_col: str) -> str:
+        """Analyze trend based on moving average relationship.
+        
+        Args:
+            short_ma_col (str): Column name for shorter-term moving average
+            long_ma_col (str): Column name for longer-term moving average
+            
+        Returns:
+            str: Trend direction ('uptrend', 'downtrend', or 'undefined')
+        """
         if short_ma_col not in self.latest_row or long_ma_col not in self.latest_row:
             return "undefined"
         
@@ -20,7 +42,15 @@ class DailyTrendAnalyzer:
         else:
             return "downtrend"
         
-    def _get_adx_strength(self, adx_col: str):
+    def _get_adx_strength(self, adx_col: str) -> OverallStrengthTrendReport:
+        """Get trend strength based on ADX indicator.
+        
+        Args:
+            adx_col (str): Column name for ADX values
+            
+        Returns:
+            OverallStrengthTrendReport: Trend strength report
+        """
         if adx_col not in self.latest_row:
             return OverallStrengthTrendReport(
                 strength='undefined',
@@ -44,13 +74,27 @@ class DailyTrendAnalyzer:
                 value=adx_val
             )
         
-    def _get_adx_direction(self, dmp_col: str, dmn_col: str):
+    def _get_adx_direction(self, dmp_col: str, dmn_col: str) -> str:
+        """Get trend direction based on ADX directional indicators.
+        
+        Args:
+            dmp_col (str): Column name for +DI values
+            dmn_col (str): Column name for -DI values
+            
+        Returns:
+            str: Trend direction ('uptrend', 'downtrend', or 'undefined')
+        """
         if dmp_col not in self.latest_row or dmn_col not in self.latest_row: 
             return "undefined"
         return "uptrend" if self.latest_row[dmp_col] > self.latest_row[dmn_col] else "downtrend"
     
-    def _get_mid_term_view(self):
-        # Cặp MA phù hợp cho trung hạn 20/50
+    def _get_mid_term_view(self) -> MidTermTrendReport:
+        """Get mid-term trend analysis (20/50 moving averages).
+        
+        Returns:
+            MidTermTrendReport: Mid-term trend analysis report
+        """
+        # Appropriate MA pair for medium term 20/50
         short_ma = 'SMA_20'
         long_ma = 'SMA_50'
         trend_direction = self._analyze_ma_trend(short_ma, long_ma)
@@ -62,15 +106,15 @@ class DailyTrendAnalyzer:
             "long_ma_value": round(self.latest_row.get(long_ma, 0), 2)
         }
         
-        # Kiểm tra vị trí giá so với MA trung hạn
+        # Check price position relative to medium-term MA
         ma_status = "undefined"
         if 'close' in self.latest_row and 'SMA_50' in self.latest_row:
             if self.latest_row['close'] > self.latest_row['SMA_50']:
-                ma_status = "positive" # Tích cực
+                ma_status = "positive"  # Positive
             else:
-                ma_status = "negative" # Chịu áp lực
+                ma_status = "negative"  # Under pressure
         
-        # Phân tích ADX để xem hướng đi hiện tại
+        # Analyze ADX to see current direction
         adx_direction = self._get_adx_direction('DMP_14', 'DMN_14')
 
         return MidTermTrendReport(
@@ -80,9 +124,13 @@ class DailyTrendAnalyzer:
             evidence=evidence
         )
     
-    def _get_long_term_view(self):
-        """Phân tích xu hướng dài hạn (vài tháng đến một năm)."""
-        # Cặp MA kinh điển 50/200
+    def _get_long_term_view(self) -> LongTermTrendReport:
+        """Analyze long-term trend (several months to a year).
+        
+        Returns:
+            LongTermTrendReport: Long-term trend analysis report
+        """
+        # Classic MA pair 50/200
         short_ma = 'SMA_50'
         long_ma = 'SMA_200'
         trend_direction = self._analyze_ma_trend(short_ma, long_ma)
@@ -94,7 +142,7 @@ class DailyTrendAnalyzer:
             "long_ma_value": round(self.latest_row.get(long_ma, 0), 2)
         }
         
-        # Kiểm tra vị trí giá so với MA dài hạn
+        # Check price position relative to long-term MA
         status = "Undefined"
         if 'close' in self.latest_row and 'SMA_200' in self.latest_row:
             if self.latest_row['close'] > self.latest_row['SMA_200']:
@@ -108,21 +156,23 @@ class DailyTrendAnalyzer:
             evidence=evidence
         )
     
-    def analyze_trend(self):
+    def analyze_trend(self) -> TrendReport:
+        """Perform comprehensive trend analysis and return a multidimensional dictionary.
+        
+        Returns:
+            TrendReport: Complete trend analysis report
         """
-        Thực hiện phân tích xu hướng toàn diện và trả về một dictionary đa chiều.
-        """
-        # Phân tích từng khung thời gian một cách độc lập
+        # Analyze each timeframe independently
         long_term_analysis = self._get_long_term_view()
         mid_term_analysis = self._get_mid_term_view()
         
-        # Sức mạnh xu hướng tổng thể được đo bằng ADX(14) tiêu chuẩn
+        # Overall trend strength measured by standard ADX(14)
         adx_strength = self._get_adx_strength('ADX_14')
         
-        # --- Logic tổng hợp ---
-        # "Primary" trend được định nghĩa là xu hướng trung hạn,
-        # vì đó là mục tiêu chính của dự án.
-        # Tuy nhiên, báo cáo vẫn chứa đầy đủ thông tin dài hạn.
+        # --- Synthesis Logic ---
+        # "Primary" trend is defined as mid-term trend,
+        # because that is the main focus of the project.
+        # However, the report still contains complete long-term information.
         
         return TrendReport(
             primary_focus='mid-term',

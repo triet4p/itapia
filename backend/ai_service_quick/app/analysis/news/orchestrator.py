@@ -1,3 +1,5 @@
+"""News analysis orchestrator for coordinating various NLP tasks."""
+
 import asyncio
 import pandas as pd
 from datetime import datetime, timezone
@@ -26,13 +28,31 @@ from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger('News Orchestrator')
 
+
 def _create_sentiment_model_sync() -> SentimentAnalysisModel:
+    """Create sentiment analysis model synchronously.
+    
+    Returns:
+        SentimentAnalysisModel: Initialized sentiment analysis model
+    """
     return SentimentAnalysisModel(cfg.NEWS_SENTIMENT_ANALYSIS_MODEL)
 
+
 def _create_ner_model_sync() -> SpacyNERModel:
+    """Create spaCy NER model synchronously.
+    
+    Returns:
+        SpacyNERModel: Initialized spaCy NER model
+    """
     return SpacyNERModel(cfg.NEWS_SPACY_NER_MODEL)
 
+
 def _create_impact_assessment_model_sync() -> WordBasedImpactAssessmentModel:
+    """Create impact assessment model synchronously.
+    
+    Returns:
+        WordBasedImpactAssessmentModel: Initialized impact assessment model
+    """
     try:
         high_impact_dictionary = load_dictionary(cfg.NEWS_IMPACT_DICTIONARY_PATH.format(level='high'))
     except FileNotFoundError as e:
@@ -52,8 +72,14 @@ def _create_impact_assessment_model_sync() -> WordBasedImpactAssessmentModel:
                                           moderate_impact_dictionary,
                                           low_impact_dictionary)
 
+
 def _create_keyword_highlighting_model_sync() -> WordBasedKeywordHighlightingModel:
-    # Tải các từ điển từ file (tương tự như impact assessment)
+    """Create keyword highlighting model synchronously.
+    
+    Returns:
+        WordBasedKeywordHighlightingModel: Initialized keyword highlighting model
+    """
+    # Load dictionaries from files (similar to impact assessment)
     try:
         positive_dictionary = load_dictionary(cfg.NEWS_KEYWORD_HIGHLIGHT_PATH.format(direction='positive'))
     except FileNotFoundError:
@@ -71,11 +97,19 @@ def _create_keyword_highlighting_model_sync() -> WordBasedKeywordHighlightingMod
         negative_dictionary=negative_dictionary
     )
     
+
 def _create_summary_model_sync() -> ResultSummarizer:
+    """Create result summarizer synchronously.
+    
+    Returns:
+        ResultSummarizer: Initialized result summarizer
+    """
     return ResultSummarizer()
 
 
 class NewsOrchestrator:
+    """Orchestrates the complete news analysis pipeline."""
+    
     TO_CACHE_ELEMENTS = {
         'sentiment': {
             'key': cfg.NEWS_SENTIMENT_ANALYSIS_MODEL,
@@ -105,10 +139,20 @@ class NewsOrchestrator:
     }
     
     def __init__(self):
+        """Initialize the news orchestrator with model cache."""
         self.model_cache = AsyncInMemoryCache()
-        # Các sub-module controller/orchestrator khác
+        # Other sub-module controllers/orchestrators
         
-    async def generate_report(self, ticker: str, texts: List[str]):
+    async def generate_report(self, ticker: str, texts: List[str]) -> NewsAnalysisReport:
+        """Generate a complete news analysis report.
+        
+        Args:
+            ticker (str): Stock ticker symbol
+            texts (List[str]): List of news texts to analyze
+            
+        Returns:
+            NewsAnalysisReport: Complete news analysis report
+        """
         logger.info("Preprocessing texts ...")
         texts = preprocess_news_texts(texts)
         
@@ -152,9 +196,15 @@ class NewsOrchestrator:
         )
         
     async def _get_or_load_element(self, element_type: Literal['sentiment', 'ner', 'impact-assessment', 'keyword-highlight', 'summary']):
-        """
-        Lấy model từ cache. Nếu không có, tải về từ Hugging Face và cache lại.
-        Hàm này sẽ tự động "hồi sinh" Task từ metadata đã lưu.
+        """Get model from cache. If not available, load from Hugging Face and cache it.
+        
+        This function will automatically "revive" the Task from saved metadata.
+        
+        Args:
+            element_type (Literal): Type of element to load
+            
+        Returns:
+            Model instance loaded from cache or created fresh
         """
         element = NewsOrchestrator.TO_CACHE_ELEMENTS[element_type]
         key = element['key']
@@ -164,7 +214,7 @@ class NewsOrchestrator:
         async def model_factory():
             logger.info(f"CACHE MISS: Loading sentiment model...")
             
-            # Chạy hàm blocking trong executor
+            # Run blocking function in executor
             loop = asyncio.get_running_loop()
             return await loop.run_in_executor(
                 None, 
@@ -174,25 +224,26 @@ class NewsOrchestrator:
         return await self.model_cache.get_or_set_with_lock(key, model_factory)
     
     async def preload_caches(self):
+        """Preload all models by running each element's loading process in parallel."""
         logger.info("--- NEWS: Starting pre-warming process for all models ---")
         
         tasks = []
         for element_type in self.TO_CACHE_ELEMENTS.keys():
-            # Tạo các task để chạy song song
+            # Create tasks to run in parallel
             task = asyncio.create_task(self._get_or_load_element(element_type))
             tasks.append(task)
         
-        # Chờ tất cả các task tải xong
+        # Wait for all tasks to complete
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Kiểm tra lỗi sau khi chạy xong
+        # Check for errors after completion
         failed_elements = []
         for result, element_type in zip(results, self.TO_CACHE_ELEMENTS.keys()):
             if isinstance(result, Exception):
                 logger.err(f"A critical error during pre-warming of element '{element_type}': {result}")
                 failed_elements.append(element_type)
 
-        # SỬA LỖI: Nếu có bất kỳ lỗi nào, hãy ném ra ngoại lệ
+        # FIX: If any errors occurred, raise an exception
         if failed_elements:
             raise PreloadCacheError(module_name="News Analysis", failed_elements=failed_elements)
                 

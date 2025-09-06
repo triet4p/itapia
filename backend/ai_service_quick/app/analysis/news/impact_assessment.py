@@ -1,34 +1,45 @@
+"""Word-based impact assessment model for news analysis."""
+
 from typing import List, Set, Union, Literal, Tuple
-from itapia_common.schemas.entities.analysis.news import ImpactAssessmentReport
-# ... (Import schema và keywords giữ nguyên) ...
-
-ImpactLabel = Literal['low', 'moderate', 'high', 'unknown']
-
-# app/news/impact_keywords.py
+from itapia_common.schemas.entities.analysis.news import ImpactAssessmentReport, ImpactLabel
 
 class WordBasedImpactAssessmentModel:
+    """Assesses the impact level of news texts based on predefined dictionaries of keywords."""
+    
     def __init__(self, high_impact_dictionary: Set[str],
                  moderate_impact_dictionary: Set[str],
                  low_impact_dictionary: Set[str]):
+        """Initialize the impact assessment model with keyword dictionaries.
+        
+        Args:
+            high_impact_dictionary (Set[str]): Set of high impact keywords
+            moderate_impact_dictionary (Set[str]): Set of moderate impact keywords
+            low_impact_dictionary (Set[str]): Set of low impact keywords
+        """
         self.high_impact_dictionary = high_impact_dictionary
         self.moderate_impact_dictionary = moderate_impact_dictionary
         self.low_impact_dictionary = low_impact_dictionary
 
     def _find_matched_keywords(self, text: str) -> Tuple[ImpactLabel, List[str]]:
+        """Helper function that scans text and returns both label and matched keywords.
+        
+        Args:
+            text (str): Text to scan for impact keywords
+            
+        Returns:
+            Tuple[ImpactLabel, List[str]]: Tuple containing impact level and list of matched keywords
         """
-        Một hàm helper quét văn bản và trả về cả nhãn và danh sách từ khóa khớp.
-        """
-        # Quét tìm các từ khóa High Impact
+        # Scan for High Impact keywords
         high_matches = [keyword for keyword in self.high_impact_dictionary if keyword in text]
         if high_matches:
-            return 'high', high_matches # Trả về ngay khi tìm thấy mức cao nhất
+            return 'high', high_matches  # Return immediately when highest level is found
 
-        # Nếu không, quét tìm các từ khóa Medium Impact
+        # If not, scan for Medium Impact keywords
         medium_matches = [keyword for keyword in self.moderate_impact_dictionary if keyword in text]
         if medium_matches:
             return 'moderate', medium_matches
 
-        # Nếu không có gì khớp
+        # If no matches found
         low_matches = [keyword for keyword in self.low_impact_dictionary if keyword in text]
         if low_matches:
             return 'low', low_matches
@@ -36,12 +47,17 @@ class WordBasedImpactAssessmentModel:
         return 'unknown', []
 
     def assess(self, texts: List[str]) -> List[ImpactAssessmentReport]:
-        """
-        Đánh giá tác động cho một hoặc nhiều văn bản (đã được tiền xử lý/chuẩn hóa).
+        """Assess impact for one or more texts (preprocessed/normalized).
+        
+        Args:
+            texts (List[str]): List of preprocessed texts to analyze
+            
+        Returns:
+            List[ImpactAssessmentReport]: List of impact assessment reports
         """
         reports = []
         for text in texts:
-            # Gọi hàm helper để lấy cả hai thông tin
+            # Call helper function to get both pieces of information
             label, matched_keywords = self._find_matched_keywords(text)
             
             reports.append(ImpactAssessmentReport(

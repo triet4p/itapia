@@ -23,26 +23,26 @@ class SHAPExplainer(ABC):
     
     @abstractmethod
     def explain_prediction(self, X_instance: pd.DataFrame) -> List[SHAPExplaination]:
+        """Explain a prediction using SHAP values."""
         pass
     
     def _format_shap_explanation(self, shap_values_array, X_instance: pd.DataFrame, top_n=5,
                                  base_value: int = 0) -> BaseSHAPExplaination:
-        """Hàm tiện ích để định dạng output của SHAP."""
         feature_names = X_instance.columns
         feature_values = X_instance.iloc[0].values
         
-        # Tạo DataFrame từ SHAP values
+        # Create DF from SHAP Values
         shap_df = pd.DataFrame({
             'feature': feature_names,
             'value': feature_values,
             'shap_value': shap_values_array.flatten()
         })
         
-        # Sắp xếp theo giá trị tuyệt đối của SHAP value
         shap_df['abs_shap'] = shap_df['shap_value'].abs()
         top_features = shap_df.sort_values(by='abs_shap', ascending=False).head(top_n)
         prediction_outcome = base_value + shap_df['shap_value'].sum()
-        # Tạo output có cấu trúc
+
+        # Create structure output        
         explanation = BaseSHAPExplaination(
             base_value=round(base_value, 4),
             prediction_outcome=round(prediction_outcome, 4),
@@ -59,7 +59,7 @@ class SHAPExplainer(ABC):
         return explanation
     
 class TreeSHAPExplainer(SHAPExplainer):
-    """Explainer cho các mô hình cây đơn mục tiêu (phân loại)."""
+    """Explainer for tree-based classification model (single-output)."""
     def __init__(self, model: ForecastingModel, snapshot_id: str|None=None):
         super().__init__(model, snapshot_id)
         if self.task.task_type != 'clf':
@@ -93,8 +93,7 @@ class TreeSHAPExplainer(SHAPExplainer):
         
 class MultiOutputTreeSHAPExplainer(SHAPExplainer):
     """
-    Explainer chuyên dụng cho các mô hình cây đa mục tiêu, được bọc bởi
-    sklearn.multioutput.MultiOutputRegressor.
+    Explainer for tree-based multi output model.
     """
     def __init__(self, model: ForecastingModel, snapshot_id: str|None = None):
         super().__init__(model, snapshot_id)
@@ -103,26 +102,19 @@ class MultiOutputTreeSHAPExplainer(SHAPExplainer):
         if not isinstance(self._to_explain_kernel, MultiOutputRegressor):
             raise TypeError("The kernel model must be an instance of MultiOutputRegressor.")
 
-        # Tạo một dictionary chứa các TreeExplainer, mỗi cái cho một model con (estimator)
         self.explainers = {
             target_name: shap.TreeExplainer(estimator)
             for target_name, estimator in zip(self.task.targets, self._to_explain_kernel.estimators_)
         }
 
     def explain_prediction(self, X_instance: pd.DataFrame) -> List[SHAPExplaination]:
-        """
-        Tạo giải thích cho TẤT CẢ các mục tiêu đầu ra và trả về một dictionary
-        chứa các giải thích riêng biệt.
-        """
         full_explanation = []
 
-        # Lặp qua từng explainer đã được tạo cho mỗi mục tiêu
         for target_name, explainer in self.explainers.items():
-            # shap_values ở đây sẽ có shape (1, num_features) vì mỗi model con là single-output
+            # shap_values shape is (1, num_features)
             shap_values_for_output = explainer.shap_values(X_instance)
             base_value_for_output = explainer.expected_value
             
-            # Định dạng lời giải thích cho mục tiêu này
             explanation = self._format_shap_explanation(
                 shap_values_for_output.flatten(), # làm phẳng thành 1D array
                 X_instance,
@@ -130,7 +122,7 @@ class MultiOutputTreeSHAPExplainer(SHAPExplainer):
                 top_n=5 # Có thể dùng top_n nhỏ hơn cho mỗi output
             )
             
-            # Lấy tên ngắn gọn của target (ví dụ: 'mean_5d' từ 'target_mean_5d')
+            # Get short target name, for example target_mean_5d is mean_5d
             short_target_name = '_'.join(target_name.split('_')[1:])
             full_explanation.append(SHAPExplaination(
                 for_target=short_target_name,

@@ -1,11 +1,23 @@
+"""Data splitting utilities for forecasting model training."""
+
 from typing import Generator, Tuple
 import pandas as pd
 from datetime import datetime
 
+
 def train_test_split(df: pd.DataFrame,
                      train_test_split_date: datetime,
-                     test_last_date: datetime):
+                     test_last_date: datetime) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Split DataFrame into train and test sets based on date thresholds.
     
+    Args:
+        df (pd.DataFrame): Input DataFrame to split
+        train_test_split_date (datetime): Date to split train and test sets
+        test_last_date (datetime): Last date for test set
+        
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame]: Tuple of (train_df, test_df)
+    """
     _train_test_split_date = pd.to_datetime(train_test_split_date, utc=True)
     _test_last_date = pd.to_datetime(test_last_date, utc=True)
     
@@ -14,30 +26,36 @@ def train_test_split(df: pd.DataFrame,
     
     return df_train, df_test
 
+
 def get_walk_forward_splits(
     df: pd.DataFrame, 
     validation_months: int = 3,
     min_train_months: int = 6,
     max_train_months: int = None
 ) -> Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None]:
-    """
-    Tạo các cặp (train, validation) cho quy trình Walk-Forward Validation theo từng năm,
-    với kích thước tập validation có thể tùy chỉnh.
-
-    Hàm này chia dữ liệu thành các khối hàng năm. Trong mỗi năm, một số tháng cuối cùng
-    (được xác định bởi `validation_months`) được dùng làm tập validation, và phần còn lại
-    của năm đó cộng với tất cả các năm trước đó được dùng làm tập train.
-
+    """Generate (train, validation) pairs for Walk-Forward Validation by year,
+    with customizable validation set size.
+    
+    This function divides data into yearly blocks. In each year, the last months
+    (defined by `validation_months`) are used as the validation set, and the rest
+    of that year plus all previous years are used as the training set.
+    
     Args:
-        df (pd.DataFrame): DataFrame đầu vào, phải có DatetimeIndex.
-        validation_months (int, optional): Số tháng cuối của mỗi năm được dùng làm
-            tập validation. Mặc định là 3 (tức là Q4).
-        min_train_months (int, optional): Số tháng tối thiểu trong một năm để được coi
-            là một "khối" hợp lệ cho việc chia. Giúp bỏ qua các năm có quá ít dữ liệu.
-
+        df (pd.DataFrame): Input DataFrame with DatetimeIndex
+        validation_months (int, optional): Number of months at the end of each year to use
+            as validation set. Defaults to 3 (i.e., Q4)
+        min_train_months (int, optional): Minimum number of months in a year to be considered
+            a valid "block" for splitting. Helps skip years with too little data. Defaults to 6
+        max_train_months (int, optional): Maximum number of months to include in training set.
+            If None, uses expanding window. If specified, uses sliding window
+            
     Yields:
         Generator[Tuple[pd.DataFrame, pd.DataFrame], None, None]: 
-            Một generator, mỗi lần yield ra một cặp (train_df, valid_df).
+            A generator that yields pairs of (train_df, valid_df)
+            
+    Raises:
+        TypeError: If DataFrame index is not a DatetimeIndex
+        ValueError: If validation_months is not between 1 and 11, or if max_train_months is not positive
     """
     if not isinstance(df.index, pd.DatetimeIndex):
         raise TypeError("DataFrame index must be a DatetimeIndex.")
@@ -46,7 +64,7 @@ def get_walk_forward_splits(
     if max_train_months is not None and max_train_months <= 0:
         raise ValueError("max_train_months must be a positive integer.")
 
-    # Sắp xếp để đảm bảo thứ tự thời gian
+    # Sort to ensure chronological order
     df = df.sort_index()
     
     start_year = df.index.min().year
@@ -61,29 +79,29 @@ def get_walk_forward_splits(
     for year in range(start_year, end_year + 1):
         year_data = df[df.index.year == year]
 
-        # Kiểm tra xem năm hiện tại có đủ dữ liệu không
+        # Check if current year has enough data
         if year_data.index.month.nunique() < min_train_months:
             print(f"  - Skipping year {year}: not enough data.")
             continue
 
-        # Xác định tháng bắt đầu của tập validation
-        # Ví dụ: nếu validation_months=3, val_start_month sẽ là 10 (tháng 10)
+        # Determine start month of validation set
+        # Example: if validation_months=3, val_start_month will be 10 (October)
         val_start_month = 12 - validation_months + 1
         
         valid_df = year_data[year_data.index.month >= val_start_month]
 
-        # Xử lý trường hợp năm cuối cùng có thể không có đủ tháng validation
+        # Handle case where last year might not have enough validation months
         if valid_df.empty:
             print(f"  - Skipping validation for year {year}: no data in the last {validation_months} months.")
             continue
             
         validation_start_date = valid_df.index.min()
         if max_train_months is not None:
-            # Chế độ Sliding Window
+            # Sliding Window mode
             train_start_date = validation_start_date - pd.DateOffset(months=max_train_months)
             train_df = df[(df.index >= train_start_date) & (df.index < validation_start_date)]
         else:
-            # Chế độ Expanding Window (như cũ)
+            # Expanding Window mode (as before)
             train_df = df[df.index < validation_start_date]
 
 
