@@ -13,13 +13,6 @@ class RuleService:
     """Service class for managing business rules."""
     
     def __init__(self, db_session: Session):
-        """Initialize the RuleService with a database session.
-
-        The service contains an instance of the RuleCRUD class for data access.
-
-        Args:
-            db_session (Session): The SQLAlchemy database session.
-        """
         # Service will contain an instance of the CRUD class
         self.crud = RuleCRUD(db_session)
 

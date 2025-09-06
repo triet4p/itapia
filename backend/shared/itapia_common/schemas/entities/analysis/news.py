@@ -19,8 +19,10 @@ class NERReport(BaseModel):
     class Config:
         from_attributes = True
         
+ImpactLabel = Literal['low', 'moderate', 'high', 'unknown']
+        
 class ImpactAssessmentReport(BaseModel):
-    level: Literal['low', 'moderate', 'high', 'unknown'] = Field(..., description='Level of impact')
+    level: ImpactLabel = Field(..., description='Level of impact')
     words: List[str] = Field(..., default_factory=list, description='List of evidence impact words')
     
     class Config:
