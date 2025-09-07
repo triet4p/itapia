@@ -9,4 +9,4 @@ def read_root():
     Returns:
         dict: Welcome message for the API
     """
-    return {"message": "Welcome to ITAPIA AI Quick Service"}
+    return {"message": "Welcome to ITAPIA Evo Service"}

@@ -123,7 +123,7 @@ class BaseEvoEngine(Stateful, SingletonNameable):
         return {
             'random_state': self._random.getstate(),
             'pop': self.pop.fallback_state,
-            'archived': self.fallback_state,
+            'archived': self.archived.fallback_state,
         }
         
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
