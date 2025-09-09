@@ -30,6 +30,22 @@ class Individual(Stateful):
         self.fitness = obj_extractor.extract(self.metrics)
         return self.fitness
     
+    def flatten_fitness(self, single_obj_extractor: SingleObjectiveExtractor) -> float:
+        """Flatten evaluated metrics to single objective.
+        
+        Args:
+            single_obj_extractor (SingleObjectiveExtractor): Extractor to convert multi-objective to single
+            
+        Returns:
+            float: Flattened fitness value
+            
+        Raises:
+            ValueError: If metrics have not been set
+        """
+        if not self.metrics:
+            raise ValueError('Metrics must be set before flatten fitness.')
+        return single_obj_extractor.extract(self.metrics)
+    
     @classmethod
     def from_rule(cls, rule: Rule) -> Self:
         """Create an individual from a rule.
@@ -79,22 +95,6 @@ class DominanceIndividual(Individual):
             Tuple[float, ...]: Calculated fitness values
         """
         return super().cal_fitness(evaluator, obj_extractor)
-        
-    def flatten_fitness(self, single_obj_extractor: SingleObjectiveExtractor) -> float:
-        """Flatten multi-objective fitness to single objective.
-        
-        Args:
-            single_obj_extractor (SingleObjectiveExtractor): Extractor to convert multi-objective to single
-            
-        Returns:
-            float: Flattened fitness value
-            
-        Raises:
-            ValueError: If metrics have not been set
-        """
-        if not self.metrics:
-            raise ValueError('Metrics must be set before flatten fitness.')
-        return single_obj_extractor.extract(self.metrics)
         
     @property
     def fallback_state(self) -> Dict[str, Any]:

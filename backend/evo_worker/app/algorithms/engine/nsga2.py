@@ -35,20 +35,19 @@ class NSGA2EvoEngine(BaseEvoEngine):
     
     def __init__(self, 
                  run_id: str,
-                 seeding_rules: Optional[List[Rule]] = None,
                  pop_size: int = 150,
                  num_gen: int = 500,
                  pc: float = 0.8,
                  pm: float = 0.2,
                  lr: float = 0.5,
                  update_score_period: int = 50,
-                 archive_each_gen: int = 50):
+                 archive_each_gen: int = 50,
+                 seeding_rules: Optional[List[Rule]] = None,
+                 ):
         """Initialize NSGA-II evolutionary engine.
         
         Args:
             run_id (str): Unique identifier for this evolutionary run
-            seeding_rules (Optional[List[Rule]], optional): Initial rules to seed the population. 
-                Defaults to None.
             pop_size (int, optional): Population size. Defaults to 150.
             num_gen (int, optional): Number of generations. Defaults to 500.
             pc (float, optional): Crossover probability. Defaults to 0.8.
@@ -56,6 +55,8 @@ class NSGA2EvoEngine(BaseEvoEngine):
             lr (float, optional): Learning rate for adaptive scoring. Defaults to 0.5.
             update_score_period (int, optional): Period to update adaptive scores. Defaults to 50.
             archive_each_gen (int, optional): Number of individuals to archive each generation. Defaults to 50.
+            seeding_rules (Optional[List[Rule]], optional): Initial rules to seed the population. 
+                Defaults to None.
         """
         super().__init__(run_id, seeding_rules)
         self.pareto_front: List[DominanceIndividual] = None
@@ -332,7 +333,7 @@ class NSGA2EvoEngine(BaseEvoEngine):
         
         return self.pareto_front
     
-    def rerun(self,**kwargs) -> List[DominanceIndividual]:
+    def rerun(self, **kwargs) -> List[DominanceIndividual]:
         """Rerun the NSGA-II evolutionary algorithm from current state.
         
         Args:
