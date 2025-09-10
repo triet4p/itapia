@@ -24,7 +24,7 @@ class EvoRuleCRUD:
         metrics = json.dumps(rule_data.get('metrics'))
         
         stmt = text("""
-            INSERT INTO evo_rules (rule_id, name, description, purpose, rule_status, created_at, root, evo_run_id, metrics)
+            INSERT INTO public.evo_rules (rule_id, name, description, purpose, rule_status, created_at, root, evo_run_id, metrics)
             VALUES (:rule_id, :name, :description, :purpose, :rule_status, :created_at, :root, :evo_run_id, :metrics)
             ON CONFLICT (rule_id) DO UPDATE SET
                 name = EXCLUDED.name,
@@ -55,7 +55,7 @@ class EvoRuleCRUD:
     def get_all_rules_by_evo(self, rule_status: str, evo_run_id: str) -> Sequence[RowMapping]:
         # Postgres JSONB query: `->>` extracts field as text
         stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root, evo_run_id, metrics
-                    FROM evo_rules WHERE rule_status = :rule_status AND evo_run_id = :evo_run_id;""")
+                    FROM public.evo_rules WHERE rule_status = :rule_status AND evo_run_id = :evo_run_id;""")
         
         results = self.db.execute(stmt, {'rule_status': rule_status, 'evo_run_id': evo_run_id})
         
@@ -65,13 +65,12 @@ class EvoRuleCRUD:
     def get_all_rules(self, rule_status: str) -> Sequence[RowMapping]:
         # Postgres JSONB query: `->>` extracts field as text
         stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root, evo_run_id, metrics
-                    FROM evo_rules WHERE rule_status = :rule_status;""")
+                    FROM public.evo_rules WHERE rule_status = :rule_status;""")
         
         results = self.db.execute(stmt, {'rule_status': rule_status})
         
         # Return a list of dictionaries
         return results.mappings().all()
-    
     
     
 class EvoRunCRUD:
@@ -87,7 +86,7 @@ class EvoRunCRUD:
         algorithm = evo_run_data.get('algorithm')
         
         stmt = text("""
-            INSERT INTO evo_runs (run_id, status, algorithm, config, fallback_state)
+            INSERT INTO public.evo_runs (run_id, status, algorithm, config, fallback_state)
             VALUES (:run_id, :status, :algorithm, :config, :fallback_state)
             ON CONFLICT (run_id) DO UPDATE SET
                 status = EXCLUDED.status,
@@ -110,7 +109,7 @@ class EvoRunCRUD:
     
     def get_evo_run(self, evo_run_id: str) -> Optional[RowMapping]:
         stmt = text("""SELECT run_id, status, config, fallback_state, algorithm
-                    FROM evo_runs WHERE run_id = :run_id;""")
+                    FROM public.evo_runs WHERE run_id = :run_id;""")
         result = self.db.execute(stmt, {'run_id': evo_run_id})
         if result is None:
             return None

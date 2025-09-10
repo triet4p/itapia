@@ -11,7 +11,7 @@ from redis.client import Redis
 def get_daily_prices(rdbms_session: Session, table_name: str, ticker: str, skip: int = 0, limit: int = 500) -> Sequence[RowMapping]:
 
     query = text(f"""
-        SELECT * FROM {table_name} 
+        SELECT * FROM public.{table_name} 
         WHERE ticker = :ticker 
         ORDER BY collect_date DESC 
         OFFSET :skip LIMIT :limit
@@ -23,7 +23,7 @@ def get_daily_prices(rdbms_session: Session, table_name: str, ticker: str, skip:
 def get_tickers_by_sector(rdbms_session: Session, table_name: str, sector_code: str) -> Sequence[str]:
 
     query = text(f"""
-        SELECT ticker_sym FROM {table_name}
+        SELECT ticker_sym FROM public.{table_name}
         WHERE sector_code = :sector_code AND is_active = TRUE
         ORDER BY ticker_sym;
     """)
@@ -78,7 +78,7 @@ def get_last_history_date(engine: Engine,
                           tickers: list[str],
                           default_return_date: datetime) -> datetime:
 
-    query = f"SELECT MAX(collect_date) FROM {table_name} WHERE ticker IN :tickers;"
+    query = f"SELECT MAX(collect_date) FROM public.{table_name} WHERE ticker IN :tickers;"
     stmt = text(query)
     
     try:

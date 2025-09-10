@@ -8,7 +8,7 @@ from sqlalchemy import RowMapping, Sequence, text
 def get_relevant_news(rdbms_session: Session, table_name: str, ticker: str, skip: int = 0, limit: int = 10) -> Sequence[RowMapping]:
     query = text(f"""
         SELECT news_uuid, ticker, title, summary, provider, link, publish_time, collect_time
-        FROM {table_name} 
+        FROM public.{table_name} 
         WHERE ticker = :ticker 
         ORDER BY publish_time DESC, collect_time DESC 
         OFFSET :skip LIMIT :limit
@@ -24,7 +24,7 @@ def get_universal_news(rdbms_session: Session, table_name: str, search_terms: st
             publish_time, collect_time, title_hash,
             ts_rank(keyword_tsv, plainto_tsquery('english', :search_query)) AS rank
         FROM 
-            {table_name}
+            public.{table_name}
         WHERE 
             keyword_tsv @@ plainto_tsquery('english', :search_query)
         ORDER BY 
@@ -44,7 +44,7 @@ def get_universal_news_with_date(rdbms_session: Session, table_name: str, search
             publish_time, collect_time, title_hash,
             ts_rank(keyword_tsv, plainto_tsquery('english', :search_query)) AS rank
         FROM 
-            {table_name}
+            public.{table_name}
         WHERE 
             keyword_tsv @@ plainto_tsquery('english', :search_query) AND publish_time <= :before_date
         ORDER BY 

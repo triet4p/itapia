@@ -27,7 +27,7 @@ class BacktestReportCRUD:
                                    'backtest_date', 'report'.
         """
         stmt = text(f"""
-            INSERT INTO {dbcfg.ANALYSIS_REPORTS_TABLE_NAME} (report_id, ticker, backtest_date, report)
+            INSERT INTO public.{dbcfg.ANALYSIS_REPORTS_TABLE_NAME} (report_id, ticker, backtest_date, report)
             VALUES (:report_id, :ticker, :backtest_date, :report)
             ON CONFLICT (report_id) DO UPDATE SET
                 ticker = EXCLUDED.ticker,
@@ -40,7 +40,7 @@ class BacktestReportCRUD:
 
     def get_latest_report_before_date(self, ticker: str, backtest_date: Any) -> Optional[RowMapping]:
         stmt = text(f"""
-            SELECT report_id, ticker, backtest_date, report FROM {dbcfg.ANALYSIS_REPORTS_TABLE_NAME}
+            SELECT report_id, ticker, backtest_date, report FROM public.{dbcfg.ANALYSIS_REPORTS_TABLE_NAME}
             WHERE ticker = :ticker AND backtest_date <= :backtest_date
             ORDER BY backtest_date DESC
             LIMIT 1
@@ -52,7 +52,7 @@ class BacktestReportCRUD:
     
     def get_reports_by_ticker(self, ticker: str) -> Sequence[RowMapping]:
         stmt = text(f"""
-            SELECT report_id, ticker, backtest_date, report FROM {dbcfg.ANALYSIS_REPORTS_TABLE_NAME}
+            SELECT report_id, ticker, backtest_date, report FROM public.{dbcfg.ANALYSIS_REPORTS_TABLE_NAME}
             WHERE ticker = :ticker
             ORDER BY backtest_date DESC
         """)

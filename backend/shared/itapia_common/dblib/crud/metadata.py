@@ -32,11 +32,11 @@ def _load_ticker_metadata_from_db(db_connectable: Session|Connection) -> dict:
                     s.sector_code,
                     s.sector_name
                 FROM 
-                    tickers t
+                    public.tickers t
                 JOIN 
-                    exchanges e ON t.exchange_code = e.exchange_code
+                    public.exchanges e ON t.exchange_code = e.exchange_code
                 JOIN 
-                    sectors s ON t.sector_code = s.sector_code
+                    public.sectors s ON t.sector_code = s.sector_code
                 WHERE 
                     t.is_active = TRUE;
             """)
@@ -97,7 +97,7 @@ def get_all_sectors(rdbms_connection: Session|Connection = None,
     if rdbms_connection is None and rdbms_engine is None:
         raise ValueError("Required at least connection or engine")
     
-    query = text("SELECT sector_code, sector_name FROM sectors ORDER BY sector_name;")
+    query = text("SELECT sector_code, sector_name FROM public.sectors ORDER BY sector_name;")
     
     if rdbms_connection is not None:
         result = rdbms_connection.execute(query)
