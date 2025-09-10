@@ -25,16 +25,13 @@ def create_dependencies():
 
     # DB and services initialization logic
     db_session_gen = get_rdbms_session()
-    redis_gen = get_redis_connection()
     db = next(db_session_gen)
-    redis = next(redis_gen)
-    
     # This initialization logic can cause errors if DB connection fails
     # Should be wrapped in try...finally to ensure sessions are closed
     try:
         metadata_service = APIMetadataService(rdbms_session=db)
-        prices_service = APIPricesService(rdbms_session=db, redis_client=redis, metadata_service=metadata_service)
-        backtest_report_service = BacktestReportService(db_session=db)
+        prices_service = APIPricesService(rdbms_session=db, metadata_service=metadata_service, redis_client=None)
+        backtest_report_service = BacktestReportService(rdbms_session=db)
         
         backtest_data_preparer = BacktestDataPreparer(
             prices_service=prices_service, 
@@ -46,7 +43,6 @@ def create_dependencies():
         _backtest_context_manager = BacktestContextManager(data_preparer=backtest_data_preparer)
     finally:
         db.close()
-        redis.close()
 
 
 def get_backtest_context_manager() -> BacktestContextManager:

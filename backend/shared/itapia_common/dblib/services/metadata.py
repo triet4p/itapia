@@ -4,7 +4,7 @@ This module provides high-level interfaces for accessing ticker and sector metad
 handling caching and conversion between raw data and Pydantic models.
 """
 
-from typing import List, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
@@ -19,7 +19,14 @@ logger = ITAPIALogger('Metadata Service of DB')
 class APIMetadataService:
     """Centralized service class for metadata-related API queries."""
     
-    def __init__(self, rdbms_session: Session):
+    def __init__(self, rdbms_session: Optional[Session]):
+        self.rdbms_session: Session = None
+        self.metadata_cache: Dict[str, Any] = None
+        
+        if rdbms_session is not None:
+            self.set_rdbms_session(rdbms_session)
+        
+    def set_rdbms_session(self, rdbms_session: Session):
         self.rdbms_session = rdbms_session
         self.metadata_cache = get_ticker_metadata(rdbms_connection=rdbms_session)
         
@@ -38,6 +45,9 @@ class APIMetadataService:
         Raises:
             ValueError: If the ticker is not found in the metadata cache.
         """
+        if self.metadata_cache is None:
+            raise ValueError("Metadata cache is missing, check the connection!")
+        
         logger.info(f"SERVICE: Preparing ticker info metadata of ticker {ticker}...")
         ticker_info = self.metadata_cache.get(ticker.upper())
         if not ticker_info:
@@ -58,6 +68,8 @@ class APIMetadataService:
         Raises:
             ValueError: If the ticker is not found or has no sector code.
         """
+        if self.metadata_cache is None:
+            raise ValueError("Metadata cache is missing, check the connection!")
         logger.info(f"SERVICE: Get sector code of a ticker")
         ticker_info = self.metadata_cache.get(ticker.upper())
         if not ticker_info:
@@ -73,6 +85,8 @@ class APIMetadataService:
         Returns:
             List[SectorMetadata]: A list of sector metadata objects.
         """
+        if self.rdbms_session is None:
+            raise ValueError('Connection is empty!!')
         logger.info("SERVICE: Preparing all sectors...")
         sector_rows = get_all_sectors(self.rdbms_session)  # Assuming metadata_crud.py file exists
         

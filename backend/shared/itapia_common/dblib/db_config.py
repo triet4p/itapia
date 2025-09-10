@@ -7,17 +7,21 @@ for both PostgreSQL and Redis, as well as table names used throughout the applic
 
 import os
 from dotenv import load_dotenv
+from urllib.parse import quote_plus
 from pathlib import Path
 
 env_path = Path(__file__).parent.parent.parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 # PostgreSQL Configuration
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_USER = os.getenv("POSTGRES_USER").strip()
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD").strip()
+POSTGRES_DB = os.getenv("POSTGRES_DB").strip()
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost").strip()
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", 5432)
+
+POSTGRES_PASSWORD = quote_plus(POSTGRES_PASSWORD)
+
 DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 # Redis Configuration

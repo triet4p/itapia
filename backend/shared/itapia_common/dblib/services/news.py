@@ -5,7 +5,7 @@ handling conversion between raw database records and Pydantic models.
 """
 
 from datetime import datetime
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
@@ -25,10 +25,15 @@ logger = ITAPIALogger('News Service of DB')
 class APINewsService:
     """Service class for API-level news operations."""
     
-    def __init__(self, rdbms_session: Session,
+    def __init__(self, rdbms_session: Optional[Session],
                  metadata_service: APIMetadataService):
-        self.rdbms_session = rdbms_session
+        self.rdbms_session: Session = None
         self.metadata_service = metadata_service
+        if rdbms_session is not None:
+            self.set_rdbms_session(rdbms_session)
+        
+    def set_rdbms_session(self, rdbms_session: Session):
+        self.rdbms_session = rdbms_session
         
     def get_relevant_news(self, ticker: str, skip: int, limit: int) -> RelevantNews:
         """Retrieve and package news data for a specific ticker.
@@ -44,6 +49,8 @@ class APINewsService:
         Returns:
             RelevantNews: A packaged news response with metadata and data points.
         """
+        if self.rdbms_session is None:
+            raise ValueError('Connection is empty!!')
         logger.info(f"SERVICE: Preparing news data for ticker {ticker}")
         metadata = self.metadata_service.get_validate_ticker_info(ticker, data_type='news')
         
@@ -77,6 +84,8 @@ class APINewsService:
         Returns:
             UniversalNews: A packaged news response with data points.
         """
+        if self.rdbms_session is None:
+            raise ValueError('Connection is empty!!')
         logger.info(f"SERVICE: Preparing {limit} universal news ...")
         
         if before_date is None:

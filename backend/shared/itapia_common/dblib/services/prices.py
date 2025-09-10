@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -21,11 +21,23 @@ from itapia_common.logger import ITAPIALogger
 logger = ITAPIALogger('Prices Service of DB')
 
 class APIPricesService:
-    def __init__(self, rdbms_session: Session, redis_client: Redis,
+    def __init__(self, rdbms_session: Optional[Session], redis_client: Optional[Redis],
                  metadata_service: APIMetadataService):
-        self.rdbms_session = rdbms_session
-        self.redis_client = redis_client
+        self.rdbms_session: Session = None
+        self.redis_client: Redis = None
         self.metadata_service = metadata_service
+        
+        if rdbms_session:
+            self.set_rdbms_session(rdbms_session)
+            
+        if redis_client:
+            self.set_redis_client(redis_client)
+        
+    def set_rdbms_session(self, rdbms_session: Session):
+        self.rdbms_session = rdbms_session
+    
+    def set_redis_client(self, redis_client: Redis):
+        self.redis_client = redis_client
         
     def get_daily_prices(self, ticker: str, skip: int, limit: int) -> Price:
         """Retrieve and package historical daily price data for a ticker.
@@ -38,6 +50,8 @@ class APIPricesService:
         Returns:
             Price: Price data object containing metadata and price points.
         """
+        if self.rdbms_session is None:
+            raise ValueError('Connection is empty!!')
         logger.info(f"SERVICE: Preparing daily prices for ticker {ticker}")
         metadata = self.metadata_service.get_validate_ticker_info(ticker, 'daily')
         
@@ -66,6 +80,8 @@ class APIPricesService:
         Returns:
             List[Price]: List of price data objects for each ticker in the sector.
         """
+        if self.rdbms_session is None:
+            raise ValueError('Connection is empty!!')
         logger.info(f"SERVICE: Preparing daily prices for sector {sector_code}...")
         
         # 1. Get list of tickers in this sector
@@ -112,6 +128,10 @@ class APIPricesService:
         Raises:
             ValueError: If no intraday data is found for the ticker.
         """
+        if self.rdbms_session is None:
+            raise ValueError('Connection is empty!!')
+        if self.redis_client is None:
+            raise ValueError('Connection is empty!!')
         logger.info(f"SERVICE: Preparing intraday prices for ticker {ticker}")
         metadata = self.metadata_service.get_validate_ticker_info(ticker, 'intraday')
 

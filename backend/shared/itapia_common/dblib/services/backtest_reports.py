@@ -17,8 +17,15 @@ from itapia_common.dblib.crud.backtest_reports import BacktestReportCRUD
 class BacktestReportService:
     """Service for managing backtest reports in the database."""
     
-    def __init__(self, db_session: Session):
-        self.crud = BacktestReportCRUD(db_session)
+    def __init__(self, rdbms_session: Optional[Session]):
+        self.crud: BacktestReportCRUD = BacktestReportCRUD(rdbms_session) if rdbms_session else None
+        
+    def set_rdbms_session(self, rdbms_session: Session) -> None:
+        self.crud = BacktestReportCRUD(rdbms_session)
+        
+    def check_health(self):
+        if self.crud is None:
+            raise ValueError('Connection is empty!')
 
     def save_quick_check_report(self, report: QuickCheckAnalysisReport,
                                 backtest_date: datetime) -> str:
@@ -34,6 +41,7 @@ class BacktestReportService:
         Returns:
             str: The ID of the saved report.
         """
+        self.check_health()
         report_id = f'{report.ticker.upper()}_{backtest_date.strftime("%Y-%m-%d")}'
 
         data_to_save = {
@@ -58,6 +66,7 @@ class BacktestReportService:
         Returns:
             Optional[QuickCheckAnalysisReport]: The report object, or None if not found.
         """
+        self.check_health()
         report_data = self.crud.get_latest_report_before_date(ticker, backtest_date)
 
         if not report_data:
@@ -77,6 +86,7 @@ class BacktestReportService:
         Returns:
             List[QuickCheckAnalysisReport]: A list of report objects.
         """
+        self.check_health()
         report_datas = self.crud.get_reports_by_ticker(ticker)
         reports = []
         for report_data in report_datas:

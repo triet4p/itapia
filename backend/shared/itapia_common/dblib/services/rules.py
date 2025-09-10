@@ -4,7 +4,7 @@ This module provides a high-level interface for managing business rules,
 handling the conversion between Pydantic models and database representations.
 """
 
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from itapia_common.dblib.crud.rules import RuleCRUD
 from itapia_common.schemas.entities.rules import RuleEntity, RuleStatus, SemanticType
@@ -12,9 +12,17 @@ from itapia_common.schemas.entities.rules import RuleEntity, RuleStatus, Semanti
 class RuleService:
     """Service class for managing business rules."""
     
-    def __init__(self, db_session: Session):
-        # Service will contain an instance of the CRUD class
-        self.crud = RuleCRUD(db_session)
+    def __init__(self, rdbms_session: Optional[Session]):
+        self.crud: RuleCRUD = None
+        if rdbms_session is not None:
+            self.set_rdbms_session(rdbms_session)
+        
+    def set_rdbms_session(self, rdbms_session: Session) -> None:
+        self.crud = RuleCRUD(rdbms_session)
+        
+    def check_health(self):
+        if self.crud is None:
+            raise ValueError('Connection is empty!')
 
     def save_rule(self, rule_entity: RuleEntity) -> str:
         """Take a Rule object, convert it to a dict, save it to the database 
@@ -26,6 +34,7 @@ class RuleService:
         Returns:
             str: The ID of the saved rule.
         """
+        self.check_health()
         # Convert the business object to raw data
         rule_dict = rule_entity.model_dump()
         
@@ -45,6 +54,7 @@ class RuleService:
         Returns:
             RuleEntity | None: The rule entity if found, otherwise None.
         """
+        self.check_health()
         # Get raw data
         rule_data = self.crud.get_rule_by_id(rule_id)
         
@@ -64,6 +74,7 @@ class RuleService:
         Returns:
             List[RuleEntity]: A list of rule entities.
         """
+        self.check_health()
         # Convert the business object (Enum) to raw data (str)
         purpose_name = purpose.name
         rule_status_name = rule_status.name
@@ -83,6 +94,7 @@ class RuleService:
         Returns:
             List[RuleEntity]: A list of all active rule entities.
         """
+        self.check_health()
         # Get list of raw data
         list_of_rule_data = self.crud.get_all_rules(rule_status.name)
         

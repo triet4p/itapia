@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from itapia_common.dblib.crud.evo import EvoRuleCRUD, EvoRunCRUD
 from itapia_common.schemas.entities.evo import EvoRuleEntity, EvoRunEntity, EvoRunStatus
@@ -7,7 +7,14 @@ from itapia_common.schemas.entities.rules import RuleStatus
 class EvoService:
     """Service class for managing evolutionary algorithms and rules."""
     
-    def __init__(self, rdbms_session: Session):
+    def __init__(self, rdbms_session: Optional[Session]):
+        self.run_crud: EvoRunCRUD = None
+        self.rule_crud: EvoRuleCRUD = None
+        
+        if rdbms_session is not None:
+            self.set_rdbms_session(rdbms_session)
+        
+    def set_rdbms_session(self, rdbms_session: Session):
         self.run_crud = EvoRunCRUD(rdbms_session)
         self.rule_crud = EvoRuleCRUD(rdbms_session)
         
@@ -17,6 +24,8 @@ class EvoService:
         Args:
             evo_rules (List[EvoRuleEntity]): List of EvoRuleEntity objects to save.
         """
+        if self.rule_crud is None:
+            raise ValueError("Connection to Rule DB is empty!")
         for rule_entity in evo_rules:
             rule_dict = rule_entity.model_dump()
             self.rule_crud.create_or_update_rule(rule_entity.rule_id, rule_dict)
@@ -27,6 +36,8 @@ class EvoService:
         Args:
             evo_run_id (str): Identifier of the evolution run.
         """
+        if self.rule_crud is None:
+            raise ValueError("Connection to Rule DB is empty!")
         rows = self.rule_crud.get_all_rules_by_evo(RuleStatus.EVOLVING, evo_run_id)
         last_rule_entities = [EvoRuleEntity(**row) for row in rows]
         for rule_entity in last_rule_entities:
@@ -44,6 +55,8 @@ class EvoService:
         Returns:
             List[EvoRuleEntity]: List of EvoRuleEntity objects matching the criteria.
         """
+        if self.rule_crud is None:
+            raise ValueError("Connection to Rule DB is empty!")
         if evo_run_id:
             rows = self.rule_crud.get_all_rules_by_evo(rule_status, evo_run_id)
         else:
@@ -63,6 +76,8 @@ class EvoService:
         Returns:
             str: The run_id of the saved evolution run.
         """
+        if self.run_crud is None or self.rule_crud is None:
+            raise ValueError("Connection to Rule and Run DB is empty!")
         evo_run_dict = evo_run.model_dump()
         
         # Deprecated last save rules
@@ -83,6 +98,8 @@ class EvoService:
         Returns:
             EvoRunEntity | None: EvoRunEntity object with associated rules or None if not found.
         """
+        if self.run_crud is None or self.rule_crud is None:
+            raise ValueError("Connection to Rule and Run DB is empty!")
         row = self.run_crud.get_evo_run(evo_run_id)
         rules = self.get_all_rules(RuleStatus.EVOLVING, evo_run_id)
         if row is None or not rules:
@@ -93,7 +110,3 @@ class EvoService:
         
         return EvoRunEntity(rules=rules, 
                             **res_dict)
-    
-    
-        
-    
