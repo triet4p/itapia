@@ -5,10 +5,10 @@ import pandas as pd
 import numpy as np
 
 # Import lớp chính và các lớp con để có thể mock nếu cần
-from app.technical.analysis_engine.daily import DailyAnalysisEngine
-from app.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
-from app.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
-from app.technical.analysis_engine.daily.pattern_recognizer import DailyPatternRecognizer
+from app.analysis.technical.analysis_engine.daily import DailyAnalysisEngine
+from app.analysis.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
+from app.analysis.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
+from app.analysis.technical.analysis_engine.daily.pattern_recognizer import DailyPatternRecognizer
 
 # Sử dụng lại hàm helper từ test_pattern_recognizer
 from .test_pattern_recoginzer import create_pattern_df

@@ -1,4 +1,4 @@
-from app.technical.analysis_engine.intraday import IntradayAnalysisEngine
+from app.analysis.technical.analysis_engine.intraday import IntradayAnalysisEngine
 
 def test_intraday_engine_integration(sample_intraday_data_for_analysis):
     """

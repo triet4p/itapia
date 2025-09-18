@@ -4,12 +4,12 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Optional
 
-from .trade import Trade
+from app.backtest.trade import Trade
 
-from itapia_common.schemas.entities.backtest import BacktestPerformanceMetrics
+from itapia_common.schemas.entities.performance import PerformanceMetrics
 
 
-class PerformanceMetrics:
+class PerformanceMetricsCalculator:
     """Analyze a trade log and calculate key performance and risk metrics."""
     
     def __init__(self, 
@@ -285,16 +285,16 @@ class PerformanceMetrics:
         cagr = (final_equity / self.initial_capital)**(1 / num_years) - 1
         return cagr
 
-    def summary(self) -> BacktestPerformanceMetrics:
+    def summary(self) -> PerformanceMetrics:
         """Consolidate all performance metrics into a dictionary.
         
         Returns:
-            BacktestPerformanceMetrics: Complete performance metrics report
+            PerformanceMetrics: Complete performance metrics report
         """
         if self.trades_df.empty:
-            return BacktestPerformanceMetrics()
+            return PerformanceMetrics()
 
-        return BacktestPerformanceMetrics(
+        return PerformanceMetrics(
             num_trades = len(self.trade_log),
             total_return_pct = self.calculate_total_return(),
             max_drawdown_pct = self.calculate_max_drawdown(),

@@ -1,9 +1,9 @@
 from typing import Any, Dict, Generic, List, Self, Tuple, TypeVar, Type
 from itapia_common.rules.rule import Rule
 from app.backtest.evaluator import Evaluator
-from app.backtest.metrics import BacktestPerformanceMetrics
+from app.performances.metrics import PerformanceMetricsCalculator
 from app.state import Stateful
-from .objective import AcceptedObjective, MultiObjectiveExtractor, ObjectiveExtractor, SingleObjectiveExtractor
+from app.algorithms.objective import AcceptedObjective, MultiObjectiveExtractor, ObjectiveExtractor, SingleObjectiveExtractor
 
 IndividualType = TypeVar("IndividualType", bound='Individual')
 
@@ -14,7 +14,7 @@ class Individual(Stateful):
         """Initialize an individual with empty chromosome, fitness, and metrics."""
         self.chromosome: Rule = None
         self.fitness: AcceptedObjective = None
-        self.metrics: BacktestPerformanceMetrics = None
+        self.metrics: PerformanceMetricsCalculator = None
     
     def cal_fitness(self, evaluator: Evaluator, obj_extractor: ObjectiveExtractor) -> AcceptedObjective:
         """Calculate fitness for the individual.
@@ -72,7 +72,7 @@ class Individual(Stateful):
     def set_from_fallback_state(self, fallback_state: Dict[str, Any]) -> None:
         self.chromosome = Rule.from_entity(fallback_state['chromosome'])
         self.fitness: AcceptedObjective = fallback_state['fitness']
-        self.metrics: BacktestPerformanceMetrics = fallback_state['metrics']
+        self.metrics: PerformanceMetricsCalculator = fallback_state['metrics']
         
 class DominanceIndividual(Individual):
     """Individual class for dominance-based evolutionary algorithms."""

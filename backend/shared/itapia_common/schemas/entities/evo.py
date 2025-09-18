@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 from enum import Enum
 from .rules import RuleEntity
-from .backtest import BacktestPerformanceMetrics
+from .performance import PerformanceMetrics
 
 class EvoRunStatus(str, Enum):
     COMPLETED = "COMPLETED"
@@ -10,7 +10,6 @@ class EvoRunStatus(str, Enum):
 
 class EvoRuleEntity(RuleEntity):
     evo_run_id: str = Field(..., description="Evo Run which is produced this rule")
-    metrics: Optional[BacktestPerformanceMetrics]
     
 class EvoRunEntity(BaseModel):
     run_id: str = Field(..., description='Running ID of this Evolutionary Run.')

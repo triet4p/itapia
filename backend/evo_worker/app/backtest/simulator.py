@@ -5,7 +5,7 @@ from typing import List, NamedTuple, Optional, Literal, Dict
 import pandas as pd
 
 from .trade import Trade, TRADE_ACTION_TYPE, EXIT_REASON_TYPE, OpenPosition
-from .action import Action
+from itapia_common.schemas.entities.action import Action
 
 from itapia_common.logger import ITAPIALogger
 

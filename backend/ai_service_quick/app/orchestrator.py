@@ -9,6 +9,8 @@ from datetime import datetime
 from typing import Dict, Literal
 import uuid
 
+from itapia_common.schemas.entities.personal import QuantitivePreferencesConfig
+from itapia_common.schemas.entities.profiles import ProfileEntity
 from itapia_common.schemas.entities.rules import ExplainationRuleEntity, NodeType, SemanticType
 
 from .analysis import AnalysisOrchestrator
@@ -145,7 +147,8 @@ class AIServiceQuickOrchestrator:
     # === NEW BUSINESS METHODS FOR ADVISOR ===
 
     async def get_full_advisor_report(self, ticker: str,
-                                      user_id: str) -> AdvisorReportSchema:
+                                      quantitive_config: QuantitivePreferencesConfig,
+                                      limit: int = 10) -> AdvisorReportSchema:
         """Complete business process: Analysis -> Advice.
         
         Executes the complete workflow from analysis to advisor recommendations.
@@ -164,17 +167,27 @@ class AIServiceQuickOrchestrator:
             ticker, 'medium', 'all'
         )
         
-        user_profile = self.personal.get_user_profile(user_id)
+        decision_all_rules = await self.rules.get_ready_rules(purpose=SemanticType.DECISION_SIGNAL)
+        risk_all_rules = await self.rules.get_ready_rules(purpose=SemanticType.RISK_LEVEL)
+        oppor_all_rules = await self.rules.get_ready_rules(purpose=SemanticType.OPPORTUNITY_RATING)
         
-        # Stage 2: Get personalization configuration
-        rule_selector = self.personal.get_rule_selector(user_profile)
-        meta_weights = self.personal.get_meta_synthesis_weights(user_profile)
+        decision_selected_rules = self.personal.filter_rules(decision_all_rules,
+                                                             quantitive_config=quantitive_config,
+                                                             limit=limit)
+        
+        risk_selected_rules = self.personal.filter_rules(risk_all_rules, 
+                                                         quantitive_config=quantitive_config,
+                                                         limit=limit)
+        oppor_selected_rules = self.personal.filter_rules(oppor_all_rules, 
+                                                          quantitive_config=quantitive_config,
+                                                          limit=limit)
+        
         # (personal_rules will be used later)
 
         # Stage 3: Execute rules in parallel
-        decision_task = self.rules.run_for_purpose(analysis_report, SemanticType.DECISION_SIGNAL, rule_selector)
-        risk_task = self.rules.run_for_purpose(analysis_report, SemanticType.RISK_LEVEL, rule_selector)
-        opp_task = self.rules.run_for_purpose(analysis_report, SemanticType.OPPORTUNITY_RATING, rule_selector)
+        decision_task = self.rules.run_for_purpose(analysis_report, SemanticType.DECISION_SIGNAL, decision_selected_rules)
+        risk_task = self.rules.run_for_purpose(analysis_report, SemanticType.RISK_LEVEL, risk_selected_rules)
+        opp_task = self.rules.run_for_purpose(analysis_report, SemanticType.OPPORTUNITY_RATING, oppor_selected_rules)
         
         decision_results, risk_results, opp_results = await asyncio.gather(decision_task, risk_task, opp_task)
 
@@ -184,11 +197,14 @@ class AIServiceQuickOrchestrator:
                                                                decision_results,
                                                                risk_results,
                                                                opp_results,
-                                                               meta_weights)
+                                                               behavior_modifiers=quantitive_config.modifiers,
+                                                               action_mapper=self.advisor.default_action_mapper)
         
         return advisor_report
     
-    async def get_full_advisor_explaination_report(self, ticker: str, user_id: str) -> str:
+    async def get_full_advisor_explaination_report(self, ticker: str,
+                                      quantitive_config: QuantitivePreferencesConfig,
+                                      limit: int = 10) -> str:
         """Get complete advisor explanation report.
         
         Args:
@@ -202,25 +218,33 @@ class AIServiceQuickOrchestrator:
             ticker, 'medium', 'all'
         )
         
-        user_profile = self.personal.get_user_profile(user_id)
+        decision_all_rules = await self.rules.get_ready_rules(purpose=SemanticType.DECISION_SIGNAL)
+        risk_all_rules = await self.rules.get_ready_rules(purpose=SemanticType.RISK_LEVEL)
+        oppor_all_rules = await self.rules.get_ready_rules(purpose=SemanticType.OPPORTUNITY_RATING)
         
-        # Stage 2: Get personalization configuration
-        rule_selector = self.personal.get_rule_selector(user_profile)
-        meta_weights = self.personal.get_meta_synthesis_weights(user_profile)
+        decision_selected_rules = self.personal.filter_rules(decision_all_rules,
+                                                             quantitive_config=quantitive_config,
+                                                             limit=limit)
+        risk_selected_rules = self.personal.filter_rules(risk_all_rules, 
+                                                         quantitive_config=quantitive_config,
+                                                         limit=limit)
+        oppor_selected_rules = self.personal.filter_rules(oppor_all_rules, 
+                                                          quantitive_config=quantitive_config,
+                                                          limit=limit)
+        
         # (personal_rules will be used later)
 
         # Stage 3: Execute rules in parallel
-        decision_task = self.rules.run_for_purpose(analysis_report, SemanticType.DECISION_SIGNAL, rule_selector)
-        risk_task = self.rules.run_for_purpose(analysis_report, SemanticType.RISK_LEVEL, rule_selector)
-        opp_task = self.rules.run_for_purpose(analysis_report, SemanticType.OPPORTUNITY_RATING, rule_selector)
+        decision_task = self.rules.run_for_purpose(analysis_report, SemanticType.DECISION_SIGNAL, decision_selected_rules)
+        risk_task = self.rules.run_for_purpose(analysis_report, SemanticType.RISK_LEVEL, risk_selected_rules)
+        opp_task = self.rules.run_for_purpose(analysis_report, SemanticType.OPPORTUNITY_RATING, oppor_selected_rules)
         
         decision_results, risk_results, opp_results = await asyncio.gather(decision_task, risk_task, opp_task)
-
         return await self.advisor.get_full_explaination_report(analysis_report,
                                                                decision_results,
                                                                risk_results,
                                                                opp_results,
-                                                               meta_weights)
+                                                               behavior_modifiers=quantitive_config.modifiers)
     
     async def get_single_explaination_rule(self, rule_id: str) -> ExplainationRuleEntity:
         """Get explanation for a single rule.
@@ -305,3 +329,6 @@ class AIServiceQuickOrchestrator:
             self.backtest_jobs_status[job_id] = 'FAILED'
             # Re-raise error so background task can record it if needed
             raise
+        
+    def get_suggest_config(self, profile: ProfileEntity) -> QuantitivePreferencesConfig:
+        return self.personal.get_suggest_config(profile)

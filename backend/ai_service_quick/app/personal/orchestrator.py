@@ -4,6 +4,13 @@ from typing import List, Dict, Callable, Any
 
 from itapia_common.rules.rule import Rule
 from itapia_common.logger import ITAPIALogger
+from itapia_common.schemas.entities.personal import QuantitivePreferencesConfig
+from itapia_common.schemas.entities.profiles import ProfileEntity
+from itapia_common.schemas.entities.rules import RuleEntity
+
+from .quantitive import QuantitivePreferencesAnalyzer
+from .preferences import PreferencesManager
+from .scorer import Scorer
 
 logger = ITAPIALogger('Personal Analysis Orchestrator')
 
@@ -14,55 +21,21 @@ class PersonalAnalysisOrchestrator:
     Provides configurations (weights, selectors) based on user profiles.
     """
     
-    def __init__(self):
+    def __init__(self, quantitive_analyzer: QuantitivePreferencesAnalyzer,
+                 preferences_manager: PreferencesManager,
+                 scorer: Scorer):
         """Initialize the personal analysis orchestrator in MVP placeholder mode."""
         self._default_meta_weights = {"decision": 1.0, "risk": 0.15, "opportunity": 0.05}
+        self.quantitive_analyzer = quantitive_analyzer
+        self.preferences_manager = preferences_manager
+        self.scorer = scorer
         logger.info("Personal Analysis Orchestrator initialized (MVP placeholder mode).")
         
-    def get_user_profile(self, user_id: str) -> Any:
-        """Get user profile by user ID.
-        
-        Args:
-            user_id (str): User identifier
-            
-        Returns:
-            Any: User profile data or None if not found
-        """
-        return None
-
-    def get_meta_synthesis_weights(self, user_profile: Any = None) -> Dict[str, float]:
-        """[PLACEHOLDER] Get weight set for final synthesis layer.
-        
-        Args:
-            user_profile (Any, optional): User profile data. Defaults to None.
-            
-        Returns:
-            Dict[str, float]: Dictionary of weights for meta-synthesis
-        """
-        if user_profile:
-            pass
-        return self._default_meta_weights
-
-    def get_rule_selector(self, user_profile: Any = None) -> Callable[[List[Rule]], List[Rule]]:
-        """[PLACEHOLDER] Return a callback function to select rules.
-        
-        Args:
-            user_profile (Any, optional): User profile data. Defaults to None.
-            
-        Returns:
-            Callable[[List[Rule]], List[Rule]]: Function that selects appropriate rules
-        """
-        if user_profile:
-            pass
-        return lambda rules: rules[:7]  # Default: take first 7 rules
-
-    def get_personal_rules(self, user_profile: Any = None) -> List[Rule]:
-        """[PLACEHOLDER] Get list of user's personal rules.
-        
-        Args:
-            user_profile (Any, optional): User profile data. Defaults to None.
-            
-        Returns:
-            List[Rule]: List of personal rules for the user
-        """
-        return []
+    def get_suggest_config(self, profile: ProfileEntity) -> QuantitivePreferencesConfig:
+        return self.quantitive_analyzer.get_suggested_config(profile)
+    
+    def filter_rules(self, rules: List[RuleEntity], quantitive_config: QuantitivePreferencesConfig,
+                     limit: int = 10):
+        return self.preferences_manager.filter_rules(rules, scorer=self.scorer,
+                                                     quantitive_config=quantitive_config,
+                                                     limit=limit)

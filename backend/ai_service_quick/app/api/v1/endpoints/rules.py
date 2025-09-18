@@ -30,7 +30,8 @@ async def get_single_explaination_rule(rule_id: str,
             rule_status=report.rule_status,
             created_at_ts=int(report.created_at.timestamp()),
             explain=report.explain,
-            root=report.root
+            root=report.root,
+            metrics=report.metrics,
         )
     except NoDataError as e1:
         raise HTTPException(status_code=404, detail=e1.msg)
@@ -58,7 +59,8 @@ async def get_ready_rules(purpose: SemanticType = SemanticType.ANY,
             purpose=rule.purpose,
             rule_status=rule.rule_status,
             created_at_ts=int(rule.created_at.timestamp()),
-            root=rule.root
+            root=rule.root,
+            metrics=rule.metrics,
         ) for rule in report]
     except NoDataError as e1:
         raise HTTPException(status_code=404, detail=e1.msg)

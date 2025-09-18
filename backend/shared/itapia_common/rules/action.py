@@ -1,26 +1,9 @@
-"""Action definitions and mappers for backtesting trading strategies."""
+"""Action definitions and mappers for trading strategies."""
 
-from typing import Dict, NamedTuple, Literal, Optional, Tuple
+from typing import NamedTuple, Literal, Optional, Tuple
 from abc import ABC, abstractmethod
-import itapia_common.rules.names as nms
-from itapia_common.rules.score import ScoreFinalMapper
-from itapia_common.schemas.entities.rules import SemanticType 
 
-ACTION_TYPE = Literal['BUY', 'SELL', 'HOLD']
-
-class Action(NamedTuple):
-    """Represents a trading action with all its parameters."""
-    action_type: ACTION_TYPE
-    # Percentage of capital to use for this action
-    position_size_pct: float = 1.0
-    # Hold time if no other exit signal
-    duration_days: int = 365
-    
-    sl_pct: float = 1.0
-    tp_pct: float = 1.0
-    
-    def __repr__(self):
-        return f'Action(action_type={self.action_type}, position_size_pct={self.position_size_pct}, duration_days={self.duration_days}, sl_pct={self.sl_pct}, tp_pct={self.tp_pct})'
+from itapia_common.schemas.entities.action import Action, ACTION_TYPE
 
 class _BaseActionMapper(ABC):
     """Abstract base class for action mappers."""
@@ -94,7 +77,7 @@ class LinearDecisionActionMapper(_BaseActionMapper):
             action_type = 'HOLD'
             
         if action_type == 'HOLD':
-            return Action('HOLD')
+            return Action(action_type='HOLD')
             
         confidence = abs(score_final)
             
@@ -116,7 +99,7 @@ class LinearDecisionActionMapper(_BaseActionMapper):
         
         return Action(action_type=action_type,
                       position_size_pct=position_size_pct,
-                      duration_days=duration_days,
+                      duration_days=int(duration_days),
                       sl_pct=sl_pct,
                       tp_pct=tp_pct)
         

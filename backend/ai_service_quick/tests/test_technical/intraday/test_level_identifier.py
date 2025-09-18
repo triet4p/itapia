@@ -1,4 +1,4 @@
-from app.technical.analysis_engine.intraday.level_identifier import IntradayLevelIdentifier
+from app.analysis.technical.analysis_engine.intraday.level_identifier import IntradayLevelIdentifier
 
 def test_level_identifier(sample_intraday_data_for_analysis):
     analyzer = IntradayLevelIdentifier(sample_intraday_data_for_analysis)

@@ -6,6 +6,10 @@ following a factory pattern to create a singleton orchestrator instance.
 
 from typing import Optional
 
+from app.personal.preferences import PreferencesManager
+from app.personal.quantitive import QuantitivePreferencesAnalyzer
+from app.personal.scorer import WeightedSumScorer
+
 # Import all required classes for initialization
 from .orchestrator import AIServiceQuickOrchestrator
 from .analysis import AnalysisOrchestrator
@@ -21,6 +25,7 @@ from .analysis.data_prepare import DataPrepareOrchestrator
 from .analysis.explainer import AnalysisExplainerOrchestrator
 from .advisor.explainer import AdvisorExplainerOrchestrator
 from .analysis.backtest import BacktestOrchestrator
+from itapia_common.rules.action import MEDIUM_SWING_IDEAL_MAPPER
 # (BacktestOrchestrator is no longer needed in the main AI Quick flow, can be ignored)
 
 from itapia_common.dblib.session import get_rdbms_session, get_redis_connection
@@ -54,8 +59,8 @@ def create_dependencies() -> None:
         metadata_service = APIMetadataService(rdbms_session=db)
         prices_service = APIPricesService(rdbms_session=db, redis_client=redis, metadata_service=metadata_service)
         news_service = APINewsService(rdbms_session=db, metadata_service=metadata_service)
-        rule_service = RuleService(db_session=db)
-        backtest_report_service = BacktestReportService(db_session=db)
+        rule_service = RuleService(rdbms_session=db)
+        backtest_report_service = BacktestReportService(rdbms_session=db)
 
         # 2. Initialize "department head" level orchestrators
         data_prepare_orc = DataPrepareOrchestrator(metadata_service, prices_service, news_service)
@@ -66,7 +71,11 @@ def create_dependencies() -> None:
         aggeration_orc = AggregationOrchestrator()
         advisor_explainer_orc = AdvisorExplainerOrchestrator()
         rule_explainer = RuleExplainerOrchestrator()
-        personal_orc = PersonalAnalysisOrchestrator()
+        personal_orc = PersonalAnalysisOrchestrator(
+            quantitive_analyzer=QuantitivePreferencesAnalyzer(),
+            preferences_manager=PreferencesManager(),
+            scorer=WeightedSumScorer()
+        )
         backtest_orc = BacktestOrchestrator(backtest_report_service)
         
         # 3. Initialize "deputy CEO" level orchestrators
@@ -79,7 +88,8 @@ def create_dependencies() -> None:
             backtest_orchestrator=backtest_orc
             # backtest_orchestrator is no longer needed for main flow, but can be initialized here if needed
         )
-        advisor_orc = AdvisorOrchestrator(agg_orc=aggeration_orc, explainer=advisor_explainer_orc)
+        advisor_orc = AdvisorOrchestrator(agg_orc=aggeration_orc, explainer=advisor_explainer_orc,
+                                          default_action_mapper=MEDIUM_SWING_IDEAL_MAPPER)
         rule_orc = RulesOrchestrator(rule_service, explainer=rule_explainer)
         
         # 4. Initialize "CEO" and assign to global variable

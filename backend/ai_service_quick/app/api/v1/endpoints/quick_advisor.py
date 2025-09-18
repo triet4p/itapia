@@ -7,10 +7,12 @@ from app.core.exceptions import NoDataError, MissingReportError, NotReadyService
 from app.dependencies import get_ceo_orchestrator
 
 from itapia_common.schemas.api.advisor import AdvisorResponse
+from itapia_common.schemas.api.personal import QuantitivePreferencesConfigRequest
+from itapia_common.schemas.entities.personal import QuantitivePreferencesConfig
 
 router = APIRouter()
 
-@router.get("/advisor/{ticker}/full", 
+@router.post("/advisor/{ticker}/full", 
             response_model=AdvisorResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},
@@ -18,11 +20,15 @@ router = APIRouter()
                 503: {"description": "Service is not ready, still pre-warming caches"}
             }
 )
-async def get_full_advisor_report(ticker: str, 
+async def get_full_advisor_report(quantitive_config: QuantitivePreferencesConfigRequest,
+                                  ticker: str, 
+                                  limit: int = 10,
                        orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
-                       user_id: str=""):
+                       ):
     try:
-        report = await orchestrator.get_full_advisor_report(ticker=ticker, user_id=user_id)
+        report = await orchestrator.get_full_advisor_report(ticker=ticker, 
+                                                            quantitive_config=QuantitivePreferencesConfig.model_validate(quantitive_config.model_dump()),
+                                                            limit=limit)
         return AdvisorResponse.model_validate(report.model_dump())
     except NoDataError as e1:
         raise HTTPException(status_code=404, detail=e1.msg)
@@ -31,7 +37,7 @@ async def get_full_advisor_report(ticker: str,
     except NotReadyServiceError as e3:
         raise HTTPException(status_code=503, detail=e3.msg)    
     
-@router.get("/advisor/{ticker}/explain", 
+@router.post("/advisor/{ticker}/explain", 
             response_class=PlainTextResponse,
             responses={
                 404: {"description": "Ticker or its data not found"},
@@ -39,11 +45,15 @@ async def get_full_advisor_report(ticker: str,
                 503: {"description": "Service is not ready, still pre-warming caches"}
             }
 )
-async def get_full_advisor_explaination_report(ticker: str,
-                       orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator), 
-                                               user_id: str=""):
+async def get_full_advisor_explaination_report(quantitive_config: QuantitivePreferencesConfigRequest,
+                                  ticker: str, 
+                                  limit: int = 10,
+                       orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
+                       ):
     try:
-        report = await orchestrator.get_full_advisor_explaination_report(ticker=ticker, user_id=user_id)
+        report = await orchestrator.get_full_advisor_explaination_report(ticker=ticker, 
+                                                            quantitive_config=QuantitivePreferencesConfig.model_validate(quantitive_config.model_dump()),
+                                                            limit=limit)
         return report
     except NoDataError as e1:
         raise HTTPException(status_code=404, detail=e1.msg)

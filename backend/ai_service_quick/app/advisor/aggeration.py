@@ -41,34 +41,6 @@ class AggregationOrchestrator:
             raw_opportunity_score=agg_opportunity
         )
 
-    def synthesize_final_decision(
-        self, 
-        aggregated_scores: AggregatedScoreInfo, 
-        weights: Dict[SemanticType, float]
-    ) -> Dict[SemanticType, float]:
-        """Execute the final weighted synthesis logic (Meta-Rule).
-        
-        Args:
-            aggregated_scores (AggregatedScoreInfo): Scores aggregated from rules
-            weights (Dict[SemanticType, float]): Weights for each semantic type
-            
-        Returns:
-            Dict[SemanticType, float]: Dictionary mapping semantic types to final scores
-        """
-        final_decision = (aggregated_scores.raw_decision_score * weights.get(SemanticType.DECISION_SIGNAL, 1.0)) - \
-                         (aggregated_scores.raw_risk_score * weights.get(SemanticType.RISK_LEVEL, 1.0)) + \
-                         (aggregated_scores.raw_opportunity_score * weights.get(SemanticType.OPPORTUNITY_RATING, 1.0))
-        
-        # In MVP, final risk and opportunity are the aggregated raw scores
-        final_risk = aggregated_scores.raw_risk_score
-        final_opportunity = aggregated_scores.raw_opportunity_score
-        
-        return {
-            SemanticType.DECISION_SIGNAL: max(-1.0, min(1.0, final_decision)),
-            SemanticType.RISK_LEVEL: final_risk,
-            SemanticType.OPPORTUNITY_RATING: final_opportunity
-        }
-
     def map_final_scores(self, final_scores: Dict[str, float]) -> Dict[str, Tuple[str, str]]:
         """Map final scores to meaningful labels.
         

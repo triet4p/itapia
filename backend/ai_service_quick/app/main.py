@@ -8,6 +8,8 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
+from app.api.v1.endpoints import personal
+
 from . import dependencies  # <-- Import factory module
 from .api.v1.endpoints import quick_analysis, quick_advisor, rules, backtest, root
 from .core.config import AI_QUICK_V1_BASE_ROUTE
@@ -54,3 +56,4 @@ app.include_router(quick_advisor.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=["A
 app.include_router(rules.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=["AI Rules"])
 app.include_router(backtest.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=["Backtest Generation"])
 app.include_router(root.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=['Root'])
+app.include_router(personal.router, prefix=AI_QUICK_V1_BASE_ROUTE, tags=['Personalization'])

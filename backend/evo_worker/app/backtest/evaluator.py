@@ -14,15 +14,16 @@ from app.core.config import PARALLEL_MULTICONTEXT_LIMIT
 
 # Import the components that have been built
 from .context import BacktestContext
-from .action import _BaseActionMapper, Action
+from itapia_common.rules.action import _BaseActionMapper
+from itapia_common.schemas.entities.action import Action
 from .simulator import BacktestSimulator
-from .metrics import PerformanceMetrics
+from app.performances.metrics import PerformanceMetricsCalculator
 from .trade import Trade
 
 # Import components from shared library
 from itapia_common.rules.rule import Rule
 from itapia_common.logger import ITAPIALogger
-from itapia_common.schemas.entities.backtest import BacktestPerformanceMetrics
+from itapia_common.schemas.entities.performance import PerformanceMetrics
 
 logger = ITAPIALogger('Fitness Evaluator (Multi-Objective)')
 
@@ -63,14 +64,14 @@ class Evaluator(ABC):
         return self
 
     @abstractmethod
-    def evaluate(self, rule: Rule) -> BacktestPerformanceMetrics:
+    def evaluate(self, rule: Rule) -> PerformanceMetrics:
         """Abstract method to evaluate a rule.
         
         Args:
             rule (Rule): Rule to evaluate
             
         Returns:
-            BacktestPerformanceMetrics: Performance metrics for the rule
+            PerformanceMetrics: Performance metrics for the rule
         """
         pass
 
@@ -130,7 +131,7 @@ class SingleContextEvaluator(Evaluator):
                 
         return actions_dict
         
-    def _evaluate_each_scenario(self, rule: Rule, scenario: EvaluateScenario) -> BacktestPerformanceMetrics:
+    def _evaluate_each_scenario(self, rule: Rule, scenario: EvaluateScenario) -> PerformanceMetrics:
         """Evaluate a rule for a specific scenario.
         
         Args:
@@ -138,7 +139,7 @@ class SingleContextEvaluator(Evaluator):
             scenario (EvaluateScenario): Scenario to evaluate with
             
         Returns:
-            BacktestPerformanceMetrics: Performance metrics for the scenario
+            PerformanceMetrics: Performance metrics for the scenario
         """
         logger.debug(f"Evaluating rule '{rule.name}' for ticker '{self.context.ticker}' with scenario {str(scenario.action_mapper)}...")
         actions_dict = self._generate_actions(rule, scenario.action_mapper)
@@ -147,7 +148,7 @@ class SingleContextEvaluator(Evaluator):
         trade_log = simulator.run()
 
         # Step 3: Analyze results from trade log.
-        metrics_calculator = PerformanceMetrics(trade_log)
+        metrics_calculator = PerformanceMetricsCalculator(trade_log)
         performance_metrics = metrics_calculator.summary()
         
         logger.debug(f"Rule '{rule.name}' evaluation complete")
@@ -155,7 +156,7 @@ class SingleContextEvaluator(Evaluator):
         return performance_metrics
     
     def _aggerate_obj_from_scenarios(self, 
-                                     scenario_results: Dict[EvaluateScenario, BacktestPerformanceMetrics]) -> BacktestPerformanceMetrics:
+                                     scenario_results: Dict[EvaluateScenario, PerformanceMetrics]) -> PerformanceMetrics:
         """Aggregate objectives from multiple scenarios.
         
         Args:
@@ -164,7 +165,7 @@ class SingleContextEvaluator(Evaluator):
         Returns:
             BacktestPerformanceMetrics: Aggregated performance metrics
         """
-        final_metrics_dict = BacktestPerformanceMetrics().model_dump()
+        final_metrics_dict = PerformanceMetrics().model_dump()
         total_weight = sum(scenario.weight for scenario in scenario_results.keys())
         
         for scenario, res in scenario_results.items():
@@ -173,7 +174,7 @@ class SingleContextEvaluator(Evaluator):
             for attr in final_metrics_dict.keys():
                 final_metrics_dict[attr] += res_dict[attr] * scenario.weight / total_weight
                 
-        return BacktestPerformanceMetrics(
+        return PerformanceMetrics(
             num_trades=int(final_metrics_dict['num_trades']),
             total_return_pct=final_metrics_dict['total_return_pct'],
             max_drawdown_pct=final_metrics_dict['max_drawdown_pct'],
@@ -186,14 +187,14 @@ class SingleContextEvaluator(Evaluator):
         )
             
 
-    def evaluate(self, rule: Rule) -> BacktestPerformanceMetrics:
+    def evaluate(self, rule: Rule) -> PerformanceMetrics:
         """Main function: Execute end-to-end evaluation process for a Rule.
         
         Args:
             rule (Rule): Rule object to evaluate.
             
         Returns:
-            BacktestPerformanceMetrisc: An object containing all detailed performance metrics (for storage).
+            PerformanceMetrics: An object containing all detailed performance metrics (for storage).
                 
         Raises:
             ValueError: If no evaluation scenarios are provided
@@ -201,7 +202,7 @@ class SingleContextEvaluator(Evaluator):
         if not self.evaluate_scenarios:
             raise ValueError("Requires at least 1 scenarios")
         
-        scenario_results: Dict[EvaluateScenario, BacktestPerformanceMetrics] = {}
+        scenario_results: Dict[EvaluateScenario, PerformanceMetrics] = {}
         for scenario in self.evaluate_scenarios:
             scenario_results[scenario] = self._evaluate_each_scenario(rule, scenario)
         
@@ -229,7 +230,7 @@ class MultiContextEvaluator(Evaluator):
         self.semaphore = asyncio.Semaphore(PARALLEL_MULTICONTEXT_LIMIT)
         self.aggregation_method = aggregation_method
         
-    def _evaluate_single_context_sync(self, context: BacktestContext, rule: Rule) -> BacktestPerformanceMetrics:
+    def _evaluate_single_context_sync(self, context: BacktestContext, rule: Rule) -> PerformanceMetrics:
         """Synchronous function to execute evaluation on a single context.
         
         This function will run in a separate thread by asyncio.to_thread.
@@ -239,7 +240,7 @@ class MultiContextEvaluator(Evaluator):
             rule (Rule): Rule to evaluate
             
         Returns:
-            BacktestPerformanceMetrics: Performance metrics for the context
+            PerformanceMetrics: Performance metrics for the context
         """
         try:
             # 2. Initialize evaluator and run evaluation
@@ -248,10 +249,10 @@ class MultiContextEvaluator(Evaluator):
         except Exception as e:
             logger.warn(f"Evaluation failed for rule '{rule.name}' on ticker '{context.ticker}': {e}")
             # Return worst-case result if there's an error
-            worst_metrics = BacktestPerformanceMetrics()
+            worst_metrics = PerformanceMetrics()
             return worst_metrics
 
-    async def _evaluate_with_semaphore(self, context: BacktestContext, rule: Rule) -> BacktestPerformanceMetrics:
+    async def _evaluate_with_semaphore(self, context: BacktestContext, rule: Rule) -> PerformanceMetrics:
         """Asynchronous worker function controlled by semaphore.
         
         Args:
@@ -259,14 +260,14 @@ class MultiContextEvaluator(Evaluator):
             rule (Rule): Rule to evaluate
             
         Returns:
-            BacktestPerformanceMetrics: Performance metrics for the context
+            PerformanceMetrics: Performance metrics for the context
         """
         async with self.semaphore:
             # Wait for an available "slot".
             # After getting a slot, run the CPU-bound task in a separate thread.
             return await asyncio.to_thread(self._evaluate_single_context_sync, context, rule)
 
-    async def evaluate_async(self, rule: Rule) -> BacktestPerformanceMetrics:
+    async def evaluate_async(self, rule: Rule) -> PerformanceMetrics:
         """(Asynchronous) Execute evaluation of a Rule on all contexts in parallel
         and return an aggregated target vector.
         
@@ -274,14 +275,14 @@ class MultiContextEvaluator(Evaluator):
             rule (Rule): Rule to evaluate
             
         Returns:
-            BacktestPerformanceMetrics: Aggregated performance metrics
+            PerformanceMetrics: Aggregated performance metrics
             
         Raises:
             Exception: If all evaluations fail
         """
         if not self.contexts:
             logger.warn("No contexts to evaluate. Returning worst-case fitness.")
-            worst_metrics = BacktestPerformanceMetrics()
+            worst_metrics = PerformanceMetrics()
             return worst_metrics
 
         logger.debug(f"Evaluating rule '{rule.name}' on {len(self.contexts)} tickers with concurrency limit {PARALLEL_MULTICONTEXT_LIMIT}...")
@@ -291,11 +292,11 @@ class MultiContextEvaluator(Evaluator):
             for context in self.contexts
         ]
         
-        results: List[BacktestPerformanceMetrics] = await asyncio.gather(*tasks)
+        results: List[PerformanceMetrics] = await asyncio.gather(*tasks)
         
         if not results:
             logger.warn(f"All evaluations failed for rule '{rule.name}'. Returning worst-case fitness.")
-            worst_metrics = BacktestPerformanceMetrics()
+            worst_metrics = PerformanceMetrics()
             return worst_metrics
 
         metrics_df = pd.DataFrame([m.model_dump() for m in results])
@@ -306,7 +307,7 @@ class MultiContextEvaluator(Evaluator):
         else:
             metrics_series = metrics_df.apply(lambda col: trim_mean(col, proportiontocut=0.1))
         metric_dict = metrics_series.to_dict()
-        aggregated_metrics = BacktestPerformanceMetrics(
+        aggregated_metrics = PerformanceMetrics(
             num_trades=int(metric_dict['num_trades']),
             total_return_pct=metric_dict['total_return_pct'],
             max_drawdown_pct=metric_dict['max_drawdown_pct'],
@@ -323,7 +324,7 @@ class MultiContextEvaluator(Evaluator):
         return aggregated_metrics
     
     # --- REQUIREMENT 2: SYNCHRONOUS WRAPPER ---
-    def evaluate(self, rule: Rule) -> BacktestPerformanceMetrics:
+    def evaluate(self, rule: Rule) -> PerformanceMetrics:
         """(Synchronous) This is a wrapper function to call from a synchronous environment 
         (e.g., genetic algorithm loop).
         
@@ -333,7 +334,7 @@ class MultiContextEvaluator(Evaluator):
             rule (Rule): Rule to evaluate
             
         Returns:
-            BacktestPerformanceMetrics: Aggregated performance metrics
+            PerformanceMetrics: Aggregated performance metrics
             
         Raises:
             RuntimeError: If called from within a running asyncio event loop

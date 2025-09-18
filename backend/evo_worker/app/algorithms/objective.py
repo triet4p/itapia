@@ -3,9 +3,10 @@ import math
 from typing import Optional, Tuple, Union
 
 import numpy as np
-from itapia_common.schemas.entities.backtest import BacktestPerformanceMetrics
+from itapia_common.schemas.entities.performance import PerformanceMetrics
 
 AcceptedObjective = Union[float, Tuple[float, ...]]
+AcceptedObjectiveName = Union[str, Tuple[str, ...]]
 
 def clip(value: float, lb: float = -float('inf'), ub: float = float("inf")):
     """Clip a value to stay within specified bounds.
@@ -29,8 +30,11 @@ def clip(value: float, lb: float = -float('inf'), ub: float = float("inf")):
 class ObjectiveExtractor(ABC):
     """Abstract base class for extracting objective values from backtest metrics."""
     
+    DEFAULT: AcceptedObjective = None
+    OBJ_NAMES: AcceptedObjectiveName = None
+    
     @abstractmethod
-    def extract(self, metrics: BacktestPerformanceMetrics) -> AcceptedObjective:
+    def extract(self, metrics: PerformanceMetrics) -> AcceptedObjective:
         """Extract objective values from backtest metrics.
         
         Args:
@@ -41,21 +45,14 @@ class ObjectiveExtractor(ABC):
         """
         pass
     
-    @property
-    @abstractmethod
-    def default(self) -> AcceptedObjective:
-        """Get the default objective values.
-        
-        Returns:
-            AcceptedObjective: Default objective values
-        """
-        pass
-    
 class MultiObjectiveExtractor(ObjectiveExtractor):
     """Abstract base class for extracting multiple objective values."""
+    DEFAULT: Tuple[float, ...] = ()
+    OBJ_NAMES: Tuple[str, ...] = ()
+    NUM_OBJS: int = 0
     
     @abstractmethod
-    def extract(self, metrics: BacktestPerformanceMetrics) -> Tuple[float, ...]:
+    def extract(self, metrics: PerformanceMetrics) -> Tuple[float, ...]:
         """Extract multiple objective values from backtest metrics.
         
         Args:
@@ -66,21 +63,13 @@ class MultiObjectiveExtractor(ObjectiveExtractor):
         """
         pass
     
-    @property
-    @abstractmethod
-    def default(self) -> Tuple[float, ...]:
-        """Get the default objective values.
-        
-        Returns:
-            Tuple[float, ...]: Default objective values as a tuple
-        """
-        pass
-    
 class SingleObjectiveExtractor(ObjectiveExtractor):
     """Abstract base class for extracting a single objective value."""
+    DEFAULT: float = 0.0
+    OBJ_NAMES: str = 'obj'
     
     @abstractmethod
-    def extract(self, metrics: BacktestPerformanceMetrics) -> float:
+    def extract(self, metrics: PerformanceMetrics) -> float:
         """Extract a single objective value from backtest metrics.
         
         Args:
@@ -90,15 +79,6 @@ class SingleObjectiveExtractor(ObjectiveExtractor):
             float: Extracted objective value
         """
         pass
-    
-    @property
-    def default(self) -> float:
-        """Get the default objective value.
-        
-        Returns:
-            float: Default objective value (0.0)
-        """
-        return 0.0
     
 class CSRSPObjectiveExtractor(MultiObjectiveExtractor):
     """Multi-objective extractor for CAGR, Sortino Ratio, Resilience, Stability, and Profit Factor.
@@ -111,17 +91,12 @@ class CSRSPObjectiveExtractor(MultiObjectiveExtractor):
     S: Stability
     P: Profit factor
     """
-        
-    @property
-    def default(self) -> Tuple[float, float, float, float, float]:
-        """Get the default objective values.
-        
-        Returns:
-            Tuple[float, float, float, float, float]: Default objective values (all 0.0)
-        """
-        return tuple([0.0] * 5)
     
-    def extract(self, metrics: BacktestPerformanceMetrics) -> Tuple[float, float, float, float, float]:
+    DEFAULT: Tuple[float, float, float, float, float] = ([0.0] * 5)
+    NUM_OBJS: int = 5
+    OBJ_NAMES: Tuple[str, str, str, str, str] = ('cagr', 'sortino_ratio', 'resilience', 'stability', 'profit_factor')
+    
+    def extract(self, metrics: PerformanceMetrics) -> Tuple[float, float, float, float, float]:
         """Extract CSRSP objectives from backtest metrics.
         
         Args:
@@ -133,7 +108,7 @@ class CSRSPObjectiveExtractor(MultiObjectiveExtractor):
         # Base case: Rule produces no trades
         # Return the worst possible result for all objectives
         if metrics.num_trades == 0:
-            return self.default
+            return self.DEFAULT
             
         obj_cagr = clip(metrics.cagr, lb=-1.0)
         obj_sortino_ratio = clip(metrics.sortino_ratio, lb=0.0, ub=15.0)
@@ -159,7 +134,7 @@ class CSRSPObjectiveExtractor(MultiObjectiveExtractor):
         # Ensure all values are finite numbers
         if not all(np.isfinite(obj) for obj in objectives):
             # If there's an error (e.g., profit_factor is inf), return the worst tuple
-            return self.default
+            return self.DEFAULT
             
         return objectives
     
@@ -168,13 +143,14 @@ class CSPSPWeightedAggObjectiveExtractor(SingleObjectiveExtractor):
     
     def __init__(self, weights: Tuple[float, float, float, float, float]):
         """Initialize the weighted aggregator.
+        You can see `CSRSPObjectiveExtractor.OBJ_NAMES` to ensure weight order.
         
         Args:
             weights (Tuple[float, float, float, float, float]): Weights in order (CAGR, Sortino, Resilience, Stability, Profit Factor)
         """
         self.weights = weights
         
-    def extract(self, metrics: BacktestPerformanceMetrics) -> float:
+    def extract(self, metrics: PerformanceMetrics) -> float:
         """Extract and aggregate objective values from backtest metrics.
         
         Args:
@@ -183,7 +159,9 @@ class CSPSPWeightedAggObjectiveExtractor(SingleObjectiveExtractor):
         Returns:
             float: Weighted aggregate of all objective values
         """
-        objectives: float = 0.0
+        if metrics.num_trades == 0:
+            return self.DEFAULT
+        objectives: float = self.DEFAULT
         total_weights: float = 0.0
         weights = self.weights
         total_weights = sum(weights)

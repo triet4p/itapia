@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
+from .action import Action
 
 class TriggeredRuleInfo(BaseModel):
     """
@@ -20,9 +21,9 @@ class AggregatedScoreInfo(BaseModel):
     """
     Thông tin về các điểm số đã được tổng hợp từ các bộ quy tắc.
     """
-    raw_decision_score: float = Field(..., description="Điểm số quyết định thô (trước khi có MetaRule).")
-    raw_risk_score: float = Field(..., description="Điểm số rủi ro thô (trước khi có MetaRule).")
-    raw_opportunity_score: float = Field(..., description="Điểm số cơ hội thô (trước khi có MetaRule).")
+    raw_decision_score: float = Field(..., description="Điểm số quyết định thô, -1 là sell immediate, 1 là very strong buy, từ -1 tới 1")
+    raw_risk_score: float = Field(..., description="Điểm số rủi ro thô, 0 là ko rủi ro, 1 là rủi ro rất cao, từ 0 tới 1.")
+    raw_opportunity_score: float = Field(..., description="Điểm số cơ hội thô 0 là ko có cơ hội, 1 là cơ hội rất cao, từ 0 tới 1.")
     
     class Config:
         from_attributes = True
@@ -54,6 +55,8 @@ class AdvisorReportSchema(BaseModel):
     final_decision: FinalRecommendation = Field(..., description="Khuyến nghị Quyết định cuối cùng.")
     final_risk: FinalRecommendation = Field(..., description="Đánh giá Rủi ro cuối cùng.")
     final_opportunity: FinalRecommendation = Field(..., description="Đánh giá Cơ hội cuối cùng.")
+    
+    final_action: Action = Field(..., description="Action được mapper cuối cùng")
     
     # --- Phần Bằng chứng và Diễn giải (Cho việc debug và XAI) ---
     aggregated_scores: AggregatedScoreInfo = Field(..., description="Các điểm số tổng hợp trước khi qua MetaRule.")

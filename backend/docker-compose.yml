@@ -143,3 +143,4 @@ volumes:
 networks:
   itapia-network:
     driver: bridge
+    name: itapia-network

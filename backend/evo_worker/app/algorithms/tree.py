@@ -9,7 +9,6 @@ from itapia_common.rules.nodes.registry import create_node, get_spec_ent
 from itapia_common.schemas.entities.rules import SemanticType
 import app.core.config as cfg
 
-_random = random.Random(cfg.RANDOM_SEED)
 
 def get_all_nodes(root: _TreeNode) -> List[_TreeNode]:
     """Traverse tree in pre-order and return a flat list containing all nodes in the tree.

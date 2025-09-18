@@ -11,6 +11,7 @@ from hashlib import sha1
 # In practice, you would import them correctly
 from .nodes import OperatorNode, _TreeNode
 from itapia_common.schemas.entities.rules import RuleEntity, SemanticType, RuleStatus
+from itapia_common.schemas.entities.performance import PerformanceMetrics
 from .parser import parse_tree, serialize_tree
 
 # Assuming the existence of the report schema
@@ -31,7 +32,8 @@ class Rule:
                  description: str = "",
                  rule_status: RuleStatus = RuleStatus.READY,
                  created_at: datetime | None = None,
-                 updated_at: datetime | None = None):
+                 updated_at: datetime | None = None,
+                 metrics: PerformanceMetrics | None = None):
         """Initialize a Rule object.
 
         Args:
@@ -42,6 +44,7 @@ class Rule:
             status (RuleStatus, optional): Status of Rule
             created_at (datetime, optional): Creation time.
             updated_at (datetime, optional): Last update time.
+            metrics (PerformanceMetrics, optional): Performance metrics in backtest data of a rules, if existed.
             
         Raises:
             TypeError: If root is not an OperatorNode instance.
@@ -57,6 +60,8 @@ class Rule:
         # Always use timezone-aware datetimes
         self.created_at = created_at or datetime.now(timezone.utc)
         self.updated_at = updated_at or datetime.now(timezone.utc)
+        
+        self.metrics = metrics
         
     @property
     def purpose(self) -> SemanticType:
@@ -103,7 +108,8 @@ class Rule:
             rule_status=self.rule_status,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            root=serialize_tree(self.root)
+            root=serialize_tree(self.root),
+            metrics=self.metrics
         )
 
     @classmethod
@@ -153,7 +159,8 @@ class Rule:
             created_at=data.created_at,
             updated_at=data.updated_at,
             # Pass the reconstructed logic tree
-            root=root_node
+            root=root_node,
+            metrics=data.metrics
         )
         
     def copy(self):

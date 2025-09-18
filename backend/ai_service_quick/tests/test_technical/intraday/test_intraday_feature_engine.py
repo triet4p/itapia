@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from app.technical.feature_engine import IntradayFeatureEngine
+from app.analysis.technical.feature_engine import IntradayFeatureEngine
 
 @pytest.fixture(scope="module")
 def sample_intraday_data() -> pd.DataFrame:

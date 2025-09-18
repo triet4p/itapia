@@ -1,6 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Literal, Optional
+from .performance import PerformanceMetrics
 
 from enum import Enum
 
@@ -98,6 +99,8 @@ class RuleEntity(BaseModel):
     
     # Định nghĩa quy tắc được giữ dưới dạng dictionary
     root: NodeEntity
+    
+    metrics: Optional[PerformanceMetrics] = Field(default=None)
     
     class Config:
         from_attributes = True

@@ -4,15 +4,20 @@ import httpx
 from app.core.config import AI_SERVICE_QUICK_BASE_URL
 
 from itapia_common.schemas.api.advisor import AdvisorResponse
+from itapia_common.schemas.api.personal import QuantitivePreferencesConfigRequest
 
 ai_quick_advisor_client = httpx.AsyncClient(base_url=AI_SERVICE_QUICK_BASE_URL, timeout=30.0)
 
-async def get_full_quick_advisor(ticker: str, user_id: str) -> AdvisorResponse:
+async def get_full_quick_advisor(quantitive_config: QuantitivePreferencesConfigRequest,
+                                  ticker: str, 
+                                  limit: int = 10) -> AdvisorResponse:
     try:
         print(f'Get for url {ai_quick_advisor_client.base_url}/advisor/{ticker}/full')
-        response = await ai_quick_advisor_client.get(f"/advisor/{ticker}/full", params={
-            'user_id': user_id
-        })
+        params = {'limit': limit}
+        body = quantitive_config.model_dump()
+        response = await ai_quick_advisor_client.post(f"/advisor/{ticker}/full", 
+                                                      params=params,
+                                                      json=body)
         response.raise_for_status()
         return AdvisorResponse.model_validate(response.json())
     except httpx.HTTPStatusError as e:
@@ -22,12 +27,17 @@ async def get_full_quick_advisor(ticker: str, user_id: str) -> AdvisorResponse:
         # Xử lý lỗi kết nối
         raise HTTPException(status_code=503, detail=f"AI Service is unavailable: {type(e).__name__}")
     
-async def get_full_quick_advisor_explain(ticker: str, user_id: str) -> str:
+async def get_full_quick_advisor_explain(quantitive_config: QuantitivePreferencesConfigRequest,
+                                  ticker: str, 
+                                  limit: int = 10) -> str:
     try:
+        print(f'Get for url {ai_quick_advisor_client.base_url}/advisor/{ticker}/full')
+        params = {'limit': limit}
+        body = quantitive_config.model_dump()
         print(f'Get for url {ai_quick_advisor_client.base_url}/advisor/{ticker}/explain')
-        response = await ai_quick_advisor_client.get(f"/advisor/{ticker}/explain", params={
-            'user_id': user_id
-        })
+        response = await ai_quick_advisor_client.post(f"/advisor/{ticker}/explain",
+                                                      params=params,
+                                                      json=body)
         response.raise_for_status()
         return response.text
     except httpx.HTTPStatusError as e:

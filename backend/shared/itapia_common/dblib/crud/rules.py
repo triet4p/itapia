@@ -23,16 +23,18 @@ class RuleCRUD:
         
         # Convert the entire dict to a JSON string for storage in the jsonb column
         root_str = json.dumps(rule_data.get('root'))
+        metrics = json.dumps(rule_data.get('metrics'))
         
         stmt = text("""
-            INSERT INTO public.rules (rule_id, name, description, purpose, rule_status, created_at, root)
-            VALUES (:rule_id, :name, :description, :purpose, :rule_status, :created_at, :root)
+            INSERT INTO public.rules (rule_id, name, description, purpose, rule_status, created_at, root, metrics)
+            VALUES (:rule_id, :name, :description, :purpose, :rule_status, :created_at, :root, :metrics)
             ON CONFLICT (rule_id) DO UPDATE SET
                 name = EXCLUDED.name,
                 description = EXCLUDED.description,
                 purpose = EXCLUDED.purpose,
                 rule_status = EXCLUDED.rule_status,
                 root = EXCLUDED.root,
+                metrics = EXCLUDED.metrics,
                 updated_at = NOW()
             RETURNING rule_id;
         """)
@@ -44,13 +46,14 @@ class RuleCRUD:
             "purpose": purpose,
             "rule_status": rule_status,
             "created_at": created_at, 
-            "root": root_str
+            "root": root_str,
+            "metrics": metrics
         })
         self.db.commit()
         return rule_id
 
     def get_rule_by_id(self, rule_id: str) -> Optional[RowMapping]:
-        stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root 
+        stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root, metrics
                     FROM public.rules WHERE rule_id = :rule_id;""")
         result = self.db.execute(stmt, {"rule_id": rule_id})
         
@@ -62,7 +65,7 @@ class RuleCRUD:
 
     def get_rules_by_purpose(self, purpose_name: str, rule_status: str) -> Sequence[RowMapping]:
         # Postgres JSONB query: `->>` extracts field as text
-        stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root 
+        stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root, metrics
                     FROM public.rules WHERE rule_status = :rule_status AND purpose = :purpose;""")
         
         results = self.db.execute(stmt, {"purpose": purpose_name, "rule_status": rule_status})
@@ -72,7 +75,7 @@ class RuleCRUD:
     
     def get_all_rules(self, rule_status: str) -> Sequence[RowMapping]:
         # Postgres JSONB query: `->>` extracts field as text
-        stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root 
+        stmt = text("""SELECT rule_id, name, description, purpose, rule_status, created_at, updated_at, root, metrics 
                     FROM public.rules WHERE rule_status = :rule_status;""")
         
         results = self.db.execute(stmt, {'rule_status': rule_status})

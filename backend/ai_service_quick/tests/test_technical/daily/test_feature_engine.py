@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 # Import lớp cần test
-from app.technical.feature_engine import DailyFeatureEngine
+from app.analysis.technical.feature_engine import DailyFeatureEngine
 
 # --- Dữ liệu giả lập (Fixture) để tái sử dụng ---
 @pytest.fixture(scope="module")

@@ -7,7 +7,7 @@ from app.core.exceptions import NoDataError
 
 from itapia_common.rules.rule import Rule
 from itapia_common.rules.nodes.registry import get_nodes_by_type
-from itapia_common.schemas.entities.rules import ExplainationRuleEntity, RuleStatus, SemanticType, NodeType
+from itapia_common.schemas.entities.rules import ExplainationRuleEntity, RuleEntity, RuleStatus, SemanticType, NodeType
 from itapia_common.dblib.services.rules import RuleService
 from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from itapia_common.schemas.entities.advisor import TriggeredRuleInfo
@@ -33,7 +33,7 @@ class RulesOrchestrator:
         self, 
         report: QuickCheckAnalysisReport, 
         purpose: SemanticType,
-        rule_selector: Callable[[List[Rule]], List[Rule]]
+        rule_entities: List[RuleEntity]
     ) -> Tuple[List[float], List[TriggeredRuleInfo]]:
         """Retrieve, filter, and execute common rules for a specific purpose.
         
@@ -46,11 +46,11 @@ class RulesOrchestrator:
             Tuple[List[float], List[TriggeredRuleInfo]]: Tuple of scores and triggered rules
         """
         # Retrieve all active rules from DB
-        all_rules_schemas = self.rule_service.get_rules_by_purpose(purpose, RuleStatus.READY)
+        all_rules_schemas = rule_entities
         all_rules = [Rule.from_entity(rs) for rs in all_rules_schemas]
         
         # Apply selection logic (can be personalized)
-        selected_rules = rule_selector(all_rules)
+        selected_rules = all_rules
         
         scores: List[float] = []
         triggered_rules: List[TriggeredRuleInfo] = []
@@ -127,7 +127,7 @@ class RulesOrchestrator:
         return scores, triggered_rules
         
     
-    def get_single_rule(self, rule_id: str) -> Rule:
+    def get_single_rule(self, rule_id: str) -> RuleEntity:
         """Retrieve a single rule by its ID.
         
         Args:
@@ -142,7 +142,7 @@ class RulesOrchestrator:
         rule_entity = self.rule_service.get_rule_by_id(rule_id)
         if rule_entity is None:
             raise ValueError(f'Not found rule with id {rule_id}')
-        return Rule.from_entity(rule_entity)
+        return rule_entity
     
     async def get_explaination_for_single_rule(self, rule_id: str) -> ExplainationRuleEntity:
         """Get explanation for a single rule by its ID.
@@ -161,12 +161,12 @@ class RulesOrchestrator:
             # Assume get_single_rule is a coroutine
             rule = self.get_single_rule(rule_id)
             
-            explanation = self.explainer.explain_rule(rule)
+            explanation = self.explainer.explain_rule(Rule.from_entity(rule))
             
             # Use model_dump() instead of **rule.to_dict() for safer Pydantic handling
             entity = ExplainationRuleEntity(
                 explain=explanation,
-                **rule.to_entity().model_dump()
+                **rule.model_dump()
             )
             return entity
         except ValueError as e:
@@ -185,7 +185,7 @@ class RulesOrchestrator:
         """
         return get_nodes_by_type(node_type, purpose)
     
-    async def get_ready_rules(self, purpose: SemanticType) -> List:
+    async def get_ready_rules(self, purpose: SemanticType) -> List[RuleEntity]:
         """Get all ready rules for a specific purpose.
         
         Args:

@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 
 # Import lớp cần test
-from app.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
+from app.analysis.technical.analysis_engine.daily.trend_analyzer import DailyTrendAnalyzer
 
 # --- Các bài test cho TrendAnalyzer ---
 

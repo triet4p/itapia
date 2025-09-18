@@ -1,5 +1,5 @@
 import pandas as pd
-from app.technical.analysis_engine.intraday.status_analyzer import IntradayStatusAnalyzer
+from app.analysis.technical.analysis_engine.intraday.status_analyzer import IntradayStatusAnalyzer
 
 def test_status_analyzer(sample_intraday_data_for_analysis):
     analyzer = IntradayStatusAnalyzer(sample_intraday_data_for_analysis)

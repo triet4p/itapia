@@ -1,7 +1,8 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Literal
+from typing import Dict, Any, Literal, Optional
 from itapia_common.schemas.entities.rules import NodeEntity, NodeSpecEntity, SemanticType, NodeType, RuleStatus
+from itapia_common.schemas.entities.performance import PerformanceMetrics
 
 class NodeResponse(NodeSpecEntity):
     pass
@@ -24,6 +25,7 @@ class RuleResponse(BaseModel):
     rule_status: RuleStatus
     created_at_ts: int
     root: NodeEntity
+    metrics: Optional[PerformanceMetrics] = Field(default=None)
 
     class Config:
         from_attributes = True

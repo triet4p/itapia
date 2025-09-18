@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 
 # Import lớp cần test
-from app.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
+from app.analysis.technical.analysis_engine.daily.sr_identifier import DailySRIdentifier
 
 # --- Dữ liệu giả lập (Fixture) ---
 @pytest.fixture(scope="module")

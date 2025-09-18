@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timezone, timedelta
 
-from app.backtest.metrics import PerformanceMetrics
+from app.performances.metrics import PerformanceMetricsCalculator
 from app.backtest.trade import Trade
 
 def create_mock_trades():
@@ -59,14 +59,14 @@ def create_mock_trades():
 def test_performance_metrics_initialization():
     """Test that PerformanceMetrics initializes correctly."""
     # Test with empty trade log
-    metrics_empty = PerformanceMetrics([])
+    metrics_empty = PerformanceMetricsCalculator([])
     assert metrics_empty.trade_log == []
     assert metrics_empty.trades_df.empty
     assert metrics_empty.initial_capital == 100000.0
 
     # Test with trades
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     assert len(metrics.trade_log) == 4
     assert len(metrics.trades_df) == 4
     assert metrics.initial_capital == 100000.0
@@ -74,7 +74,7 @@ def test_performance_metrics_initialization():
 def test_create_trades_dataframe():
     """Test the _create_trades_dataframe method."""
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     df = metrics._create_trades_dataframe()
     assert len(df) == 4
@@ -92,7 +92,7 @@ def test_create_trades_dataframe():
 def test_calculate_equity_curve():
     """Test the calculate_equity_curve method."""
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     equity_curve = metrics.calculate_equity_curve()
     assert len(equity_curve) == 5  # Initial capital + 4 trades
@@ -101,7 +101,7 @@ def test_calculate_equity_curve():
 def test_calculate_total_return():
     """Test the calculate_total_return method."""
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     total_return = metrics.calculate_total_return()
     # The calculation uses compounding returns:
@@ -142,7 +142,7 @@ def test_calculate_max_drawdown():
             position_size_pct=1.0
         )
     ]
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     max_dd = metrics.calculate_max_drawdown()
     # With a 50% loss followed by a 50% gain, max drawdown should be 50%
     assert abs(max_dd - 0.5) < 0.01
@@ -150,7 +150,7 @@ def test_calculate_max_drawdown():
 def test_calculate_win_rate():
     """Test the calculate_win_rate method."""
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     win_rate = metrics.calculate_win_rate()
     # 2 winning trades out of 4 total trades = 50%
@@ -159,7 +159,7 @@ def test_calculate_win_rate():
 def test_calculate_profit_factor():
     """Test the calculate_profit_factor method."""
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     profit_factor = metrics.calculate_profit_factor()
     # Gross profit: 10% + 10% = 20%
@@ -171,7 +171,7 @@ def test_calculate_profit_factor():
 def test_calculate_sharpe_ratio():
     """Test the calculate_sharpe_ratio method."""
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     sharpe = metrics.calculate_sharpe_ratio()
     # Should be a valid number (not NaN or infinity)
@@ -182,7 +182,7 @@ def test_calculate_sharpe_ratio():
 def test_calculate_sortino_ratio():
     """Test the calculate_sortino_ratio method."""
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     sortino = metrics.calculate_sortino_ratio()
     # Should be a valid number (not NaN or infinity)
@@ -193,7 +193,7 @@ def test_calculate_sortino_ratio():
 def test_calculate_annual_return_stability():
     """Test the calculate_annual_return_stability method."""
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     stability = metrics.calculate_annual_return_stability()
     # Should be a valid number
@@ -204,7 +204,7 @@ def test_calculate_annual_return_stability():
 def test_summary():
     """Test the summary method."""
     trades = create_mock_trades()
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     summary = metrics.summary()
     
@@ -220,7 +220,7 @@ def test_summary():
 
 def test_empty_trades():
     """Test all methods with empty trade log."""
-    metrics = PerformanceMetrics([])
+    metrics = PerformanceMetricsCalculator([])
     
     # All methods should return appropriate default values for empty trade log
     assert metrics.calculate_total_return() == 0.0
@@ -255,7 +255,7 @@ def test_single_trade():
             position_size_pct=1.0
         )
     ]
-    metrics = PerformanceMetrics(trades)
+    metrics = PerformanceMetricsCalculator(trades)
     
     # Test that methods handle single trade correctly
     assert metrics.calculate_total_return() == pytest.approx(0.1, abs=1e-10)  # 10% gain
@@ -280,7 +280,7 @@ def test_profit_factor_edge_cases():
             position_size_pct=1.0
         )
     ]
-    metrics = PerformanceMetrics(losing_trades)
+    metrics = PerformanceMetricsCalculator(losing_trades)
     profit_factor = metrics.calculate_profit_factor()
     # No profits, only losses -> profit factor = 0
     assert profit_factor == 0.0
@@ -298,7 +298,7 @@ def test_profit_factor_edge_cases():
             position_size_pct=1.0
         )
     ]
-    metrics = PerformanceMetrics(breakeven_trades)
+    metrics = PerformanceMetricsCalculator(breakeven_trades)
     profit_factor = metrics.calculate_profit_factor()
     # No profits, no losses -> profit factor = 1 (break even)
     assert profit_factor == 1.0
@@ -327,7 +327,7 @@ def test_only_winning_trades():
             position_size_pct=1.0
         )
     ]
-    metrics = PerformanceMetrics(winning_trades)
+    metrics = PerformanceMetricsCalculator(winning_trades)
     
     # Win rate should be 100%
     assert metrics.calculate_win_rate() == 1.0
@@ -368,7 +368,7 @@ def test_sortino_ratio_edge_cases():
             position_size_pct=1.0
         )
     ]
-    metrics = PerformanceMetrics(winning_trades)
+    metrics = PerformanceMetricsCalculator(winning_trades)
     sortino = metrics.calculate_sortino_ratio()
     # With only positive returns, downside deviation should be 0, 
     # which would normally cause a division by zero, but the function handles this
@@ -401,7 +401,7 @@ def test_stability_short_duration():
             position_size_pct=1.0
         )
     ]
-    metrics = PerformanceMetrics(short_trades)
+    metrics = PerformanceMetricsCalculator(short_trades)
     stability = metrics.calculate_annual_return_stability()
     # Since the trades occur within less than a year, should return penalty value of 1.0
     assert stability == pytest.approx(1.0, abs=1e-10)
@@ -453,7 +453,7 @@ def test_stability_multiple_years_known_std():
             position_size_pct=1.0
         )
     ]
-    metrics = PerformanceMetrics(multi_year_trades)
+    metrics = PerformanceMetricsCalculator(multi_year_trades)
     stability = metrics.calculate_annual_return_stability()
     
     # Calculate expected standard deviation manually:

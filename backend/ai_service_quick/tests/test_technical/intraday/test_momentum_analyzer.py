@@ -1,4 +1,4 @@
-from app.technical.analysis_engine.intraday.momentum_analyzer import IntradayMomentumAnalyzer
+from app.analysis.technical.analysis_engine.intraday.momentum_analyzer import IntradayMomentumAnalyzer
 
 def test_momentum_analyzer(sample_intraday_data_for_analysis):
     # Tăng volume của cây nến cuối để test Volume Spike
