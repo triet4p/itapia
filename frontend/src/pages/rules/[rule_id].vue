@@ -34,6 +34,11 @@ function handleNodeClick(nodeName: string) {
 onMounted(() => {
   rulesStore.fetchRuleExplanation(ruleId);
 });
+
+//Compute
+const performanceMetrics = computed(() => {
+  return currentRule.value?.metrics || null;
+});
 </script>
 
 <template>
@@ -63,6 +68,21 @@ onMounted(() => {
               <v-list-item title="Created At" :subtitle="new Date(currentRule.created_at_ts * 1000).toLocaleString('en-GB')"></v-list-item>
             </v-list>
           </v-card>
+
+          <VCard v-if="performanceMetrics">
+            <VCardTitle>Peformance metrics</VCardTitle>
+            <v-list density="compact">
+              <v-list-item title="Total Return" :subtitle="`${(performanceMetrics.total_return_pct * 100).toFixed(2)}%`"></v-list-item>
+              <v-list-item title="Win Rate" :subtitle="`${(performanceMetrics.win_rate_pct * 100).toFixed(2)}%`"></v-list-item>
+              <v-list-item title="Profit Factor" :subtitle="performanceMetrics.profit_factor.toFixed(2)"></v-list-item>
+              <v-list-item title="Max Drawdown" :subtitle="`${(performanceMetrics.max_drawdown_pct * 100).toFixed(2)}%`"></v-list-item>
+              <v-list-item title="Sharpe Ratio" :subtitle="performanceMetrics.sharpe_ratio.toFixed(2)"></v-list-item>
+              <v-list-item title="Number of Trades" :subtitle="performanceMetrics.num_trades"></v-list-item>
+              <v-list-item title="Sortino Ratio" :subtitle="performanceMetrics.sortino_ratio.toFixed(2)"></v-list-item>
+              <v-list-item title="Annual Return Stability" :subtitle="performanceMetrics.annual_return_stability.toFixed(2)"></v-list-item>
+              <v-list-item title="CAGR" :subtitle="performanceMetrics.cagr.toFixed(2)"></v-list-item>
+            </v-list>
+          </VCard>
         </v-col>
         <v-col cols="12" md="8">
           <v-card>

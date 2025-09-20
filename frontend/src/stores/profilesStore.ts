@@ -23,6 +23,13 @@ export const useProfileStore = defineStore('profile', {
     isLoadingDetails: false,
     error: null,
   }),
+
+  getters: {
+    defaultProfile: (state): Profile | undefined => {
+      return state.profiles.find(p => p.is_default);
+    },
+  },
+
   actions: {
     // Lấy danh sách tất cả profile
     async fetchProfiles() {
@@ -34,7 +41,7 @@ export const useProfileStore = defineStore('profile', {
         const response = await axios.get('/profiles');
         this.profiles = response.data;
       } catch (e: any) {
-        this.error = "Failed to fetch profiles.";
+        this.error = e.response?.data?.details || "Failed to fetch profiles.";
         console.error(e);
       } finally {
         this.isLoadingList = false;
@@ -51,7 +58,7 @@ export const useProfileStore = defineStore('profile', {
         const response = await axios.get(`/profiles/${profileId}`);
         this.currentProfile = response.data;
       } catch (e: any) {
-        this.error = "Failed to fetch profile details.";
+        this.error = e.response?.data?.detail || "Failed to fetch profile details.";
         console.error(e);
       } finally {
         this.isLoadingDetails = false;
@@ -59,21 +66,22 @@ export const useProfileStore = defineStore('profile', {
     },
 
     // Tạo profile mới
-    async createProfile(profileData: ProfileCreate) {
+    async createProfile(profileData: ProfileCreate): Promise<boolean> {
+      this.error = null;
       try {
         // 4. Không cần thêm header
         const response = await axios.post('/profiles', profileData);
         this.profiles.unshift(response.data);
         return true;
       } catch (e: any) {
-        this.error = "Failed to create profile.";
+        this.error = e.response?.data?.detail || "Failed to create profile.";
         console.error(e);
         return false;
       }
     },
     
     // --- MỚI: Action để cập nhật profile ---
-    async updateProfile(profileId: string, profileData: ProfileUpdate) {
+    async updateProfile(profileId: string, profileData: ProfileUpdate): Promise<boolean> {
       this.error = null;
       try {
         // Gửi request PUT đến API
@@ -94,14 +102,14 @@ export const useProfileStore = defineStore('profile', {
         
         return true; // Báo thành công
       } catch (e: any) {
-        this.error = "Failed to update profile.";
+        this.error = e.response?.data?.detail || "Failed to update profile.";
         console.error(e);
         return false; // Báo thất bại
       }
     },
 
     // --- MỚI: Action để xóa profile ---
-    async deleteProfile(profileId: string) {
+    async deleteProfile(profileId: string): Promise<boolean> {
       this.error = null;
       try {
         // Gửi request DELETE đến API
@@ -117,7 +125,7 @@ export const useProfileStore = defineStore('profile', {
         
         return true; // Báo thành công
       } catch (e: any) {
-        this.error = "Failed to delete profile.";
+        this.error = e.response?.data?.detail || "Failed to delete profile.";
         console.error(e);
         return false; // Báo thất bại
       }

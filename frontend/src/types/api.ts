@@ -216,10 +216,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Full Quick Advisor */
-        get: operations["get_ai_full_quick_advisor_api_v1_advisor_quick__ticker__full_get"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Get Ai Full Quick Advisor */
+        post: operations["get_ai_full_quick_advisor_api_v1_advisor_quick__ticker__full_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -233,10 +233,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Full Quick Advisor Explain */
-        get: operations["get_ai_full_quick_advisor_explain_api_v1_advisor_quick__ticker__explain_get"];
+        get?: never;
         put?: never;
-        post?: never;
+        /** Get Ai Full Quick Advisor Explain */
+        post: operations["get_ai_full_quick_advisor_explain_api_v1_advisor_quick__ticker__explain_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -420,10 +420,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/personal/suggested_config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Get Ai Suggest Config */
+        post: operations["get_ai_suggest_config_api_v1_personal_suggested_config_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Action */
+        Action: {
+            /**
+             * Action Type
+             * @enum {string}
+             */
+            action_type: "BUY" | "SELL" | "HOLD";
+            /**
+             * Position Size Pct
+             * @description Percentage of capital to use for this action
+             * @default 1
+             */
+            position_size_pct: number;
+            /**
+             * Duration Days
+             * @description Hold time if no other exit signal
+             * @default 365
+             */
+            duration_days: number;
+            /**
+             * Sl Pct
+             * @default 1
+             */
+            sl_pct: number;
+            /**
+             * Tp Pct
+             * @default 1
+             */
+            tp_pct: number;
+        };
         /** AdvisorResponse */
         AdvisorResponse: {
             /** @description Khuyến nghị Quyết định cuối cùng. */
@@ -432,6 +479,8 @@ export interface components {
             final_risk: components["schemas"]["FinalRecommendation"];
             /** @description Đánh giá Cơ hội cuối cùng. */
             final_opportunity: components["schemas"]["FinalRecommendation"];
+            /** @description Action được mapper cuối cùng */
+            final_action: components["schemas"]["Action"];
             /** @description Các điểm số tổng hợp trước khi qua MetaRule. */
             aggregated_scores: components["schemas"]["AggregatedScoreInfo"];
             /**
@@ -457,17 +506,17 @@ export interface components {
         AggregatedScoreInfo: {
             /**
              * Raw Decision Score
-             * @description Điểm số quyết định thô (trước khi có MetaRule).
+             * @description Điểm số quyết định thô, -1 là sell immediate, 1 là very strong buy, từ -1 tới 1
              */
             raw_decision_score: number;
             /**
              * Raw Risk Score
-             * @description Điểm số rủi ro thô (trước khi có MetaRule).
+             * @description Điểm số rủi ro thô, 0 là ko rủi ro, 1 là rủi ro rất cao, từ 0 tới 1.
              */
             raw_risk_score: number;
             /**
              * Raw Opportunity Score
-             * @description Điểm số cơ hội thô (trước khi có MetaRule).
+             * @description Điểm số cơ hội thô 0 là ko có cơ hội, 1 là cơ hội rất cao, từ 0 tới 1.
              */
             raw_opportunity_score: number;
         };
@@ -493,6 +542,24 @@ export interface components {
              * @description List of most influential features.
              */
             top_features: components["schemas"]["TopFeature"][];
+        };
+        /**
+         * BehaviorModifiers
+         * @description Các tham số để ĐIỀU CHỈNH HÀNH VI giao dịch cuối cùng.
+         */
+        BehaviorModifiers: {
+            /**
+             * Position Sizing Factor
+             * @description Factor to scale position size. 1.0 is default.
+             * @default 1
+             */
+            position_sizing_factor: number;
+            /**
+             * Risk Tolerance Factor
+             * @description Factor to adjust risk parameters like Stop-Loss. >1.0 means higher risk tolerance.
+             * @default 1
+             */
+            risk_tolerance_factor: number;
         };
         /** CapitalIncomePart */
         CapitalIncomePart: {
@@ -558,6 +625,7 @@ export interface components {
             /** Created At Ts */
             created_at_ts: number;
             root: components["schemas"]["NodeEntity"];
+            metrics?: components["schemas"]["PerformanceMetrics"] | null;
             /** Explain */
             explain: string;
         };
@@ -991,6 +1059,204 @@ export interface components {
              */
             top_patterns: components["schemas"]["PatternObj"][];
         };
+        /** PerformanceFilterWeights */
+        PerformanceFilterWeights: {
+            /**
+             * Num Trades
+             * @default 0
+             */
+            num_trades: number;
+            /**
+             * Total Return Pct
+             * @default 0
+             */
+            total_return_pct: number;
+            /**
+             * Max Drawdown Pct
+             * @default 0
+             */
+            max_drawdown_pct: number;
+            /**
+             * Win Rate Pct
+             * @default 0
+             */
+            win_rate_pct: number;
+            /**
+             * Profit Factor
+             * @default 0
+             */
+            profit_factor: number;
+            /**
+             * Sharpe Ratio
+             * @default 0
+             */
+            sharpe_ratio: number;
+            /**
+             * Sortino Ratio
+             * @default 0
+             */
+            sortino_ratio: number;
+            /**
+             * Annual Return Stability
+             * @default 0
+             */
+            annual_return_stability: number;
+            /**
+             * Cagr
+             * @default 0
+             */
+            cagr: number;
+        };
+        /** PerformanceHardConstraints */
+        PerformanceHardConstraints: {
+            /**
+             * Num Trades
+             * @default [
+             *       null,
+             *       null
+             *     ]
+             */
+            num_trades: [
+                number | null,
+                number | null
+            ];
+            /**
+             * Total Return Pct
+             * @default [
+             *       null,
+             *       null
+             *     ]
+             */
+            total_return_pct: [
+                number | null,
+                number | null
+            ];
+            /**
+             * Max Drawdown Pct
+             * @default [
+             *       null,
+             *       null
+             *     ]
+             */
+            max_drawdown_pct: [
+                number | null,
+                number | null
+            ];
+            /**
+             * Win Rate Pct
+             * @default [
+             *       null,
+             *       null
+             *     ]
+             */
+            win_rate_pct: [
+                number | null,
+                number | null
+            ];
+            /**
+             * Profit Factor
+             * @default [
+             *       null,
+             *       null
+             *     ]
+             */
+            profit_factor: [
+                number | null,
+                number | null
+            ];
+            /**
+             * Sharpe Ratio
+             * @default [
+             *       null,
+             *       null
+             *     ]
+             */
+            sharpe_ratio: [
+                number | null,
+                number | null
+            ];
+            /**
+             * Sortino Ratio
+             * @default [
+             *       null,
+             *       null
+             *     ]
+             */
+            sortino_ratio: [
+                number | null,
+                number | null
+            ];
+            /**
+             * Annual Return Stability
+             * @default [
+             *       null,
+             *       null
+             *     ]
+             */
+            annual_return_stability: [
+                number | null,
+                number | null
+            ];
+            /**
+             * Cagr
+             * @default [
+             *       null,
+             *       null
+             *     ]
+             */
+            cagr: [
+                number | null,
+                number | null
+            ];
+        };
+        /** PerformanceMetrics */
+        PerformanceMetrics: {
+            /**
+             * Num Trades
+             * @default 0
+             */
+            num_trades: number;
+            /**
+             * Total Return Pct
+             * @default 0
+             */
+            total_return_pct: number;
+            /**
+             * Max Drawdown Pct
+             * @default 0
+             */
+            max_drawdown_pct: number;
+            /**
+             * Win Rate Pct
+             * @default 0
+             */
+            win_rate_pct: number;
+            /**
+             * Profit Factor
+             * @default 0
+             */
+            profit_factor: number;
+            /**
+             * Sharpe Ratio
+             * @default 0
+             */
+            sharpe_ratio: number;
+            /**
+             * Sortino Ratio
+             * @default 0
+             */
+            sortino_ratio: number;
+            /**
+             * Annual Return Stability
+             * @default 0
+             */
+            annual_return_stability: number;
+            /**
+             * Cagr
+             * @default 0
+             */
+            cagr: number;
+        };
         /** PersonalPreferPart */
         PersonalPreferPart: {
             /**
@@ -1068,6 +1334,44 @@ export interface components {
              */
             is_default: boolean;
         };
+        /** ProfileRequest */
+        ProfileRequest: {
+            /**
+             * Profile Name
+             * @description Name of profile
+             */
+            profile_name: string;
+            /**
+             * Description
+             * @description Short description about this profile
+             */
+            description: string;
+            risk_tolerance: components["schemas"]["RiskTolerancePart"];
+            invest_goal: components["schemas"]["InvestGoalPart"];
+            knowledge_exp: components["schemas"]["KnowledgeExpPart"];
+            capital_income: components["schemas"]["CapitalIncomePart"];
+            personal_prefer: components["schemas"]["PersonalPreferPart"];
+            /**
+             * Use In Advisor
+             * @description Allow Advisor to use this profile to personalize advice.
+             * @default true
+             */
+            use_in_advisor: boolean;
+            /**
+             * Is Default
+             * @description Set as default profile.
+             * @default false
+             */
+            is_default: boolean;
+            /** Profile Id */
+            profile_id: string;
+            /** User Id */
+            user_id: string;
+            /** Created At Ts */
+            created_at_ts: number;
+            /** Updated At Ts */
+            updated_at_ts: number;
+        };
         /** ProfileResponse */
         ProfileResponse: {
             /**
@@ -1121,6 +1425,18 @@ export interface components {
             use_in_advisor?: boolean | null;
             /** Is Default */
             is_default?: boolean | null;
+        };
+        /** QuantitivePreferencesConfigRequest */
+        QuantitivePreferencesConfigRequest: {
+            weights: components["schemas"]["PerformanceFilterWeights"];
+            constraints: components["schemas"]["PerformanceHardConstraints"];
+            modifiers: components["schemas"]["BehaviorModifiers"];
+        };
+        /** QuantitivePreferencesConfigResponse */
+        QuantitivePreferencesConfigResponse: {
+            weights: components["schemas"]["PerformanceFilterWeights"];
+            constraints: components["schemas"]["PerformanceHardConstraints"];
+            modifiers: components["schemas"]["BehaviorModifiers"];
         };
         /** QuickCheckReportResponse */
         QuickCheckReportResponse: {
@@ -1202,6 +1518,7 @@ export interface components {
             /** Created At Ts */
             created_at_ts: number;
             root: components["schemas"]["NodeEntity"];
+            metrics?: components["schemas"]["PerformanceMetrics"] | null;
         };
         /**
          * RuleStatus
@@ -1908,10 +2225,10 @@ export interface operations {
             };
         };
     };
-    get_ai_full_quick_advisor_api_v1_advisor_quick__ticker__full_get: {
+    get_ai_full_quick_advisor_api_v1_advisor_quick__ticker__full_post: {
         parameters: {
             query?: {
-                user_id?: string;
+                limit?: number;
             };
             header?: never;
             path: {
@@ -1919,7 +2236,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuantitivePreferencesConfigRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -1941,10 +2262,10 @@ export interface operations {
             };
         };
     };
-    get_ai_full_quick_advisor_explain_api_v1_advisor_quick__ticker__explain_get: {
+    get_ai_full_quick_advisor_explain_api_v1_advisor_quick__ticker__explain_post: {
         parameters: {
             query?: {
-                user_id?: string;
+                limit?: number;
             };
             header?: never;
             path: {
@@ -1952,7 +2273,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuantitivePreferencesConfigRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -2305,6 +2630,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_ai_suggest_config_api_v1_personal_suggested_config_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuantitivePreferencesConfigResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -10,10 +10,11 @@ router = APIRouter()
 
 @router.post("/personal/suggested_config",
              response_model=QuantitivePreferencesConfigResponse)
-def get_suggest_config(profile: ProfileRequest,
+async def get_suggest_config(profile: ProfileRequest,
                        orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator)) -> QuantitivePreferencesConfigResponse:
-    return orchestrator.get_suggest_config(ProfileEntity(
+    config = orchestrator.get_suggest_config(ProfileEntity(
         created_at=datetime.fromtimestamp(profile.created_at_ts, tz=timezone.utc),
         updated_at=datetime.fromtimestamp(profile.updated_at_ts, tz=timezone.utc),
         **profile.model_dump()
     ))
+    return QuantitivePreferencesConfigResponse.model_validate(config.model_dump())

@@ -1,7 +1,7 @@
 import type { Router } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 
-const protectedRoutes = ['/profiles']
+const protectedRoutes = ['/profiles', '/advisor/[ticker]']
 
 export function setupNavigationGuards(router: Router) {
     router.beforeEach((to, from, next) => {
