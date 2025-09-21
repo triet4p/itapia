@@ -93,7 +93,30 @@ cp ./backend/.env.template ./backend/.env
 # Frontend
 cp ./frontend/.env.template ./frontend/.env
 ```
+**e. Download require models**
+*   You need to download Spacy Models before build docker images. You can find at
+    [Spacy Models](https://github.com/explosion/spacy-models/releases/)
 
+    In this project, we use `en_core_web_md-3.6.0` at
+    [en_core_web_md-3.6.0](https://github.com/explosion/spacy-models/releases/tag/en_core_web_md-3.6.0)
+
+*   Then, you needs to move this file to a directory and modify in [Dockerfile](./backend/ai_service_quick/Dockerfile)
+    ```dockerfile
+    # --- BƯỚC 2: KÍCH HOẠT MÔI TRƯỜNG MỚI VÀ CÀI ĐẶT THƯ VIỆN ---
+    # Change spacy=3.6.* to your version, but we recommend spacy 3.6 to compatible with ta-lib
+    RUN conda run -n itapia conda install -c conda-forge -y ta-lib "spacy=3.6.*" pandas-ta
+
+    # 2.2. Cài đặt các gói còn lại bằng pip
+    COPY ./ai_service_quick/requirements.txt /ai-service-quick/requirements.txt
+    RUN conda run -n itapia pip install --no-cache-dir --upgrade -r /ai-service-quick/requirements.txt
+
+    # --- BƯỚC 3: COPY MODEL LOCAL ---
+    # Copy wheel model đã tải sẵn
+    # Thay
+    COPY ./path_to_your_wheel/wheel_file.whl /tmp/
+    # Install model từ local wheel, đảm bảo reproducible
+    RUN conda run -n itapia pip install /tmp/wheel_file.whl
+    ```
 #### 3. Run the Backend
 
 ```bash
@@ -101,7 +124,7 @@ cp ./frontend/.env.template ./frontend/.env
 cd backend
 
 # Build and run all backend services in detached mode
-docker-compose up --build -d api-gateway
+docker-compose up -d api-gateway
 ```
 
 #### 4. Run the Frontend
