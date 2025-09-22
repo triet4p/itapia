@@ -12,8 +12,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Daily Prices
-         * @description API endpoint để lấy dữ liệu giá lịch sử hàng ngày cho một mã cổ phiếu.
+         * Get daily historical price data for a stock ticker
+         * @description Get daily historical price data for a stock ticker.
+         *
+         *     Args:
+         *         ticker (str): Stock ticker symbol
+         *         skip (int): Number of records to skip (for pagination)
+         *         limit (int): Maximum number of records to return
+         *         prices_service (APIPricesService): Prices service dependency
+         *
+         *     Returns:
+         *         PriceResponse: Daily historical price data
          */
         get: operations["get_daily_prices_api_v1_market_tickers__ticker__prices_daily_get"];
         put?: never;
@@ -32,8 +41,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Daily Prices By Sector
-         * @description API endpoint để lấy dữ liệu giá hàng ngày cho tất cả các cổ phiếu trong một nhóm ngành.
+         * Get daily price data for all stocks in a sector
+         * @description Get daily price data for all stocks in a sector.
+         *
+         *     Args:
+         *         sector (str): Sector name
+         *         skip (int): Number of records to skip (for pagination)
+         *         limit (int): Maximum number of records to return
+         *         prices_service (APIPricesService): Prices service dependency
+         *
+         *     Returns:
+         *         list[PriceResponse]: Daily price data for all stocks in the sector
          */
         get: operations["get_daily_prices_by_sector_api_v1_market_sectors__sector__prices_daily_get"];
         put?: never;
@@ -52,8 +70,16 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Intraday Prices
-         * @description API endpoint để lấy toàn bộ lịch sử giá trong ngày (giới hạn bởi stream) của một cổ phiếu.
+         * Get intraday price history for a stock ticker
+         * @description Get intraday price history for a stock ticker.
+         *
+         *     Args:
+         *         ticker (str): Stock ticker symbol
+         *         prices_service (APIPricesService): Prices service dependency
+         *         latest_only (bool): If True, return only the latest intraday data
+         *
+         *     Returns:
+         *         PriceResponse: Intraday price history
          */
         get: operations["get_intraday_prices_api_v1_market_tickers__ticker__prices_intraday_get"];
         put?: never;
@@ -72,8 +98,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Relevant News
-         * @description API endpoint để lấy danh sách các tin tức gần đây cho một mã cổ phiếu.
+         * Get recent news for a stock ticker
+         * @description Get recent news for a stock ticker.
+         *
+         *     Args:
+         *         ticker (str): Stock ticker symbol
+         *         skip (int): Number of records to skip (for pagination)
+         *         limit (int): Maximum number of records to return
+         *         news_service (APINewsService): News service dependency
+         *
+         *     Returns:
+         *         RelevantNewsResponse: Recent news for the stock ticker
          */
         get: operations["get_relevant_news_api_v1_market_tickers__ticker__news_get"];
         put?: never;
@@ -92,8 +127,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Universal News
-         * @description API endpoint để lấy danh sách các tin tức gần đây cho một mã cổ phiếu.
+         * Get recent news based on search terms
+         * @description Get recent news based on search terms.
+         *
+         *     Args:
+         *         search_terms (str): Search terms to filter news
+         *         skip (int): Number of records to skip (for pagination)
+         *         limit (int): Maximum number of records to return
+         *         news_service (APINewsService): News service dependency
+         *
+         *     Returns:
+         *         UniversalNewsResponse: Recent news based on search terms
          */
         get: operations["get_universal_news_api_v1_market_news_universal_get"];
         put?: never;
@@ -112,8 +156,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get All Sectors
-         * @description API endpoint để lấy danh sách tất cả các nhóm ngành được hỗ trợ.
+         * Get list of all supported sectors
+         * @description Get list of all supported sectors.
+         *
+         *     Args:
+         *         metadata_service (APIMetadataService): Metadata service dependency
+         *
+         *     Returns:
+         *         list[SectorMetadataResponse]: List of all supported sectors
          */
         get: operations["get_all_sectors_api_v1_metadata_sectors_get"];
         put?: never;
@@ -131,7 +181,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Full Quick Analysis */
+        /**
+         * Get full market analysis report from AI Quick Service
+         * @description Get full market analysis report from AI Quick Service.
+         *
+         *     Args:
+         *         ticker (str): Stock ticker symbol
+         *         daily_analysis_type (Literal['short', 'medium', 'long']): Daily analysis time frame
+         *         required_type (Literal['daily', 'intraday', 'all']): Type of analysis to include
+         *
+         *     Returns:
+         *         QuickCheckReportResponse: Complete market analysis report
+         */
         get: operations["get_ai_full_quick_analysis_api_v1_analysis_quick__ticker__full_get"];
         put?: never;
         post?: never;
@@ -148,7 +209,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Technical Quick Analysis */
+        /**
+         * Get technical analysis report from AI Quick Service
+         * @description Get technical analysis report from AI Quick Service.
+         *
+         *     Args:
+         *         ticker (str): Stock ticker symbol
+         *         daily_analysis_type (Literal['short', 'medium', 'long']): Daily analysis time frame
+         *         required_type (Literal['daily', 'intraday', 'all']): Type of analysis to include
+         *
+         *     Returns:
+         *         TechnicalReportResponse: Technical analysis report
+         */
         get: operations["get_ai_technical_quick_analysis_api_v1_analysis_quick__ticker__technical_get"];
         put?: never;
         post?: never;
@@ -165,7 +237,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Forecasting Quick Analysis */
+        /**
+         * Get forecasting analysis report from AI Quick Service
+         * @description Get forecasting analysis report from AI Quick Service.
+         *
+         *     Args:
+         *         ticker (str): Stock ticker symbol
+         *
+         *     Returns:
+         *         ForecastingReportResponse: Forecasting analysis report
+         */
         get: operations["get_ai_forecasting_quick_analysis_api_v1_analysis_quick__ticker__forecasting_get"];
         put?: never;
         post?: never;
@@ -182,7 +263,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai News Quick Analysis */
+        /**
+         * Get news analysis report from AI Quick Service
+         * @description Get news analysis report from AI Quick Service.
+         *
+         *     Args:
+         *         ticker (str): Stock ticker symbol
+         *
+         *     Returns:
+         *         NewsReportResponse: News analysis report
+         */
         get: operations["get_ai_news_quick_analysis_api_v1_analysis_quick__ticker__news_get"];
         put?: never;
         post?: never;
@@ -199,7 +289,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Quick Analysis Plain */
+        /**
+         * Get natural language explanation of market analysis from AI Quick Service
+         * @description Get natural language explanation of market analysis from AI Quick Service.
+         *
+         *     Args:
+         *         ticker (str): Stock ticker symbol
+         *         daily_analysis_type (Literal['short', 'medium', 'long']): Daily analysis time frame
+         *         required_type (Literal['daily', 'intraday', 'all']): Type of analysis to include
+         *         explain_type (Literal['technical', 'news', 'forecasting', 'all']): Type of explanation to generate
+         *
+         *     Returns:
+         *         str: Natural language explanation of market analysis
+         */
         get: operations["get_ai_quick_analysis_plain_api_v1_analysis_quick__ticker__explain_get"];
         put?: never;
         post?: never;
@@ -218,7 +320,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Get Ai Full Quick Advisor */
+        /**
+         * Get full advisor report from AI Quick Service
+         * @description Get full advisor report from AI Quick Service.
+         *
+         *     Args:
+         *         quantitive_config (QuantitivePreferencesConfigRequest): Quantitative preferences configuration
+         *         ticker (str): Stock ticker symbol
+         *         limit (int): Maximum number of rules to include in the report
+         *
+         *     Returns:
+         *         AdvisorResponse: Complete advisor report with recommendations
+         */
         post: operations["get_ai_full_quick_advisor_api_v1_advisor_quick__ticker__full_post"];
         delete?: never;
         options?: never;
@@ -235,7 +348,18 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Get Ai Full Quick Advisor Explain */
+        /**
+         * Get natural language explanation of advisor recommendations from AI Quick Service
+         * @description Get natural language explanation of advisor recommendations from AI Quick Service.
+         *
+         *     Args:
+         *         quantitive_config (QuantitivePreferencesConfigRequest): Quantitative preferences configuration
+         *         ticker (str): Stock ticker symbol
+         *         limit (int): Maximum number of rules to include in the explanation
+         *
+         *     Returns:
+         *         str: Natural language explanation of advisor recommendations
+         */
         post: operations["get_ai_full_quick_advisor_explain_api_v1_advisor_quick__ticker__explain_post"];
         delete?: never;
         options?: never;
@@ -250,7 +374,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Single Rule Explain */
+        /**
+         * Get explanation for a specific rule from AI Service
+         * @description Get explanation for a specific rule from AI Service.
+         *
+         *     Args:
+         *         rule_id (str): ID of the rule to explain
+         *
+         *     Returns:
+         *         ExplainationRuleResponse: Rule with natural language explanation
+         */
         get: operations["get_ai_single_rule_explain_api_v1_rules__rule_id__explain_get"];
         put?: never;
         post?: never;
@@ -267,7 +400,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Ready Rules */
+        /**
+         * Get list of ready rules from AI Service
+         * @description Get list of ready rules from AI Service.
+         *
+         *     Args:
+         *         purpose (SemanticType): Filter rules by purpose
+         *
+         *     Returns:
+         *         list[RuleResponse]: List of ready rules
+         */
         get: operations["get_ai_ready_rules_api_v1_rules_get"];
         put?: never;
         post?: never;
@@ -284,7 +426,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Nodes */
+        /**
+         * Get list of available nodes from AI Service
+         * @description Get list of available nodes from AI Service.
+         *
+         *     Args:
+         *         node_type (NodeType): Filter nodes by type
+         *         purpose (SemanticType): Filter nodes by purpose
+         *
+         *     Returns:
+         *         list[NodeResponse]: List of available nodes
+         */
         get: operations["get_ai_nodes_api_v1_rules_nodes_get"];
         put?: never;
         post?: never;
@@ -301,7 +453,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Google Login */
+        /**
+         * Get Google OAuth authorization URL
+         * @description Get Google OAuth authorization URL.
+         *
+         *     Returns:
+         *         AuthorizationURLResponse: Google OAuth authorization URL
+         */
         get: operations["google_login_api_v1_auth_google_login_get"];
         put?: never;
         post?: never;
@@ -318,7 +476,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Google Callback */
+        /**
+         * Handle Google OAuth callback and generate JWT token
+         * @description Handle Google OAuth callback and generate JWT token.
+         *
+         *     Args:
+         *         code (str): Authorization code from Google OAuth
+         *         user_service (UserService): User service dependency
+         *
+         *     Returns:
+         *         RedirectResponse: Redirect to frontend with JWT token or error message
+         */
         get: operations["google_callback_api_v1_auth_google_callback_get"];
         put?: never;
         post?: never;
@@ -335,7 +503,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Me */
+        /**
+         * Get current user information
+         * @description Get current user information.
+         *
+         *     Args:
+         *         current_user (UserEntity): Current authenticated user
+         *
+         *     Returns:
+         *         UserResponse: Current user information
+         */
         get: operations["get_me_api_v1_users_me_get"];
         put?: never;
         post?: never;
@@ -353,14 +530,29 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get User Profiles
+         * Get all investment profiles for the current user
          * @description Get all investment profiles for the current logged-in user.
+         *
+         *     Args:
+         *         profile_service (ProfileService): Profile service dependency
+         *         current_user (UserEntity): Current authenticated user
+         *
+         *     Returns:
+         *         List[ProfileResponse]: List of user's investment profiles
          */
         get: operations["get_user_profiles_api_v1_profiles_get"];
         put?: never;
         /**
-         * Create User Profile
+         * Create a new investment profile for the current user
          * @description Create a new investment profile for the current logged-in user.
+         *
+         *     Args:
+         *         profile_in (ProfileCreateRequest): Profile creation request data
+         *         profile_service (ProfileService): Profile service dependency
+         *         current_user (UserEntity): Current authenticated user
+         *
+         *     Returns:
+         *         ProfileResponse: Created profile data
          */
         post: operations["create_user_profile_api_v1_profiles_post"];
         delete?: never;
@@ -377,19 +569,44 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get User Profile Details
+         * Get details of a specific investment profile
          * @description Get details of a specific investment profile.
+         *
+         *     Args:
+         *         profile_id (str): ID of the profile to retrieve
+         *         profile_service (ProfileService): Profile service dependency
+         *         current_user (UserEntity): Current authenticated user
+         *
+         *     Returns:
+         *         ProfileResponse: Requested profile data
          */
         get: operations["get_user_profile_details_api_v1_profiles__profile_id__get"];
         /**
-         * Update User Profile
+         * Update an existing investment profile
          * @description Update an existing investment profile.
+         *
+         *     Args:
+         *         profile_id (str): ID of the profile to update
+         *         profile_in (ProfileUpdateRequest): Profile update request data
+         *         profile_service (ProfileService): Profile service dependency
+         *         current_user (UserEntity): Current authenticated user
+         *
+         *     Returns:
+         *         ProfileResponse: Updated profile data
          */
         put: operations["update_user_profile_api_v1_profiles__profile_id__put"];
         post?: never;
         /**
-         * Delete User Profile
+         * Delete an investment profile
          * @description Delete an investment profile.
+         *
+         *     Args:
+         *         profile_id (str): ID of the profile to delete
+         *         profile_service (ProfileService): Profile service dependency
+         *         current_user (UserEntity): Current authenticated user
+         *
+         *     Returns:
+         *         ProfileResponse: Deleted profile data
          */
         delete: operations["delete_user_profile_api_v1_profiles__profile_id__delete"];
         options?: never;
@@ -429,7 +646,16 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Get Ai Suggest Config */
+        /**
+         * Get suggested quantitative preferences configuration from AI Service
+         * @description Get suggested quantitative preferences configuration from AI Service.
+         *
+         *     Args:
+         *         profile (ProfileRequest): User investment profile
+         *
+         *     Returns:
+         *         QuantitivePreferencesConfigResponse: Suggested quantitative preferences configuration
+         */
         post: operations["get_ai_suggest_config_api_v1_personal_suggested_config_post"];
         delete?: never;
         options?: never;
@@ -441,7 +667,10 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Action */
+        /**
+         * Action
+         * @description Action to take based on analysis results.
+         */
         Action: {
             /**
              * Action Type
@@ -462,70 +691,81 @@ export interface components {
             duration_days: number;
             /**
              * Sl Pct
+             * @description Stop Loss Percentage, 0.1 is (1-0.1)=0.9 of now price
              * @default 1
              */
             sl_pct: number;
             /**
              * Tp Pct
+             * @description Take Profit Percentage, 0.1 is (1+0.1)=1.1 of now price
              * @default 1
              */
             tp_pct: number;
         };
-        /** AdvisorResponse */
+        /**
+         * AdvisorResponse
+         * @description Response schema for advisor reports.
+         */
         AdvisorResponse: {
-            /** @description Khuyến nghị Quyết định cuối cùng. */
+            /** @description Final Decision recommendation. */
             final_decision: components["schemas"]["FinalRecommendation"];
-            /** @description Đánh giá Rủi ro cuối cùng. */
+            /** @description Final Risk assessment. */
             final_risk: components["schemas"]["FinalRecommendation"];
-            /** @description Đánh giá Cơ hội cuối cùng. */
+            /** @description Final Opportunity assessment. */
             final_opportunity: components["schemas"]["FinalRecommendation"];
-            /** @description Action được mapper cuối cùng */
+            /** @description Final mapped action */
             final_action: components["schemas"]["Action"];
-            /** @description Các điểm số tổng hợp trước khi qua MetaRule. */
+            /** @description Aggregated scores before going through MetaRule. */
             aggregated_scores: components["schemas"]["AggregatedScoreInfo"];
             /**
              * Ticker
-             * @description Mã cổ phiếu được phân tích.
+             * @description Stock symbol being analyzed.
              */
             ticker: string;
             /**
              * Generated At Utc
-             * @description Thời gian tạo báo cáo (ISO format).
+             * @description Report generation time (ISO format).
              */
             generated_at_utc: string;
             /**
              * Generated Timestamp
-             * @description Generate with timestamp
+             * @description Generated with timestamp
              */
             generated_timestamp: number;
         };
         /**
          * AggregatedScoreInfo
-         * @description Thông tin về các điểm số đã được tổng hợp từ các bộ quy tắc.
+         * @description Information about scores aggregated from rule sets.
          */
         AggregatedScoreInfo: {
             /**
              * Raw Decision Score
-             * @description Điểm số quyết định thô, -1 là sell immediate, 1 là very strong buy, từ -1 tới 1
+             * @description Raw decision score, -1 is immediate sell, 1 is very strong buy, range from -1 to 1
              */
             raw_decision_score: number;
             /**
              * Raw Risk Score
-             * @description Điểm số rủi ro thô, 0 là ko rủi ro, 1 là rủi ro rất cao, từ 0 tới 1.
+             * @description Raw risk score, 0 is no risk, 1 is very high risk, range from 0 to 1.
              */
             raw_risk_score: number;
             /**
              * Raw Opportunity Score
-             * @description Điểm số cơ hội thô 0 là ko có cơ hội, 1 là cơ hội rất cao, từ 0 tới 1.
+             * @description Raw opportunity score, 0 is no opportunity, 1 is very high opportunity, range from 0 to 1.
              */
             raw_opportunity_score: number;
         };
-        /** AuthorizationURLResponse */
+        /**
+         * AuthorizationURLResponse
+         * @description Response schema for authorization URL.
+         */
         AuthorizationURLResponse: {
             /** Authorization Url */
             authorization_url: string;
         };
-        /** BaseSHAPExplaination */
+        /**
+         * BaseSHAPExplaination
+         * @description Base SHAP explanation schema.
+         */
         BaseSHAPExplaination: {
             /**
              * Base Value
@@ -545,7 +785,7 @@ export interface components {
         };
         /**
          * BehaviorModifiers
-         * @description Các tham số để ĐIỀU CHỈNH HÀNH VI giao dịch cuối cùng.
+         * @description Parameters to MODIFY the final trading behavior.
          */
         BehaviorModifiers: {
             /**
@@ -561,7 +801,10 @@ export interface components {
              */
             risk_tolerance_factor: number;
         };
-        /** CapitalIncomePart */
+        /**
+         * CapitalIncomePart
+         * @description Capital and income profile part.
+         */
         CapitalIncomePart: {
             /**
              * Initial Capital
@@ -575,7 +818,10 @@ export interface components {
              */
             income_dependency: "low" | "medium" | "high";
         };
-        /** CurrentStatusReport */
+        /**
+         * CurrentStatusReport
+         * @description Current market status report.
+         */
         CurrentStatusReport: {
             /**
              * Vwap Status
@@ -597,15 +843,18 @@ export interface components {
             rsi_status: "overbought" | "oversold" | "neutral";
             /**
              * Evidence
-             * @description A dictionary describe evidence of status analysis
+             * @description A dictionary describing evidence of status analysis
              */
             evidence: {
                 [key: string]: unknown;
             };
         };
-        /** DailyAnalysisReport */
+        /**
+         * DailyAnalysisReport
+         * @description Complete daily technical analysis report.
+         */
         DailyAnalysisReport: {
-            /** @description Some important key indicators to mid-term and long-term */
+            /** @description Some important key indicators for mid-term and long-term */
             key_indicators: components["schemas"]["KeyIndicators"];
             /** @description Trend report */
             trend_report: components["schemas"]["TrendReport"];
@@ -614,7 +863,10 @@ export interface components {
             /** @description Pattern Report */
             pattern_report: components["schemas"]["PatternReport"];
         };
-        /** ExplainationRuleResponse */
+        /**
+         * ExplainationRuleResponse
+         * @description Rule response with explanation.
+         */
         ExplainationRuleResponse: {
             /** Rule Id */
             rule_id: string;
@@ -631,12 +883,12 @@ export interface components {
         };
         /**
          * FinalRecommendation
-         * @description Thông tin về khuyến nghị cuối cùng sau khi đã qua tất cả các tầng.
+         * @description Information about the final recommendation after all layers.
          */
         FinalRecommendation: {
             /**
              * Final Score
-             * @description Điểm số cuối cùng sau khi đã tổng hợp và cá nhân hóa.
+             * @description Final score after aggregation and personalization.
              */
             final_score: number;
             /** Purpose */
@@ -645,16 +897,19 @@ export interface components {
             label: string;
             /**
              * Final Recommend
-             * @description Final recommend
+             * @description Final recommendation
              */
             final_recommend: string;
             /**
              * Triggered Rules
-             * @description Danh sách các quy tắc đã được kích hoạt và đóng góp vào kết quả.
+             * @description List of triggered rules that contributed to the result.
              */
             triggered_rules: components["schemas"]["TriggeredRuleInfo"][];
         };
-        /** ForecastingReport */
+        /**
+         * ForecastingReport
+         * @description Complete forecasting report for a ticker.
+         */
         ForecastingReport: {
             /**
              * Ticker
@@ -672,7 +927,10 @@ export interface components {
              */
             forecasts: components["schemas"]["SingleTaskForecastReport"][];
         };
-        /** ForecastingReportResponse */
+        /**
+         * ForecastingReportResponse
+         * @description Response schema for forecasting reports.
+         */
         ForecastingReportResponse: {
             /**
              * Ticker
@@ -695,7 +953,10 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
-        /** ImpactAssessmentReport */
+        /**
+         * ImpactAssessmentReport
+         * @description Impact assessment results.
+         */
         ImpactAssessmentReport: {
             /**
              * Level
@@ -709,16 +970,22 @@ export interface components {
              */
             words?: string[];
         };
-        /** IntradayAnalysisReport */
+        /**
+         * IntradayAnalysisReport
+         * @description Complete intraday technical analysis report.
+         */
         IntradayAnalysisReport: {
             /** @description Status report */
             current_status_report: components["schemas"]["CurrentStatusReport"];
             /** @description Momentum report */
             momentum_report: components["schemas"]["MomentumReport"];
-            /** @description Some of key levels */
+            /** @description Key levels */
             key_levels: components["schemas"]["KeyLevelsReport"];
         };
-        /** InvestGoalPart */
+        /**
+         * InvestGoalPart
+         * @description Investment goal profile part.
+         */
         InvestGoalPart: {
             /**
              * Primary Goal
@@ -738,7 +1005,10 @@ export interface components {
              */
             expected_annual_return_pct: number;
         };
-        /** KeyIndicators */
+        /**
+         * KeyIndicators
+         * @description Key technical indicators.
+         */
         KeyIndicators: {
             /** Sma 20 */
             sma_20: number | null;
@@ -763,7 +1033,10 @@ export interface components {
             /** Psar */
             psar: number | null;
         };
-        /** KeyLevelsReport */
+        /**
+         * KeyLevelsReport
+         * @description Key levels report.
+         */
         KeyLevelsReport: {
             /** Day High */
             day_high: number;
@@ -778,20 +1051,26 @@ export interface components {
             /** Or 30M Low */
             or_30m_low: number | null;
         };
-        /** KeywordHighlightingReport */
+        /**
+         * KeywordHighlightingReport
+         * @description Keyword highlighting results.
+         */
         KeywordHighlightingReport: {
             /**
              * Positive Keywords
-             * @description List of positive keyword highlighted
+             * @description List of positive keywords highlighted
              */
             positive_keywords: string[];
             /**
              * Negative Keywords
-             * @description List of negative keyword highlighted
+             * @description List of negative keywords highlighted
              */
             negative_keywords: string[];
         };
-        /** KnowledgeExpPart */
+        /**
+         * KnowledgeExpPart
+         * @description Knowledge and experience profile part.
+         */
         KnowledgeExpPart: {
             /**
              * Investment Knowledge
@@ -805,7 +1084,10 @@ export interface components {
              */
             years_of_experience: number;
         };
-        /** LongTermTrendReport */
+        /**
+         * LongTermTrendReport
+         * @description Long-term trend report.
+         */
         LongTermTrendReport: {
             /**
              * Ma Direction
@@ -821,13 +1103,16 @@ export interface components {
             ma_status: "positive" | "negative" | "undefined";
             /**
              * Evidence
-             * @description A dictionary describe evidence of trend analysis
+             * @description A dictionary describing evidence of trend analysis
              */
             evidence: {
                 [key: string]: unknown;
             };
         };
-        /** MidTermTrendReport */
+        /**
+         * MidTermTrendReport
+         * @description Mid-term trend report.
+         */
         MidTermTrendReport: {
             /**
              * Ma Direction
@@ -843,19 +1128,22 @@ export interface components {
             ma_status: "positive" | "negative" | "undefined";
             /**
              * Evidence
-             * @description A dictionary describe evidence of trend analysis
+             * @description A dictionary describing evidence of trend analysis
              */
             evidence: {
                 [key: string]: unknown;
             };
             /**
              * Adx Direction
-             * @description Direction using MA indicators
+             * @description Direction using ADX indicators
              * @enum {string}
              */
             adx_direction: "uptrend" | "downtrend" | "undefined";
         };
-        /** MomentumReport */
+        /**
+         * MomentumReport
+         * @description Momentum analysis report.
+         */
         MomentumReport: {
             /**
              * Macd Crossover
@@ -877,13 +1165,16 @@ export interface components {
             opening_range_status: "bull-breakout" | "bear-breakdown" | "inside";
             /**
              * Evidence
-             * @description A dictionary describe evidence of momentum analysis
+             * @description A dictionary describing evidence of momentum analysis
              */
             evidence: {
                 [key: string]: unknown;
             };
         };
-        /** NDaysDistributionTaskMetadata */
+        /**
+         * NDaysDistributionTaskMetadata
+         * @description Metadata for N-days distribution task.
+         */
         NDaysDistributionTaskMetadata: {
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -906,7 +1197,10 @@ export interface components {
              */
             horizon: number;
         };
-        /** NERElement */
+        /**
+         * NERElement
+         * @description Named Entity Recognition element.
+         */
         NERElement: {
             /**
              * Entity Group
@@ -915,19 +1209,25 @@ export interface components {
             entity_group: string;
             /**
              * Word
-             * @description word recognized
+             * @description Word recognized
              */
             word: string;
         };
-        /** NERReport */
+        /**
+         * NERReport
+         * @description Named Entity Recognition report.
+         */
         NERReport: {
             /**
              * Entities
-             * @description List of entity
+             * @description List of entities
              */
             entities: components["schemas"]["NERElement"][];
         };
-        /** NewsAnalysisReport */
+        /**
+         * NewsAnalysisReport
+         * @description Complete news analysis report for a ticker.
+         */
         NewsAnalysisReport: {
             /** Ticker */
             ticker: string;
@@ -935,7 +1235,10 @@ export interface components {
             reports: components["schemas"]["SingleNewsAnalysisReport"][];
             summary: components["schemas"]["SummaryReport"];
         };
-        /** NewsReportResponse */
+        /**
+         * NewsReportResponse
+         * @description Response schema for news analysis reports.
+         */
         NewsReportResponse: {
             /** Ticker */
             ticker: string;
@@ -943,34 +1246,44 @@ export interface components {
             reports: components["schemas"]["SingleNewsAnalysisReport"][];
             summary: components["schemas"]["SummaryReport"];
         };
-        /** NodeEntity */
+        /**
+         * NodeEntity
+         * @description Node entity in a rule tree.
+         */
         NodeEntity: {
             /** Node Name */
             node_name: string;
             /** Children */
             children?: components["schemas"]["NodeEntity"][] | null;
         };
-        /** NodeResponse */
+        /**
+         * NodeResponse
+         * @description Response schema for node specification entities.
+         */
         NodeResponse: {
             /** Node Name */
             node_name: string;
             /** Description */
             description: string;
             node_type: components["schemas"]["NodeType"];
-            /** @description return type of a nodes */
+            /** @description Return type of a node */
             return_type: components["schemas"]["SemanticType"];
             /**
              * Args Type
-             * @description Argument type, only need for operator node
+             * @description Argument type, only needed for operator node
              */
             args_type?: components["schemas"]["SemanticType"][] | null;
         };
         /**
          * NodeType
+         * @description Type of node in a rule tree.
          * @enum {string}
          */
         NodeType: "constant" | "variable" | "operator" | "any";
-        /** OverallStrengthTrendReport */
+        /**
+         * OverallStrengthTrendReport
+         * @description Overall trend strength report.
+         */
         OverallStrengthTrendReport: {
             /**
              * Strength
@@ -984,7 +1297,10 @@ export interface components {
              */
             value: number;
         };
-        /** PatternObj */
+        /**
+         * PatternObj
+         * @description Pattern object.
+         */
         PatternObj: {
             /**
              * Name
@@ -1010,18 +1326,21 @@ export interface components {
             score: number;
             /**
              * Confirmation Date
-             * @description ISO Format string to describe confimation date of this pattern
+             * @description ISO Format string to describe confirmation date of this pattern
              */
             confirmation_date: string;
             /**
              * Evidence
-             * @description A dictionary describe evidence of a recognized pattern
+             * @description A dictionary describing evidence of a recognized pattern
              */
             evidence: {
                 [key: string]: unknown;
             };
         };
-        /** PatternReport */
+        /**
+         * PatternReport
+         * @description Pattern recognition report.
+         */
         PatternReport: {
             /**
              * History Window
@@ -1055,11 +1374,14 @@ export interface components {
             num_top_patterns: number;
             /**
              * Top Patterns
-             * @description Top patterns recongized
+             * @description Top patterns recognized
              */
             top_patterns: components["schemas"]["PatternObj"][];
         };
-        /** PerformanceFilterWeights */
+        /**
+         * PerformanceFilterWeights
+         * @description Weights for performance metrics used in filtering.
+         */
         PerformanceFilterWeights: {
             /**
              * Num Trades
@@ -1107,7 +1429,10 @@ export interface components {
              */
             cagr: number;
         };
-        /** PerformanceHardConstraints */
+        /**
+         * PerformanceHardConstraints
+         * @description Hard constraints for performance metrics.
+         */
         PerformanceHardConstraints: {
             /**
              * Num Trades
@@ -1209,7 +1534,10 @@ export interface components {
                 number | null
             ];
         };
-        /** PerformanceMetrics */
+        /**
+         * PerformanceMetrics
+         * @description Performance metrics for trading strategies.
+         */
         PerformanceMetrics: {
             /**
              * Num Trades
@@ -1257,7 +1585,10 @@ export interface components {
              */
             cagr: number;
         };
-        /** PersonalPreferPart */
+        /**
+         * PersonalPreferPart
+         * @description Personal preferences profile part.
+         */
         PersonalPreferPart: {
             /**
              * Preferred Sectors
@@ -1276,7 +1607,10 @@ export interface components {
              */
             ethical_investing: boolean;
         };
-        /** PriceDataPoint */
+        /**
+         * PriceDataPoint
+         * @description A single price data point.
+         */
         PriceDataPoint: {
             /** Open */
             open?: number | null;
@@ -1294,17 +1628,23 @@ export interface components {
              */
             timestamp: number;
         };
-        /** PriceResponse */
+        /**
+         * PriceResponse
+         * @description Response schema for price data.
+         */
         PriceResponse: {
-            /** @description metadata of a ticker */
+            /** @description Metadata of a ticker */
             metadata: components["schemas"]["TickerMetadata"];
             /**
              * Datas
-             * @description daily data or intraday data
+             * @description Daily data or intraday data
              */
             datas: components["schemas"]["PriceDataPoint"][];
         };
-        /** ProfileCreateRequest */
+        /**
+         * ProfileCreateRequest
+         * @description Request schema for creating a new investment profile.
+         */
         ProfileCreateRequest: {
             /**
              * Profile Name
@@ -1334,7 +1674,10 @@ export interface components {
              */
             is_default: boolean;
         };
-        /** ProfileRequest */
+        /**
+         * ProfileRequest
+         * @description Request schema for investment profile operations.
+         */
         ProfileRequest: {
             /**
              * Profile Name
@@ -1372,7 +1715,10 @@ export interface components {
             /** Updated At Ts */
             updated_at_ts: number;
         };
-        /** ProfileResponse */
+        /**
+         * ProfileResponse
+         * @description Response schema for investment profile data.
+         */
         ProfileResponse: {
             /**
              * Profile Name
@@ -1410,7 +1756,10 @@ export interface components {
             /** Updated At Ts */
             updated_at_ts: number;
         };
-        /** ProfileUpdateRequest */
+        /**
+         * ProfileUpdateRequest
+         * @description Request schema for updating an existing investment profile.
+         */
         ProfileUpdateRequest: {
             /** Profile Name */
             profile_name?: string | null;
@@ -1426,19 +1775,28 @@ export interface components {
             /** Is Default */
             is_default?: boolean | null;
         };
-        /** QuantitivePreferencesConfigRequest */
+        /**
+         * QuantitivePreferencesConfigRequest
+         * @description Request schema for quantitative preferences configuration.
+         */
         QuantitivePreferencesConfigRequest: {
             weights: components["schemas"]["PerformanceFilterWeights"];
             constraints: components["schemas"]["PerformanceHardConstraints"];
             modifiers: components["schemas"]["BehaviorModifiers"];
         };
-        /** QuantitivePreferencesConfigResponse */
+        /**
+         * QuantitivePreferencesConfigResponse
+         * @description Response schema for quantitative preferences configuration.
+         */
         QuantitivePreferencesConfigResponse: {
             weights: components["schemas"]["PerformanceFilterWeights"];
             constraints: components["schemas"]["PerformanceHardConstraints"];
             modifiers: components["schemas"]["BehaviorModifiers"];
         };
-        /** QuickCheckReportResponse */
+        /**
+         * QuickCheckReportResponse
+         * @description Response schema for quick check analysis reports.
+         */
         QuickCheckReportResponse: {
             /**
              * Ticker
@@ -1462,7 +1820,10 @@ export interface components {
             /** @description News report */
             news_report: components["schemas"]["NewsAnalysisReport"];
         };
-        /** RelevantNewsPoint */
+        /**
+         * RelevantNewsPoint
+         * @description A single relevant news item.
+         */
         RelevantNewsPoint: {
             /** News Uuid */
             news_uuid: string;
@@ -1479,17 +1840,23 @@ export interface components {
             /** Collect Ts */
             collect_ts: number;
         };
-        /** RelevantNewsResponse */
+        /**
+         * RelevantNewsResponse
+         * @description Response schema for relevant news.
+         */
         RelevantNewsResponse: {
-            /** @description metadata of a ticker */
+            /** @description Metadata of a ticker */
             metadata: components["schemas"]["TickerMetadata"];
             /**
              * Datas
-             * @description news
+             * @description News items
              */
             datas: components["schemas"]["RelevantNewsPoint"][];
         };
-        /** RiskTolerancePart */
+        /**
+         * RiskTolerancePart
+         * @description Risk tolerance profile part.
+         */
         RiskTolerancePart: {
             /**
              * Risk Appetite
@@ -1506,7 +1873,7 @@ export interface components {
         };
         /**
          * RuleResponse
-         * @description Schema cho dữ liệu ĐI RA sau khi tạo Rule thành công.
+         * @description Schema for data OUTPUT after successfully creating a Rule.
          */
         RuleResponse: {
             /** Rule Id */
@@ -1522,37 +1889,47 @@ export interface components {
         };
         /**
          * RuleStatus
+         * @description Status of a rule.
          * @enum {string}
          */
         RuleStatus: "READY" | "EVOLVING" | "DEPRECATED";
-        /** SHAPExplaination */
+        /**
+         * SHAPExplaination
+         * @description SHAP explanation for a specific target.
+         */
         SHAPExplaination: {
             /**
              * For Target
              * @description Name of target
              */
             for_target: string;
-            /** @description Explaination for this target */
+            /** @description Explanation for this target */
             explaination: components["schemas"]["BaseSHAPExplaination"];
         };
-        /** SRIdentifyLevelObj */
+        /**
+         * SRIdentifyLevelObj
+         * @description Support/Resistance level identification object.
+         */
         SRIdentifyLevelObj: {
             /**
              * Level
-             * @description Level Value of supportance/resitance identify
+             * @description Level value of support/resistance identification
              */
             level: number;
             /**
              * Source
-             * @description Source of the Level Value of supportance/resitance identify
+             * @description Source of the level value of support/resistance identification
              */
             source: string;
         };
-        /** SRReport */
+        /**
+         * SRReport
+         * @description Support/Resistance report.
+         */
         SRReport: {
             /**
              * History Window
-             * @description History window for identify level
+             * @description History window for identifying levels
              * @default 90
              */
             history_window: number;
@@ -1567,7 +1944,10 @@ export interface components {
              */
             resistances: components["schemas"]["SRIdentifyLevelObj"][];
         };
-        /** SectorMetadataResponse */
+        /**
+         * SectorMetadataResponse
+         * @description Response schema for sector metadata.
+         */
         SectorMetadataResponse: {
             /** Sector Code */
             sector_code: string;
@@ -1576,12 +1956,15 @@ export interface components {
         };
         /**
          * SemanticType
-         * @description Định nghĩa các kiểu ngữ nghĩa cho các giá trị trong cây quy tắc.
-         *     Điều này là trái tim của Strongly Typed Genetic Programming (STGP).
+         * @description Defines semantic types for values in rule trees.
+         *     This is the heart of Strongly Typed Genetic Programming (STGP).
          * @enum {string}
          */
         SemanticType: "NUMERICAL" | "BOOLEAN" | "PRICE" | "PERCENTAGE" | "FINANCIAL_RATIO" | "MOMENTUM" | "TREND" | "VOLATILITY" | "VOLUME" | "SENTIMENT" | "FORECAST_PROB" | "DECISION_SIGNAL" | "RISK_LEVEL" | "OPPORTUNITY_RATING" | "ANY" | "ANY_NUMERIC";
-        /** SentimentAnalysisReport */
+        /**
+         * SentimentAnalysisReport
+         * @description Sentiment analysis results.
+         */
         SentimentAnalysisReport: {
             /**
              * Label
@@ -1595,11 +1978,14 @@ export interface components {
              */
             score: number;
         };
-        /** SingleNewsAnalysisReport */
+        /**
+         * SingleNewsAnalysisReport
+         * @description Analysis report for a single news item.
+         */
         SingleNewsAnalysisReport: {
             /**
              * Text
-             * @description Text to analysis
+             * @description Text to analyze
              */
             text: string;
             /** @description Sentiment Analysis Report */
@@ -1611,11 +1997,14 @@ export interface components {
             /** @description Keyword Highlighting Evidence */
             keyword_highlighting_evidence: components["schemas"]["KeywordHighlightingReport"];
         };
-        /** SingleTaskForecastReport */
+        /**
+         * SingleTaskForecastReport
+         * @description Forecast report for a single task.
+         */
         SingleTaskForecastReport: {
             /**
              * Task Name
-             * @description Identify of task
+             * @description Identifier of task
              */
             task_name: string;
             /**
@@ -1640,7 +2029,10 @@ export interface components {
              */
             evidence: components["schemas"]["SHAPExplaination"][];
         };
-        /** SummaryReport */
+        /**
+         * SummaryReport
+         * @description Summary of news analysis results.
+         */
         SummaryReport: {
             /** Num Positive Sentiment */
             num_positive_sentiment: number;
@@ -1659,7 +2051,10 @@ export interface components {
             /** Avg Of Ner Found */
             avg_of_ner_found: number;
         };
-        /** TechnicalReport */
+        /**
+         * TechnicalReport
+         * @description Complete technical analysis report combining daily and intraday analysis.
+         */
         TechnicalReport: {
             /**
              * Report Type
@@ -1673,7 +2068,10 @@ export interface components {
             /** @description Intraday Analysis Report */
             intraday_report: components["schemas"]["IntradayAnalysisReport"] | null;
         };
-        /** TechnicalReportResponse */
+        /**
+         * TechnicalReportResponse
+         * @description Response schema for technical analysis reports.
+         */
         TechnicalReportResponse: {
             /**
              * Report Type
@@ -1687,7 +2085,10 @@ export interface components {
             /** @description Intraday Analysis Report */
             intraday_report: components["schemas"]["IntradayAnalysisReport"] | null;
         };
-        /** TickerMetadata */
+        /**
+         * TickerMetadata
+         * @description Metadata for a ticker symbol.
+         */
         TickerMetadata: {
             /** Ticker */
             ticker: string;
@@ -1707,7 +2108,10 @@ export interface components {
              */
             data_type: "daily" | "intraday" | "news";
         };
-        /** TopFeature */
+        /**
+         * TopFeature
+         * @description Top feature information for SHAP explanation.
+         */
         TopFeature: {
             /**
              * Feature
@@ -1731,7 +2135,10 @@ export interface components {
              */
             effect: "positive" | "negative";
         };
-        /** TrendReport */
+        /**
+         * TrendReport
+         * @description Complete trend analysis report.
+         */
         TrendReport: {
             /**
              * Primary Focus
@@ -1749,32 +2156,35 @@ export interface components {
         };
         /**
          * TriggeredRuleInfo
-         * @description Thông tin tóm tắt về một quy tắc (Rule) đã được kích hoạt.
-         *     'Kích hoạt' có nghĩa là quy tắc đó đã trả về một điểm số khác 0.
+         * @description Summary information about a triggered rule.
+         *     'Triggered' means the rule returned a non-zero score.
          */
         TriggeredRuleInfo: {
             /**
              * Rule Id
-             * @description ID của quy tắc.
+             * @description ID of the rule.
              */
             rule_id: string;
             /**
              * Name
-             * @description Tên của quy tắc để con người đọc.
+             * @description Human-readable name of the rule.
              */
             name: string;
             /**
              * Score
-             * @description Điểm số mà quy tắc trả về (đã chuẩn hóa).
+             * @description Normalized score returned by the rule.
              */
             score: number;
             /**
              * Purpose
-             * @description Mục đích của quy tắc, ví dụ: 'DECISION_SIGNAL'.
+             * @description Purpose of the rule, e.g., 'DECISION_SIGNAL'.
              */
             purpose: string;
         };
-        /** TripleBarrierTaskMetadata */
+        /**
+         * TripleBarrierTaskMetadata
+         * @description Metadata for triple barrier task.
+         */
         TripleBarrierTaskMetadata: {
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -1807,7 +2217,10 @@ export interface components {
              */
             sl_pct: number;
         };
-        /** UniversalNewsPoint */
+        /**
+         * UniversalNewsPoint
+         * @description A universal news item with additional keyword information.
+         */
         UniversalNewsPoint: {
             /** News Uuid */
             news_uuid: string;
@@ -1828,15 +2241,21 @@ export interface components {
             /** Title Hash */
             title_hash: string;
         };
-        /** UniversalNewsResponse */
+        /**
+         * UniversalNewsResponse
+         * @description Response schema for universal news.
+         */
         UniversalNewsResponse: {
             /**
              * Datas
-             * @description universal news
+             * @description Universal news items
              */
             datas: components["schemas"]["UniversalNewsPoint"][];
         };
-        /** UserResponse */
+        /**
+         * UserResponse
+         * @description Response schema for user data.
+         */
         UserResponse: {
             /**
              * Email

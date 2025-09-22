@@ -1,4 +1,6 @@
 # api/v1/endpoints/quick_advisor.py
+"""Advisor endpoints for generating investment recommendations."""
+
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse
 
@@ -14,6 +16,7 @@ router = APIRouter()
 
 @router.post("/advisor/{ticker}/full", 
             response_model=AdvisorResponse,
+            summary="Get full advisor report with investment recommendations",
             responses={
                 404: {"description": "Ticker or its data not found"},
                 500: {"description": "Internal analysis module failed"},
@@ -23,8 +26,19 @@ router = APIRouter()
 async def get_full_advisor_report(quantitive_config: QuantitivePreferencesConfigRequest,
                                   ticker: str, 
                                   limit: int = 10,
-                       orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
-                       ):
+                                  orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
+                                 ):
+    """Get full advisor report with investment recommendations.
+    
+    Args:
+        quantitive_config (QuantitivePreferencesConfigRequest): Quantitative preferences configuration
+        ticker (str): Stock ticker symbol
+        limit (int): Maximum number of rules to include in the report
+        orchestrator (AIServiceQuickOrchestrator): Service orchestrator dependency
+        
+    Returns:
+        AdvisorResponse: Complete advisor report with recommendations
+    """
     try:
         report = await orchestrator.get_full_advisor_report(ticker=ticker, 
                                                             quantitive_config=QuantitivePreferencesConfig.model_validate(quantitive_config.model_dump()),
@@ -39,6 +53,7 @@ async def get_full_advisor_report(quantitive_config: QuantitivePreferencesConfig
     
 @router.post("/advisor/{ticker}/explain", 
             response_class=PlainTextResponse,
+            summary="Get natural language explanation of advisor recommendations",
             responses={
                 404: {"description": "Ticker or its data not found"},
                 500: {"description": "Internal analysis module failed"},
@@ -46,10 +61,21 @@ async def get_full_advisor_report(quantitive_config: QuantitivePreferencesConfig
             }
 )
 async def get_full_advisor_explaination_report(quantitive_config: QuantitivePreferencesConfigRequest,
-                                  ticker: str, 
-                                  limit: int = 10,
-                       orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
-                       ):
+                                               ticker: str, 
+                                               limit: int = 10,
+                                               orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
+                                              ):
+    """Get natural language explanation of advisor recommendations.
+    
+    Args:
+        quantitive_config (QuantitivePreferencesConfigRequest): Quantitative preferences configuration
+        ticker (str): Stock ticker symbol
+        limit (int): Maximum number of rules to include in the explanation
+        orchestrator (AIServiceQuickOrchestrator): Service orchestrator dependency
+        
+    Returns:
+        str: Natural language explanation of advisor recommendations
+    """
     try:
         report = await orchestrator.get_full_advisor_explaination_report(ticker=ticker, 
                                                             quantitive_config=QuantitivePreferencesConfig.model_validate(quantitive_config.model_dump()),

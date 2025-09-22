@@ -20,7 +20,7 @@ const profileId = route.params.profile_id as string;
 const notificationStore = useNotificationStore();
 
 // --- LOCAL STATE ---
-// Thay đổi kiểu dữ liệu ở đây: editableProfile sẽ luôn có cấu trúc đầy đủ
+// Change data type here
 const editableProfile = ref<Profile | null>(null);
 const isSaving = ref(false);
 const isDeleting = ref(false);
@@ -28,8 +28,7 @@ const isDeleting = ref(false);
 // --- LOGIC ---
 watch(currentProfile, (newProfileData) => {
   if (newProfileData) {
-    // Chỉ cần tạo một bản sao sâu. Kiểu `Profile` đảm bảo tất cả các
-    // object con như `risk_tolerance` đều tồn tại.
+    // Create deep copy
     editableProfile.value = JSON.parse(JSON.stringify(newProfileData));
   }
 }, { immediate: true });
@@ -40,10 +39,10 @@ async function handleUpdateProfile() {
   if (!editableProfile.value) return;
   isSaving.value = true;
   
-  // Quan trọng: Trước khi gửi đi, chúng ta tạo một đối tượng ProfileUpdate
-  // chỉ chứa những trường thực sự cần thiết.
-  // Mặc dù editableProfile có tất cả các trường, nhưng `profile_in`
-  // sẽ chỉ chứa những gì `ProfileUpdate` schema định nghĩa.
+  // Important: Before sending, we create a ProfileUpdate object
+  // containing only the fields that are actually needed.
+  // Even though editableProfile has all the fields, `profile_in`
+  // will only contain what the `ProfileUpdate` schema defines.
   const profile_in: ProfileUpdate = {
       profile_name: editableProfile.value.profile_name,
       description: editableProfile.value.description,
@@ -101,16 +100,16 @@ onMounted(() => {
 
 <template>
   <v-container>
-    <!-- Giao diện Loading và Error -->
+    <!-- Loading and error -->
     <div v-if="isLoadingDetails" class="text-center pa-10">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
       <p class="mt-4">Loading profile details...</p>
     </div>
     <v-alert v-else-if="error" type="error" class="mb-4" closable>{{ error }}</v-alert>
 
-    <!-- Form chỉnh sửa chính -->
+    <!-- Main Form -->
     <v-form v-else-if="editableProfile" @submit.prevent="handleUpdateProfile">
-      <!-- Thanh Header với các nút hành động -->
+      
       <div class="d-flex justify-space-between align-center mb-6">
         <div>
           <h1 class="text-h4">Edit Profile</h1>
@@ -123,7 +122,7 @@ onMounted(() => {
       </div>
       
       <v-row>
-        <!-- CỘT BÊN TRÁI -->
+        <!-- LEFT -->
         <v-col cols="12" md="6">
           <v-card class="pa-2">
             <v-card-title>Basic Info</v-card-title>
@@ -163,7 +162,7 @@ onMounted(() => {
           </v-card>
         </v-col>
 
-        <!-- CỘT BÊN PHẢI -->
+        <!-- RIGHT -->
         <v-col cols="12" md="6">
           <v-card class="pa-2">
              <v-card-title>Investment Goals</v-card-title>
@@ -202,7 +201,7 @@ onMounted(() => {
         </v-col>
       </v-row>
       
-      <!-- Card cho Preferences & Settings -->
+      <!-- Preferences & Settings -->
       <v-card class="mt-6 pa-2">
         <v-card-title>Preferences & Settings</v-card-title>
         <v-card-text>
@@ -234,7 +233,7 @@ onMounted(() => {
         </v-card-text>
       </v-card>
 
-      <!-- VÙNG NGUY HIỂM - XÓA PROFILE -->
+      <!-- DANGER ZONE - REMOVE PROFILE -->
       <v-card class="mt-6 pa-2" variant="tonal" color="error">
         <v-card-title>Danger Zone</v-card-title>
         <v-card-text>

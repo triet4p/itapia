@@ -4,33 +4,42 @@
  * Bootstraps Vuetify and other plugins then mounts the App`
  */
 
-// Plugins
-import { registerPlugins } from '@/plugins'
+// Plugin imports
+import { registerPlugins } from '@/plugins';
 
-// Components
-import App from './App.vue'
+// Component imports
+import App from './App.vue';
 
-// Composables
-import { createApp } from 'vue'
+// Vue composable imports
+import { createApp } from 'vue';
 
-// Styles
-import 'unfonts.css'
+// Global style imports
+import 'unfonts.css';
 
-import { useAuthStore } from './stores/authStore'
-import { createPinia } from 'pinia'
-import router from './router'
-import vuetify from './plugins/vuetify'
+// Store imports
+import { useAuthStore } from './stores/authStore';
+import { createPinia } from 'pinia';
 
-const app = createApp(App)
+// Router import
+import router from './router';
 
-app.use(createPinia())
-app.use(router)
-app.use(vuetify)
+// Vuetify import
+import vuetify from './plugins/vuetify';
 
-registerPlugins(app)
+// Create the main Vue application instance
+const app = createApp(App);
 
-// 2. Khởi tạo và gọi action sau khi Pinia đã được use()
-const authStore = useAuthStore()
-authStore.initializeAuth()
+// Register core plugins
+app.use(createPinia());
+app.use(router);
+app.use(vuetify);
 
-app.mount('#app')
+// Register additional plugins
+registerPlugins(app);
+
+// 2. Initialize and call action after Pinia has been used
+const authStore = useAuthStore();
+authStore.initializeAuth();
+
+// Mount the application to the DOM
+app.mount('#app');

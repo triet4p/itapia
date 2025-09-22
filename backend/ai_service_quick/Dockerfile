@@ -1,26 +1,26 @@
 FROM continuumio/miniconda3
 
-# Đặt thư mục làm việc
+# Set working directory
 WORKDIR /ai-service-quick
 
-# --- BƯỚC 1: TẠO MÔI TRƯỜNG CONDA MỚI VỚI PHIÊN BẢN PYTHON CỤ THỂ ---
-# Đây là cách làm tốt nhất để kiểm soát phiên bản.
-# Chúng ta tạo một môi trường tên là 'itapia' với Python 3.11
+# --- STEP 1: CREATE NEW CONDA ENVIRONMENT WITH SPECIFIC PYTHON VERSION ---
+# This is the best practice to control version.
+# We create an environment named 'itapia' with Python 3.11
 RUN conda create -n itapia python=3.11 -y
 
-# --- BƯỚC 2: KÍCH HOẠT MÔI TRƯỜNG MỚI VÀ CÀI ĐẶT THƯ VIỆN ---
-# Sử dụng 'conda run' để thực thi các lệnh bên trong môi trường 'itapia'
-# 2.1. Cài đặt TA-Lib trước tiên
+# --- STEP 2: ACTIVATE NEW ENVIRONMENT AND INSTALL LIBRARIES ---
+# Use 'conda run' to execute commands inside the 'itapia' environment
+# 2.1. Install TA-Lib first
 RUN conda run -n itapia conda install -c conda-forge -y ta-lib "spacy=3.6.*" pandas-ta
 
-# 2.2. Cài đặt các gói còn lại bằng pip
+# 2.2. Install remaining packages with pip
 COPY ./ai_service_quick/requirements.txt /ai-service-quick/requirements.txt
 RUN conda run -n itapia pip install --no-cache-dir --upgrade -r /ai-service-quick/requirements.txt
 
-# --- BƯỚC 3: COPY MODEL LOCAL ---
-# Copy wheel model đã tải sẵn
+# --- STEP 3: COPY LOCAL MODEL ---
+# Copy pre-downloaded wheel model
 COPY ./ai_service_quick/dependencies/en_core_web_md-3.6.0-py3-none-any.whl /tmp/
-# Install model từ local wheel, đảm bảo reproducible
+# Install model from local wheel, ensuring reproducible
 RUN conda run -n itapia pip install /tmp/en_core_web_md-3.6.0-py3-none-any.whl
 
 # Install shared dependencies first to leverage Docker layer caching

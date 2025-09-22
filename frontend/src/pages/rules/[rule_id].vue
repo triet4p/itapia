@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import axios from 'axios';
 import type { components } from '@/types/api';
 import TreeNode from '@/components/TreeNode.vue';
 import { useRulesStore } from '@/stores/rulesStore';

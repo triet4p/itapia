@@ -1,8 +1,14 @@
+<!--
+  Application Footer Component
+  
+  Displays application footer with social links and copyright information.
+-->
 <template>
   <v-footer
     app
     height="40"
   >
+    <!-- Social media links -->
     <a
       v-for="item in items"
       :key="item.title"
@@ -18,6 +24,7 @@
       />
     </a>
 
+    <!-- Copyright information -->
     <div
       class="text-caption text-disabled"
       style="position: absolute; right: 16px;"
@@ -37,6 +44,9 @@
 </template>
 
 <script setup lang="ts">
+  /**
+   * Social media and resource links to display in the footer
+   */
   const items = [
     {
       title: 'Vuetify Documentation',

@@ -1,19 +1,25 @@
 /**
  * plugins/vuetify.ts
  *
+ * Vuetify plugin configuration
+ * 
  * Framework documentation: https://vuetifyjs.com`
  */
 
-// Styles
-import '@mdi/font/css/materialdesignicons.css'
-import 'vuetify/styles'
+// Vuetify styles
+import '@mdi/font/css/materialdesignicons.css';
+import 'vuetify/styles';
 
-// Composables
-import { createVuetify } from 'vuetify'
+// Vuetify composables
+import { createVuetify } from 'vuetify';
 
-// https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides
+/**
+ * Creates and configures the Vuetify instance.
+ * 
+ * https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides
+ */
 export default createVuetify({
   theme: {
     defaultTheme: 'system',
   },
-})
+});

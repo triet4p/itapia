@@ -2,6 +2,8 @@ from typing import Dict, Literal, Optional, Tuple
 from pydantic import BaseModel, Field
 
 class PerformanceMetrics(BaseModel):
+    """Performance metrics for trading strategies."""
+    
     num_trades: int = Field(default=0)
     total_return_pct: float = Field(default=0.0)
     max_drawdown_pct: float = Field(default=0.0)
@@ -13,6 +15,8 @@ class PerformanceMetrics(BaseModel):
     cagr: float = Field(default=0.0)
     
 class NormalizedPerformanceMetrics(BaseModel):
+    """Normalized performance metrics scaled to 0-1 range."""
+    
     num_trades: float = Field(default=0.0)
     total_return_pct: float = Field(default=0.0)
     max_drawdown_pct: float = Field(default=0.0)
@@ -24,6 +28,8 @@ class NormalizedPerformanceMetrics(BaseModel):
     cagr: float = Field(default=0.0)
     
 class PerformanceFilterWeights(BaseModel):
+    """Weights for performance metrics used in filtering."""
+    
     num_trades: float = Field(default=0.0)
     total_return_pct: float = Field(default=0.0)
     max_drawdown_pct: float = Field(default=0.0)
@@ -35,6 +41,8 @@ class PerformanceFilterWeights(BaseModel):
     cagr: float = Field(default=0.0)
     
 class PerformanceHardConstraints(BaseModel):
+    """Hard constraints for performance metrics."""
+    
     num_trades: Tuple[Optional[float], Optional[float]] = Field(default=(None, None))
     total_return_pct: Tuple[Optional[float], Optional[float]] = Field(default=(None, None))
     max_drawdown_pct: Tuple[Optional[float], Optional[float]] = Field(default=(None, None))
@@ -45,11 +53,11 @@ class PerformanceHardConstraints(BaseModel):
     annual_return_stability: Tuple[Optional[float], Optional[float]] = Field(default=(None, None))
     cagr: Tuple[Optional[float], Optional[float]] = Field(default=(None, None))
     
-# Định nghĩa một kiểu cho "hướng" của metric
+# Define a type for the "direction" of a metric
 MetricDirection = Literal["higher_is_better", "lower_is_better"]
 
-# --- TỪ ĐIỂN CẤU HÌNH CHUẨN HÓA ---
-# Đây là nơi chứa toàn bộ "tri thức" về cách chuẩn hóa
+# --- NORMALIZATION CONFIGURATION DICTIONARY ---
+# This contains all the "knowledge" about how to normalize metrics
 NORMALIZATION_CONFIG: Dict[str, Dict] = {
     "cagr": {
         "worst": -0.20,
@@ -64,12 +72,12 @@ NORMALIZATION_CONFIG: Dict[str, Dict] = {
     "max_drawdown_pct": {
         "worst": 0.40, # 40% drawdown
         "best": 0.05,  # 5% drawdown
-        "direction": "lower_is_better" # <-- Quan trọng
+        "direction": "lower_is_better" # <-- Important
     },
     "annual_return_stability": {
-        "worst": 1.0, # std = 1.0 (rất biến động)
-        "best": 0.1,  # std = 0.1 (rất ổn định)
-        "direction": "lower_is_better" # <-- Quan trọng
+        "worst": 1.0, # std = 1.0 (very volatile)
+        "best": 0.1,  # std = 0.1 (very stable)
+        "direction": "lower_is_better" # <-- Important
     },
     "profit_factor": {
         "worst": 1.0,
@@ -86,5 +94,5 @@ NORMALIZATION_CONFIG: Dict[str, Dict] = {
         "best": 100,
         "direction": "higher_is_better"
     }
-    # Thêm các metric khác vào đây nếu cần
+    # Add other metrics here if needed
 }

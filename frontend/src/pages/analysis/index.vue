@@ -7,27 +7,25 @@ import { useRouter } from 'vue-router';
 
 const notificationStore = useNotificationStore();
 
-// Loại quy trình phân tích
 type ProcessType = 'quick' | 'deep' | null;
 const selectedProcess = ref<ProcessType>(null);
 
-// Dữ liệu chung cho form
+// Common data
 const ticker = ref('');
 const isNavigating = ref<boolean>(false);
 
-// Các tùy chọn cho Quick Analysis
+// Option for quick check pipeline
 const quickOptions = reactive({
   daily_analysis_type: 'medium',
   required_type: 'all',
   showKeyIndicators: true,
   showTopPatterns: true,
-  // Dùng mảng để lưu các lựa chọn forecasting
-  selectedForecasts: [0, 1, 2], // Mặc định chọn cả 3
+  selectedForecasts: [0, 1, 2], 
   showTopNews: true,
   showSummary: true,
 });
 
-// (Tương lai) Các tùy chọn cho Deep Analysis
+// (Future) Option for deep dive
 // const deepOptions = reactive({ ... });
 
 const router = useRouter();
@@ -46,7 +44,7 @@ function startAnalysis() {
   
   isNavigating.value = true;
 
-  // Tập hợp các query params
+  //Query params
   let query: Record<string, any> = {
     processType: selectedProcess.value,
   };
@@ -58,17 +56,16 @@ function startAnalysis() {
       required_type: quickOptions.required_type,
       showKeyIndicators: quickOptions.showKeyIndicators,
       showTopPatterns: quickOptions.showTopPatterns,
-      // Chuyển mảng forecasting thành chuỗi để truyền qua URL
+      // Convert forecasts Array to string to use in URL
       forecasts: quickOptions.selectedForecasts.join(','),
       showTopNews: quickOptions.showTopNews,
       showSummary: quickOptions.showSummary
     };
   } else if (selectedProcess.value === 'deep') {
-    // (Tương lai) Thêm logic cho Deep Dive ở đây
-    // query = { ...query, ...deepOptions };
+    
   }
   
-  // Điều hướng đến trang kết quả
+  // Navigate to result page
   router.push({
     name: '/analysis/[ticker]',
     params: { ticker: ticker.value.toUpperCase() },
@@ -76,10 +73,9 @@ function startAnalysis() {
   });
 }
 
-// Theo dõi sự thay đổi của quy trình để reset các tùy chọn nếu cần
+// Watch to reset if need
 watch(selectedProcess, (newValue, oldValue) => {
-  console.log(`Đã chuyển từ quy trình ${oldValue} sang ${newValue}`);
-  // Có thể thêm logic reset các form ở đây trong tương lai
+  console.log(`Changed from ${oldValue} process to ${newValue} process`);
 });
 
 </script>
@@ -91,7 +87,7 @@ watch(selectedProcess, (newValue, oldValue) => {
         <h1 class="text-h4 text-center mb-6">ITAPIA Analysis</h1>
 
         <v-card class="pa-4" elevation="2">
-          <!-- BƯỚC 1: CÁC THÔNG TIN CƠ BẢN -->
+          <!-- BASIC INFORMATION -->
           <v-card-title>Basic Information</v-card-title>
           <v-card-text>
             <v-row>
@@ -105,7 +101,6 @@ watch(selectedProcess, (newValue, oldValue) => {
                 ></v-text-field>
               </v-col>
               <v-col cols="12" sm="6">
-                <!-- Sử dụng v-radio-group để chọn 1 trong 2 quy trình -->
                 <p class="font-weight-medium mb-2">Choose process:</p>
                 <v-radio-group v-model="selectedProcess" inline>
                   <v-radio label="Quick Analysis" value="quick"></v-radio>
@@ -117,8 +112,7 @@ watch(selectedProcess, (newValue, oldValue) => {
 
           <v-divider class="my-4"></v-divider>
 
-          <!-- BƯỚC 2: CÁC TÙY CHỌN CHO QUICK ANALYSIS -->
-          <!-- Dùng v-expand-transition và v-if để chỉ hiện khi đã chọn 'quick' -->
+          <!-- OPTION FOR QUICK ANALYSIS -->
           <v-expand-transition>
             <div v-if="selectedProcess === 'quick'">
               <v-card-title>Quick Analysis Options</v-card-title>
@@ -172,7 +166,7 @@ watch(selectedProcess, (newValue, oldValue) => {
             </div>
           </v-expand-transition>
           
-          <!-- (Tương lai) Tùy chọn cho Deep Dive sẽ nằm ở đây -->
+          <!-- (Future) OPTION FOR DEEP DIVE -->
           <!-- <div v-if="selectedProcess === 'deep'"> ... </div> -->
 
           <v-card-actions>

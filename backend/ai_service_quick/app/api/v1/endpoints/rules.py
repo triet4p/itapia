@@ -1,4 +1,6 @@
-# api/v1/endpoints/quick_advisor.py
+# api/v1/endpoints/rules.py
+"""Rule endpoints for accessing and explaining trading rules."""
+
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import PlainTextResponse
 
@@ -13,14 +15,24 @@ router = APIRouter()
 
 @router.get("/rules/{rule_id}/explain", 
             response_model=ExplainationRuleResponse,
+            summary="Get explanation for a specific rule",
             responses={
-                404: {"description": "Ticker or its data not found"},
+                404: {"description": "Rule not found"},
                 500: {"description": "Internal analysis module failed"},
                 503: {"description": "Service is not ready, still pre-warming caches"}
             }
 )
 async def get_single_explaination_rule(rule_id: str, 
                        orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator)):
+    """Get explanation for a specific rule.
+    
+    Args:
+        rule_id (str): ID of the rule to explain
+        orchestrator (AIServiceQuickOrchestrator): Service orchestrator dependency
+        
+    Returns:
+        ExplainationRuleResponse: Rule with natural language explanation
+    """
     try:
         report = await orchestrator.get_single_explaination_rule(rule_id=rule_id)
         return ExplainationRuleResponse(
@@ -42,8 +54,9 @@ async def get_single_explaination_rule(rule_id: str,
     
 @router.get("/rules", 
             response_model=list[RuleResponse],
+            summary="Get list of ready rules",
             responses={
-                404: {"description": "Ticker or its data not found"},
+                404: {"description": "No rules found"},
                 500: {"description": "Internal analysis module failed"},
                 503: {"description": "Service is not ready, still pre-warming caches"}
             }
@@ -51,6 +64,15 @@ async def get_single_explaination_rule(rule_id: str,
 async def get_ready_rules(purpose: SemanticType = SemanticType.ANY, 
                            orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
                            ):
+    """Get list of ready rules.
+    
+    Args:
+        purpose (SemanticType): Filter rules by purpose
+        orchestrator (AIServiceQuickOrchestrator): Service orchestrator dependency
+        
+    Returns:
+        list[RuleResponse]: List of ready rules
+    """
     try:
         report = await orchestrator.get_ready_rules(purpose=purpose)
         return [RuleResponse(
@@ -71,8 +93,9 @@ async def get_ready_rules(purpose: SemanticType = SemanticType.ANY,
     
 @router.get("/rules/nodes", 
             response_model=list[NodeResponse],
+            summary="Get list of available nodes",
             responses={
-                404: {"description": "Ticker or its data not found"},
+                404: {"description": "No nodes found"},
                 500: {"description": "Internal analysis module failed"},
                 503: {"description": "Service is not ready, still pre-warming caches"}
             }
@@ -81,6 +104,16 @@ def get_nodes(node_type: NodeType = NodeType.ANY,
                            purpose: SemanticType = SemanticType.ANY, 
                            orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator),
                            ):
+    """Get list of available nodes.
+    
+    Args:
+        node_type (NodeType): Filter nodes by type
+        purpose (SemanticType): Filter nodes by purpose
+        orchestrator (AIServiceQuickOrchestrator): Service orchestrator dependency
+        
+    Returns:
+        list[NodeResponse]: List of available nodes
+    """
     try:
         report = orchestrator.get_nodes(node_type, purpose)
         return [NodeResponse.model_validate(node.model_dump()) for node in report]

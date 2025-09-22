@@ -1,8 +1,7 @@
 <!-- src/pages/rules/index.vue -->
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
 import type { components } from '@/types/api';
 import { SEMANTIC_TYPE_OPTIONS } from '@/constants/api';
 import { VDataTable } from 'vuetify/components';
@@ -12,7 +11,6 @@ import { useRulesStore } from '@/stores/rulesStore';
 type RuleResponse = components['schemas']['RuleResponse'];
 type SemanticType = components['schemas']['SemanticType'];
 type ReadonlyHeaders = VDataTable['$props']['headers'];
-type RuleStatus = components['schemas']['RuleStatus']
 
 // --- STORE ---
 const rulesStore = useRulesStore();
@@ -27,7 +25,6 @@ const headers: ReadonlyHeaders = [
   { 
     title: 'Rule ID', 
     key: 'rule_id',
-    // Sử dụng `cellProps` để thêm class vào các ô <td>
     cellProps: { class: 'rule-id-col' },
     align: 'start' 
   },
@@ -141,19 +138,16 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* Dùng :deep() để style các phần tử được tạo ra bởi component v-data-table */
+/* Use :deep() to style element created by component v-data-table */
 
-/* Cột Rule ID: Rộng, nhưng có thể co lại nếu cần */
 :deep(.rule-id-col) {
   min-width: 280px !important;
 }
 
-/* Cột Name: Linh hoạt, sẽ chiếm phần lớn không gian còn lại */
 :deep(.name-col) {
   min-width: 300px !important;
 }
 
-/* Cột Purpose: Rộng vừa phải */
 :deep(.purpose-col) {
   min-width: 180px !important;
 }
@@ -162,12 +156,10 @@ onMounted(() => {
   width: 100px !important;
 }
 
-/* Cột Created At: Rộng vừa phải */
 :deep(.created-at-col) {
   min-width: 180px !important;
 }
 
-/* Cột Actions: Hẹp, cố định */
 :deep(.actions-col) {
   width: 100px !important;
 }

@@ -1,20 +1,41 @@
 <!-- src/components/TreeNode.vue -->
+<!--
+  Tree Node Component
+  
+  A recursive component that displays a hierarchical tree structure of nodes.
+  Each node can have child nodes, which are rendered using recursive calls
+  to the same component.
+-->
 <script setup lang="ts">
 import type { components } from '@/types/api';
 
 type NodeEntity = components['schemas']['NodeEntity'];
 
-// Component này nhận vào một node và độ sâu của nó trong cây
+/**
+ * Props for the TreeNode component
+ * 
+ * @prop node - The node entity to display
+ * @prop depth - The depth level of this node in the tree (used for indentation)
+ */
 defineProps<{
   node: NodeEntity;
   depth: number;
 }>();
 
-// Nó có thể phát ra sự kiện khi một node được click
+/**
+ * Emits events from the TreeNode component
+ * 
+ * @event node-click - Emitted when a node is clicked
+ */
 const emit = defineEmits<{
   (e: 'node-click', nodeName: string): void;
 }>();
 
+/**
+ * Handles node click events
+ * 
+ * @param nodeName - The name of the clicked node
+ */
 function onNodeClick(nodeName: string) {
   emit('node-click', nodeName);
 }
@@ -22,7 +43,7 @@ function onNodeClick(nodeName: string) {
 
 <template>
   <div class="tree-node">
-    <!-- Hiển thị node hiện tại -->
+    <!-- Display the current node -->
     <div 
       class="node-content" 
       :style="{ paddingLeft: `${depth * 20}px` }" 
@@ -34,7 +55,7 @@ function onNodeClick(nodeName: string) {
       </v-chip>
     </div>
 
-    <!-- Nếu có node con, render chúng bằng cách gọi lại chính component này -->
+    <!-- If there are child nodes, render them by recursively calling this component -->
     <div v-if="node.children && node.children.length > 0" class="node-children">
       <TreeNode 
         v-for="(child, index) in node.children" 

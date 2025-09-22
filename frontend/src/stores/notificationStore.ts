@@ -1,3 +1,10 @@
+/**
+ * Notification Store
+ * 
+ * Manages application notifications and toast messages.
+ * Provides a centralized way to display feedback to users.
+ */
+
 import { defineStore } from "pinia";
 
 interface State {
@@ -12,7 +19,7 @@ export const useNotificationStore = defineStore('notification', {
     message: '',
     color: 'info',
     visible: false,
-    timeout: 5000, // 5 second
+    timeout: 5000, // 5 seconds
   }),
   actions: {
     showNotification(payload: { message: string, color?: string, timeout?: number }) {

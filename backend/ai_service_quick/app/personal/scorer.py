@@ -4,6 +4,7 @@ from itapia_common.schemas.entities.performance import NormalizedPerformanceMetr
 from itapia_common.schemas.entities.personal import QuantitivePreferencesConfig
 from typing import Dict, Literal
 
+
 def clip(value: float, lb: float = -float('inf'), ub: float = float("inf")):
     """Clip a value to stay within specified bounds.
     
@@ -23,16 +24,37 @@ def clip(value: float, lb: float = -float('inf'), ub: float = float("inf")):
         return ub
     return value
 
+
 class Scorer(ABC):
+    """Abstract base class for scoring performance metrics."""
     
     @abstractmethod
     def score(self, metrics: PerformanceMetrics,
               quantitive_config: QuantitivePreferencesConfig) -> float:
+        """Score performance metrics based on quantitative preferences.
+        
+        Args:
+            metrics (PerformanceMetrics): Performance metrics to score
+            quantitive_config (QuantitivePreferencesConfig): Quantitative preferences configuration
+            
+        Returns:
+            float: Score for the metrics
+        """
         pass
     
+
 class WeightedSumScorer(Scorer):
+    """Scorer that uses weighted sum approach to evaluate performance metrics."""
     
     def normalize(self, metrics: PerformanceMetrics):
+        """Normalize performance metrics to 0-1 range.
+        
+        Args:
+            metrics (PerformanceMetrics): Performance metrics to normalize
+            
+        Returns:
+            NormalizedPerformanceMetrics: Normalized performance metrics
+        """
         normalized = metrics.model_dump()
         for k, value in normalized.items():
             if k in NORMALIZATION_CONFIG.keys():
@@ -55,6 +77,15 @@ class WeightedSumScorer(Scorer):
     
     def score(self, metrics: PerformanceMetrics,
               quantitive_config: QuantitivePreferencesConfig) -> float:
+        """Score performance metrics using weighted sum approach.
+        
+        Args:
+            metrics (PerformanceMetrics): Performance metrics to score
+            quantitive_config (QuantitivePreferencesConfig): Quantitative preferences configuration
+            
+        Returns:
+            float: Weighted sum score for the metrics
+        """
         weights = quantitive_config.weights
         normalized = self.normalize(metrics)
         
@@ -64,7 +95,7 @@ class WeightedSumScorer(Scorer):
         personal_score = 0.0
         total_weight = 0.0
         
-        # 2. Tính tổng có trọng số trên các giá trị đã được chuẩn hóa
+        # Calculate weighted sum of normalized values
         for name, weight in weights_dict.items():
             if weight > 0 and name in normalized_dict:
                 personal_score += normalized_dict[name] * weight

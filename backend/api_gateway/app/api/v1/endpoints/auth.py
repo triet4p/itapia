@@ -1,3 +1,5 @@
+"""Authentication endpoints for user login and token management."""
+
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 from app.services.auth.security import get_authorized_url, create_access_token
@@ -11,8 +13,16 @@ from itapia_common.schemas.api.auth import AuthorizationURLResponse
 
 router = APIRouter()
 
-@router.get('/auth/google/login', response_model=AuthorizationURLResponse, tags=['Auth'])
+@router.get('/auth/google/login', 
+            response_model=AuthorizationURLResponse, 
+            tags=['Auth'],
+            summary="Get Google OAuth authorization URL")
 def google_login():
+    """Get Google OAuth authorization URL.
+    
+    Returns:
+        AuthorizationURLResponse: Google OAuth authorization URL
+    """
     try:
         url = get_authorized_url()
         return AuthorizationURLResponse(authorization_url=url)
@@ -21,29 +31,39 @@ def google_login():
     except Exception as ex:
         raise HTTPException(status_code=500, detail='Unknown Error occured in servers')
 
-@router.get("/auth/google/callback")
+@router.get("/auth/google/callback", 
+            summary="Handle Google OAuth callback and generate JWT token")
 async def google_callback(code: str, 
                           user_service: UserService = Depends(get_users_service)):
+    """Handle Google OAuth callback and generate JWT token.
+    
+    Args:
+        code (str): Authorization code from Google OAuth
+        user_service (UserService): User service dependency
+        
+    Returns:
+        RedirectResponse: Redirect to frontend with JWT token or error message
+    """
     try:
-        # 1 & 2. Lấy token và thông tin user từ Google
+        # 1 & 2. Get token and user info from Google
         google_tokens = await google.get_google_tokens(code=code)
         user_info = await google.get_google_user_info(access_token=google_tokens["access_token"])
 
-        # 3. Tìm hoặc tạo user trong CSDL
+        # 3. Find or create user in database
         user_in_db = user_service.get_or_create(user_info)
 
-        # 4. Tạo JWT của ITAPIA
-        # Payload của token sẽ chứa ID user trong hệ thống của bạn
+        # 4. Create ITAPIA JWT
+        # Token payload will contain user ID in your system
         access_token = create_access_token(subject=user_in_db.user_id)
         
-        # 5. Redirect về frontend
-        # TODO: Đưa URL này vào biến môi trường
+        # 5. Redirect to frontend
+        # TODO: Move this URL to environment variables
         frontend_callback_url = f'{FRONTEND_CALLBACK_URL}?token={access_token}'
         return RedirectResponse(url=frontend_callback_url)
 
     except ServerCredError as e:
-        # Nếu có lỗi trong quá trình giao tiếp với Google, redirect về trang login của frontend với thông báo lỗi
-        # TODO: Đưa URL này vào biến môi trường
+        # If there's an error communicating with Google, redirect to frontend login page with error message
+        # TODO: Move this URL to environment variables
         return RedirectResponse(url=f"{FRONTEND_LOGIN_ERR_URL}?error={e.detail}")
     except Exception as ex:
         raise HTTPException(status_code=500, detail='Unknown Error occured in servers')

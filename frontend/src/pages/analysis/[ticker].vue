@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import axios from 'axios';
 import { useAnalysisStore } from '@/stores/analysisStore';
 
 const showFullJson = ref<boolean>(false);
@@ -16,9 +15,6 @@ const ticker = route.params.ticker as string;
 
 // --- HELPER FUNCTIONS FOR FORMATTING ---
 
-/**
- * Chuyển đổi kết quả dự báo Triple Barrier thành chuỗi dễ đọc.
- */
 function formatTripleBarrierPrediction(prediction: number): string {
   if (prediction === 1) return 'Take-Profit Hit';
   if (prediction === -1) return 'Stop-Loss Hit';
@@ -26,10 +22,6 @@ function formatTripleBarrierPrediction(prediction: number): string {
   return 'Unknown';
 }
 
-/**
- * Chuyển đổi tên target của bài toán phân phối thành dạng đẹp hơn.
- * VD: 'target_mean_pct_5d' -> 'Mean'
- */
 function formatDistributionTargetName(target: string): string {
   const parts = target.split('_');
   if (parts.length > 1) {
@@ -44,7 +36,6 @@ onMounted(() => {
   analysisStore.fetchReport(ticker, route.query);
 });
 
-// Đọc và xử lý tất cả các query params từ URL
 const displayOptions = computed(() => {
   const query = route.query;
   return {
@@ -53,7 +44,7 @@ const displayOptions = computed(() => {
     showKeyIndicators: query.showKeyIndicators !== 'false',
     showTopPatterns: query.showTopPatterns !== 'false',
     showTopNews: query.showTopNews !== 'false',
-    showSummary: query.showSummary !== 'false', // Chỉ dành cho News Summary
+    showSummary: query.showSummary !== 'false',
     selectedForecasts: query.forecasts ? (query.forecasts as string).split(',').map(Number) : [0,1,2]
   };
 });
@@ -63,7 +54,7 @@ const keyIndicatorsList = computed(() => {
   if (!report.value?.technical_report.daily_report?.key_indicators) return [];
   const indicators = report.value.technical_report.daily_report.key_indicators;
   return Object.entries(indicators)
-    .filter(([key, value]) => typeof value === 'number') // Chỉ lấy các chỉ số là số
+    .filter(([key, value]) => typeof value === 'number')
     .map(([key, value]) => ({
       name: key.toUpperCase(),
       value: (value as number).toFixed(2)
@@ -77,14 +68,14 @@ const filteredForecasts = computed(() => {
   return allForecasts.filter((_, index) => displayOptions.value.selectedForecasts.includes(index));
 });
 
-// Computed property mới cho News Summary
+// Computed property for News Summary
 const newsSummary = computed(() => report.value?.news_report.summary);
 
 </script>
 
 <template>
   <v-container>
-    <!-- Giao diện Loading và Error -->
+    <!-- Loading and Error -->
     <div v-if="isLoading" class="text-center pa-10">
       <v-progress-circular indeterminate color="primary" :size="70" :width="7"></v-progress-circular>
       <h2 class="mt-4">Analyzing {{ ticker }}...</h2>
@@ -92,15 +83,15 @@ const newsSummary = computed(() => report.value?.news_report.summary);
     </div>
     <v-alert type="error" v-else-if="error" title="Analysis Error" :text="error" variant="tonal"></v-alert>
 
-    <!-- Giao diện hiển thị dữ liệu -->
+    <!-- Data Visualization -->
     <div v-else-if="report">
       <h1 class="text-h4 mb-2">Analysis Report: {{ ticker }}</h1>
       <p class="text-subtitle-1 mb-6">Generated at {{ new Date(report.generated_at_utc).toLocaleString('en-GB') }}</p>
 
       <v-row>
-        <!-- CỘT BÊN TRÁI: GIẢI THÍCH VÀ CÁC BÁO CÁO CHÍNH -->
+        <!-- LEFT COL: Explanation -->
         <v-col cols="12" md="7">
-          <!-- 1. BẢN TÓM TẮT GIẢI THÍCH (LUÔN HIỂN THỊ) -->
+          <!-- 1. Summary -->
           <v-card class="mb-6">
             <v-card-title>Explanation Summary</v-card-title>
             <v-card-text>
@@ -110,9 +101,9 @@ const newsSummary = computed(() => report.value?.news_report.summary);
 
         </v-col>
 
-        <!-- CỘT BÊN PHẢI: THÔNG TIN NHANH -->
+        <!-- RIGHT COL: Quick Infomation -->
         <v-col cols="12" md="5">
-          <!-- 4. CÁC CHỈ SỐ CHÍNH (HIỂN THỊ CÓ ĐIỀU KIỆN) -->
+          <!-- Indicators -->
           <v-card v-if="displayOptions.showKeyIndicators" class="mb-6">
             <v-card-title>Key Indicators</v-card-title>
             <!-- (Code hiển thị key indicators giữ nguyên) -->
@@ -124,7 +115,7 @@ const newsSummary = computed(() => report.value?.news_report.summary);
             </v-list>
           </v-card>
 
-          <!-- 5. CÁC MẪU HÌNH (HIỂN THỊ CÓ ĐIỀU KIỆN) -->
+          <!-- Patterns -->
           <v-card v-if="displayOptions.showTopPatterns && topPatterns.length > 0" class="mb-6">
             <v-card-title>Top Patterns</v-card-title>
             <!-- (Code hiển thị patterns giữ nguyên) -->
@@ -136,10 +127,9 @@ const newsSummary = computed(() => report.value?.news_report.summary);
             </v-list>
           </v-card>
 
-          <!-- 2. BÁO CÁO DỰ BÁO (HIỂN THỊ CÓ ĐIỀU KIỆN) -->
+          <!-- Forecasting -->
           <v-card v-if="filteredForecasts.length > 0" class="mb-6">
             <v-card-title>Forecasting Report</v-card-title>
-            <!-- (Code hiển thị forecasting giữ nguyên) -->
             <v-list>
               <template v-for="(task, index) in filteredForecasts" :key="task.task_name">
                 <v-list-item class="by-grey-lighten-4">
@@ -168,7 +158,7 @@ const newsSummary = computed(() => report.value?.news_report.summary);
             </v-list>
           </v-card>
 
-          <!-- 3. TÓM TẮT TIN TỨC (HIỂN THỊ CÓ ĐIỀU KIỆN) -->
+          <!-- News summary -->
           <v-card v-if="displayOptions.showSummary && newsSummary" class="mb-6">
             <v-card-title>News Analysis Summary</v-card-title>
              <v-list density="compact">
@@ -180,9 +170,8 @@ const newsSummary = computed(() => report.value?.news_report.summary);
         </v-col>
       </v-row>
       
-      <!-- KHU VỰC JSON ĐẦY ĐỦ -->
+      <!-- Full JSON -->
       <v-card class="mt-6">
-        <!-- (Code không đổi) -->
         <v-card-actions>
           <v-btn @click="showFullJson = !showFullJson">
             {{ showFullJson ? 'Hide' : 'Show' }} Full JSON Report
@@ -202,7 +191,6 @@ const newsSummary = computed(() => report.value?.news_report.summary);
 </template>
 
 <style scoped>
-/* (Style không đổi) */
 .explanation-text {
   background-color: #f5f5f5;
   padding: 16px;

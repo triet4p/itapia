@@ -1,6 +1,13 @@
 // src/stores/profileStore.ts
+/**
+ * Profile Store
+ * 
+ * Manages user investment profiles including creation, retrieval,
+ * updating, and deletion operations.
+ */
+
 import { defineStore } from 'pinia';
-import axios from '@/plugins/axios'; // Import axios đã được cấu hình
+import axios from '@/plugins/axios'; // Import configured axios
 import type { components } from '@/types/api';
 
 type Profile = components['schemas']['ProfileResponse'];
@@ -31,13 +38,13 @@ export const useProfileStore = defineStore('profile', {
   },
 
   actions: {
-    // Lấy danh sách tất cả profile
+    // Fetch list of all profiles
     async fetchProfiles() {
 
       this.isLoadingList = true;
       this.error = null;
       try {
-        // 2. Không cần thêm header nữa! Interceptor sẽ tự làm.
+        // 2. No need to add headers anymore! Interceptor will do it automatically.
         const response = await axios.get('/profiles');
         this.profiles = response.data;
       } catch (e: any) {
@@ -48,13 +55,13 @@ export const useProfileStore = defineStore('profile', {
       }
     },
 
-    // Lấy chi tiết một profile
+    // Fetch details of a specific profile
     async fetchProfileDetails(profileId: string) {
       this.isLoadingDetails = true;
       this.currentProfile = null;
       this.error = null;
       try {
-        // 3. Không cần thêm header
+        // 3. No need to add headers
         const response = await axios.get(`/profiles/${profileId}`);
         this.currentProfile = response.data;
       } catch (e: any) {
@@ -65,11 +72,11 @@ export const useProfileStore = defineStore('profile', {
       }
     },
 
-    // Tạo profile mới
+    // Create a new profile
     async createProfile(profileData: ProfileCreate): Promise<boolean> {
       this.error = null;
       try {
-        // 4. Không cần thêm header
+        // 4. No need to add headers
         const response = await axios.post('/profiles', profileData);
         this.profiles.unshift(response.data);
         return true;
@@ -80,54 +87,54 @@ export const useProfileStore = defineStore('profile', {
       }
     },
     
-    // --- MỚI: Action để cập nhật profile ---
+    // --- NEW: Action to update a profile ---
     async updateProfile(profileId: string, profileData: ProfileUpdate): Promise<boolean> {
       this.error = null;
       try {
-        // Gửi request PUT đến API
+        // Send PUT request to API
         const response = await axios.put(`/profiles/${profileId}`, profileData);
         
-        // Cập nhật lại state cục bộ để giao diện thay đổi ngay lập tức
+        // Update local state immediately for UI changes
         
-        // 1. Cập nhật trong danh sách `profiles`
+        // 1. Update in the `profiles` list
         const index = this.profiles.findIndex(p => p.profile_id === profileId);
         if (index !== -1) {
           this.profiles[index] = response.data;
         }
 
-        // 2. Cập nhật `currentProfile` nếu nó đang được hiển thị
+        // 2. Update `currentProfile` if it's currently being displayed
         if (this.currentProfile?.profile_id === profileId) {
           this.currentProfile = response.data;
         }
         
-        return true; // Báo thành công
+        return true; // Report success
       } catch (e: any) {
         this.error = e.response?.data?.detail || "Failed to update profile.";
         console.error(e);
-        return false; // Báo thất bại
+        return false; // Report failure
       }
     },
 
-    // --- MỚI: Action để xóa profile ---
+    // --- NEW: Action to delete a profile ---
     async deleteProfile(profileId: string): Promise<boolean> {
       this.error = null;
       try {
-        // Gửi request DELETE đến API
+        // Send DELETE request to API
         await axios.delete(`/profiles/${profileId}`);
 
-        // Xóa profile khỏi danh sách `profiles` trong state
+        // Remove profile from the `profiles` list in state
         this.profiles = this.profiles.filter(p => p.profile_id !== profileId);
 
-        // Nếu profile đang được xem chi tiết bị xóa, hãy xóa nó đi
+        // If the profile being viewed in detail is deleted, clear it
         if (this.currentProfile?.profile_id === profileId) {
           this.currentProfile = null;
         }
         
-        return true; // Báo thành công
+        return true; // Report success
       } catch (e: any) {
         this.error = e.response?.data?.detail || "Failed to delete profile.";
         console.error(e);
-        return false; // Báo thất bại
+        return false; // Report failure
       }
     }
   },

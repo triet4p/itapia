@@ -1,38 +1,45 @@
 // src/stores/advisorStore.ts
+/**
+ * Advisor Store
+ * 
+ * Manages state and logic for the investment advisor functionality.
+ * Handles AI-generated investment recommendations and user configuration.
+ */
 
 import { defineStore } from 'pinia';
 import axios from 'axios';
 import type { components } from '@/types/api';
 
 // --- TYPE DEFINITIONS ---
-// Sử dụng các schema đã được đồng bộ từ backend
+// Using schemas synchronized from the backend
 type Profile = components['schemas']['ProfileResponse'];
 type QuantitativeConfig = components['schemas']['QuantitivePreferencesConfigResponse'];
 type AdvisorReport = components['schemas']['AdvisorResponse'];
-type Constraints = components['schemas']['PerformanceHardConstraints']
+type Constraints = components['schemas']['PerformanceHardConstraints'];
 
-// Định nghĩa cấu trúc của State
+// Define the structure of the State
 interface State {
-  activeProfile: Profile | null; // Profile đang được sử dụng cho phiên tư vấn
-  suggestedConfig: QuantitativeConfig | null; // Cấu hình gốc do AI gợi ý
-  editableConfig: QuantitativeConfig | null; // Cấu hình người dùng đang chỉnh sửa
-  finalReport: AdvisorReport | null; // Báo cáo cuối cùng
+  activeProfile: Profile | null; // Profile currently being used for consultation
+  suggestedConfig: QuantitativeConfig | null; // Original configuration suggested by AI
+  editableConfig: QuantitativeConfig | null; // Configuration currently being edited by user
+  finalReport: AdvisorReport | null; // Final report
   
-  // Quản lý trạng thái UI chi tiết
+  // Manage detailed UI state
   isLoadingSuggestion: boolean;
   isLoadingReport: boolean;
   error: string | null;
 }
 
-// --- HELPER FUNCTION (Module hóa) ---
+// --- HELPER FUNCTION (Modularization) ---
 /**
- * Nhận vào một object constraints và chuyển đổi các giá trị chuỗi rỗng ("")
- * trong các tuple thành null để gửi đi cho API.
- * @param originalConstraints - Object constraints gốc từ state.
- * @returns Một object constraints mới đã được làm sạch.
+ * Takes a constraints object and converts empty string values ("")
+ * in tuples to null for API submission.
+ * 
+ * @param originalConstraints - Original constraints object from state
+ * @returns A new, cleaned constraints object
  */
 function cleanConstraintsForAPI(originalConstraints: Constraints): Constraints {
-  // Tạo một bản sao sâu để không thay đổi object gốc
+  // Create a deep copy to avoid modifying the original object
   const cleaned = JSON.parse(JSON.stringify(originalConstraints));
 
   for (const key in cleaned) {
@@ -40,7 +47,7 @@ function cleanConstraintsForAPI(originalConstraints: Constraints): Constraints {
     const value = cleaned[constraintKey];
 
     if (Array.isArray(value)) {
-      // Chuyển đổi "" thành null cho cả min (index 0) và max (index 1)
+      // Convert "" to null for both min (index 0) and max (index 1)
       value[0] = value[0] === '' ? null : value[0];
       value[1] = value[1] === '' ? null : value[1];
     }
@@ -49,7 +56,7 @@ function cleanConstraintsForAPI(originalConstraints: Constraints): Constraints {
 }
 
 export const useAdvisorStore = defineStore("advisor", {
-  // 1. STATE: Trạng thái ban đầu
+  // 1. STATE: Initial state
   state: (): State => ({
     activeProfile: null,
     suggestedConfig: null,
@@ -60,14 +67,14 @@ export const useAdvisorStore = defineStore("advisor", {
     error: null,
   }),
 
-  // 2. ACTIONS: Nơi chứa logic nghiệp vụ
+  // 2. ACTIONS: Contains business logic
   actions: {
     /**
-     * BƯỚC 1: Lấy cấu hình định lượng được gợi ý từ AI.
-     * Được gọi khi người dùng chọn một hồ sơ và bắt đầu phiên tư vấn.
+     * STEP 1: Fetch quantitative configuration suggested by AI.
+     * Called when user selects a profile and starts a consultation session.
      */
     async fetchSuggestedConfig(profile: Profile) {
-      this.resetState(); // Dọn dẹp phiên làm việc cũ trước khi bắt đầu
+      this.resetState(); // Clean up previous session before starting
       this.isLoadingSuggestion = true;
       this.error = null;
       this.activeProfile = profile;
@@ -75,11 +82,11 @@ export const useAdvisorStore = defineStore("advisor", {
       try {
         const response = await axios.post('/personal/suggested_config', profile);
         
-        // Lưu kết quả vào cả hai state
+        // Save result to both states
         const config: QuantitativeConfig = response.data;
 
-        this.suggestedConfig = config
-        // Tạo một bản sao sâu để người dùng chỉnh sửa
+        this.suggestedConfig = config;
+        // Create a deep copy for user editing
         this.editableConfig = JSON.parse(JSON.stringify(config));
 
       } catch (e: any) {
@@ -91,8 +98,8 @@ export const useAdvisorStore = defineStore("advisor", {
     },
 
     /**
-     * BƯỚC 2: Lấy báo cáo tư vấn cuối cùng.
-     * Được gọi khi người dùng đã xem xét và nhấn "Get Final Advice".
+     * STEP 2: Fetch the final advisory report.
+     * Called when user has reviewed and clicks "Get Final Advice".
      */
     async fetchFinalReport(ticker: string, limit: number = 10) {
       if (!this.editableConfig) {
@@ -102,15 +109,15 @@ export const useAdvisorStore = defineStore("advisor", {
 
       this.isLoadingReport = true;
       this.error = null;
-      this.finalReport = null; // Xóa báo cáo cũ
+      this.finalReport = null; // Clear old report
 
       try {
         const configToSend = JSON.parse(JSON.stringify(this.editableConfig));
-        // Gọi hàm helper để làm sạch chỉ riêng phần constraints
+        // Call helper function to clean only the constraints part
         configToSend.constraints = cleanConstraintsForAPI(this.editableConfig.constraints);
         const response = await axios.post(
           `/advisor/quick/${ticker}/full`,
-          this.editableConfig, // Gửi đi cấu hình đã được người dùng tinh chỉnh
+          this.editableConfig, // Send the user-adjusted configuration
           { params: { limit } }
         );
         this.finalReport = response.data;
@@ -123,8 +130,8 @@ export const useAdvisorStore = defineStore("advisor", {
     },
 
     /**
-     * Dọn dẹp trạng thái của store.
-     * Sẽ được gọi khi bắt đầu một phiên mới hoặc khi người dùng rời khỏi trang.
+     * Reset the store state.
+     * Will be called when starting a new session or when user leaves the page.
      */
     resetState() {
       this.activeProfile = null;

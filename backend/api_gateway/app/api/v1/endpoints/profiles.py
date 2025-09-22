@@ -1,18 +1,19 @@
 # api_gateway/app/api/v1/endpoints/profiles.py
+"""User profile endpoints for managing investment profiles."""
 
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-# Dependencies để lấy service và user hiện tại
+# Dependencies to get service and current user
 from app.dependencies import get_profile_service
 from app.dependencies import get_current_user_dep
 from app.core.exceptions import NoDataError, AuthError, DBError
 
-# Schemas để validate request/response và định nghĩa kiểu dữ liệu
+# Schemas to validate request/response and define data types
 from itapia_common.schemas.api.profiles import ProfileCreateRequest, ProfileUpdateRequest, ProfileResponse
 from itapia_common.schemas.entities.profiles import ProfileCreate, ProfileUpdate, ProfileEntity
-from itapia_common.schemas.entities.users import UserEntity # Giả sử UserEntity được định nghĩa ở đây
+from itapia_common.schemas.entities.users import UserEntity # Assuming UserEntity is defined here
 
-# Service class để xử lý logic nghiệp vụ
+# Service class to handle business logic
 from app.services.profiles import ProfileService
 
 router = APIRouter()
@@ -28,18 +29,26 @@ def _change_from_entity_to_response(profile_entity: ProfileEntity):
     "/profiles", 
     response_model=ProfileResponse, 
     status_code=status.HTTP_201_CREATED,
-    tags=['User Profiles']
+    tags=['User Profiles'],
+    summary="Create a new investment profile for the current user"
 )
 def create_user_profile(
     profile_in: ProfileCreateRequest,
     profile_service: ProfileService = Depends(get_profile_service),
     current_user: UserEntity = Depends(get_current_user_dep)
 ):
-    """
-    Create a new investment profile for the current logged-in user.
+    """Create a new investment profile for the current logged-in user.
+    
+    Args:
+        profile_in (ProfileCreateRequest): Profile creation request data
+        profile_service (ProfileService): Profile service dependency
+        current_user (UserEntity): Current authenticated user
+        
+    Returns:
+        ProfileResponse: Created profile data
     """
     try:
-        # Service sẽ xử lý toàn bộ logic tạo mới
+        # Service will handle all creation logic
         created_profile = profile_service.create_profile(
             profile_in=ProfileCreate.model_validate(profile_in.model_dump()), 
             user_id=current_user.user_id
@@ -52,7 +61,7 @@ def create_user_profile(
     except AuthError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.msg)
     except Exception as e:
-        # Bắt các lỗi tiềm ẩn, ví dụ như vi phạm ràng buộc UNIQUE (user_id, profile_name)
+        # Catch potential errors, e.g., UNIQUE constraint violations (user_id, profile_name)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Unknown Error: {str(e)}"
@@ -61,14 +70,21 @@ def create_user_profile(
 @router.get(
     "/profiles", 
     response_model=List[ProfileResponse], 
-    tags=['User Profiles']
+    tags=['User Profiles'],
+    summary="Get all investment profiles for the current user"
 )
 def get_user_profiles(
     profile_service: ProfileService = Depends(get_profile_service),
     current_user: UserEntity = Depends(get_current_user_dep)
 ):
-    """
-    Get all investment profiles for the current logged-in user.
+    """Get all investment profiles for the current logged-in user.
+    
+    Args:
+        profile_service (ProfileService): Profile service dependency
+        current_user (UserEntity): Current authenticated user
+        
+    Returns:
+        List[ProfileResponse]: List of user's investment profiles
     """
     profiles = profile_service.get_profiles_by_user(user_id=current_user.user_id)
     return [_change_from_entity_to_response(profile)
@@ -77,15 +93,23 @@ def get_user_profiles(
 @router.get(
     "/profiles/{profile_id}", 
     response_model=ProfileResponse, 
-    tags=['User Profiles']
+    tags=['User Profiles'],
+    summary="Get details of a specific investment profile"
 )
 def get_user_profile_details(
     profile_id: str,
     profile_service: ProfileService = Depends(get_profile_service),
     current_user: UserEntity = Depends(get_current_user_dep)
 ):
-    """
-    Get details of a specific investment profile.
+    """Get details of a specific investment profile.
+    
+    Args:
+        profile_id (str): ID of the profile to retrieve
+        profile_service (ProfileService): Profile service dependency
+        current_user (UserEntity): Current authenticated user
+        
+    Returns:
+        ProfileResponse: Requested profile data
     """
     try:
         profile = profile_service.get_profile_by_id(
@@ -100,7 +124,7 @@ def get_user_profile_details(
     except AuthError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.msg)
     except Exception as e:
-        # Bắt các lỗi tiềm ẩn, ví dụ như vi phạm ràng buộc UNIQUE (user_id, profile_name)
+        # Catch potential errors, e.g., UNIQUE constraint violations (user_id, profile_name)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Unknown Error: {str(e)}"
@@ -109,7 +133,8 @@ def get_user_profile_details(
 @router.put(
     "/profiles/{profile_id}", 
     response_model=ProfileResponse, 
-    tags=['User Profiles']
+    tags=['User Profiles'],
+    summary="Update an existing investment profile"
 )
 def update_user_profile(
     profile_id: str,
@@ -117,8 +142,16 @@ def update_user_profile(
     profile_service: ProfileService = Depends(get_profile_service),
     current_user: UserEntity = Depends(get_current_user_dep)
 ):
-    """
-    Update an existing investment profile.
+    """Update an existing investment profile.
+    
+    Args:
+        profile_id (str): ID of the profile to update
+        profile_in (ProfileUpdateRequest): Profile update request data
+        profile_service (ProfileService): Profile service dependency
+        current_user (UserEntity): Current authenticated user
+        
+    Returns:
+        ProfileResponse: Updated profile data
     """
     try:
         profile = profile_service.update_profile(
@@ -134,7 +167,7 @@ def update_user_profile(
     except AuthError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.msg)
     except Exception as e:
-        # Bắt các lỗi tiềm ẩn, ví dụ như vi phạm ràng buộc UNIQUE (user_id, profile_name)
+        # Catch potential errors, e.g., UNIQUE constraint violations (user_id, profile_name)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Unknown Error: {str(e)}"
@@ -143,15 +176,23 @@ def update_user_profile(
 @router.delete(
     "/profiles/{profile_id}", 
     response_model=ProfileResponse, 
-    tags=['User Profiles']
+    tags=['User Profiles'],
+    summary="Delete an investment profile"
 )
 def delete_user_profile(
     profile_id: str,
     profile_service: ProfileService = Depends(get_profile_service),
     current_user: UserEntity = Depends(get_current_user_dep)
 ):
-    """
-    Delete an investment profile.
+    """Delete an investment profile.
+    
+    Args:
+        profile_id (str): ID of the profile to delete
+        profile_service (ProfileService): Profile service dependency
+        current_user (UserEntity): Current authenticated user
+        
+    Returns:
+        ProfileResponse: Deleted profile data
     """
     try:
         profile = profile_service.remove_profile(
@@ -166,7 +207,7 @@ def delete_user_profile(
     except AuthError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=e.msg)
     except Exception as e:
-        # Bắt các lỗi tiềm ẩn, ví dụ như vi phạm ràng buộc UNIQUE (user_id, profile_name)
+        # Catch potential errors, e.g., UNIQUE constraint violations (user_id, profile_name)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=f"Unknown Error: {str(e)}"

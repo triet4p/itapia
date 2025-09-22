@@ -1,8 +1,14 @@
 // src/stores/authStore.ts
+/**
+ * Authentication Store
+ * 
+ * Manages user authentication state, login/logout functionality,
+ * and user profile information.
+ */
 
 import { defineStore } from 'pinia';
 import axios from '@/plugins/axios';
-import router from '@/router'; // Import trực tiếp router instance
+import router from '@/router'; // Directly import router instance
 import type { components } from '@/types/api';
 
 type UserInfo = components['schemas']['UserResponse'];
@@ -27,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     /**
-     * Bắt đầu luồng đăng nhập
+     * Initiate the login flow
      */
     async redirectToGoogle() {
       if (this.isLoading) return;
@@ -42,47 +48,47 @@ export const useAuthStore = defineStore('auth', {
     },
 
     /**
-     * MỚI: Được gọi từ trang callback sau khi đăng nhập thành công
+     * NEW: Called from the callback page after successful login
      */
     async handleLoginSuccess(token: string) {
-      // 1. Lưu token vào state và localStorage
+      // 1. Save token to state and localStorage
       this.token = token;
       localStorage.setItem('authToken', token);
 
-      // 2. Gọi API để lấy thông tin người dùng
+      // 2. Call API to get user information
       await this.fetchCurrentUser();
     },
     
     /**
-     * MỚI: Gọi API /users/me để lấy thông tin user
+     * NEW: Call API /users/me to get user info
      */
     async fetchCurrentUser() {
       if (!this.token) return;
 
       try {
-        // Cấu hình Axios để gửi token trong header
+        // Configure Axios to send token in header
         const response = await axios.get('/users/me');
         this.user = response.data;
       } catch (error) {
         console.error("Failed to fetch user info. Token might be invalid.", error);
-        // Nếu token không hợp lệ, hãy logout
+        // If token is invalid, logout
         this.logout();
       }
     },
 
     /**
-     * Đăng xuất
+     * Logout user
      */
     logout() {
       this.token = null;
       this.user = null;
       localStorage.removeItem('authToken');
-      // Dùng router đã import để đảm bảo hoạt động ở mọi nơi
+      // Use imported router to ensure it works everywhere
       router.push('/login');
     },
 
     /**
-     * MỚI: Được gọi khi ứng dụng khởi động
+     * NEW: Called when the application starts
      */
     async initializeAuth() {
       if (this.token) {

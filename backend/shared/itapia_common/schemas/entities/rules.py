@@ -7,36 +7,37 @@ from enum import Enum
 
 class SemanticType(str, Enum):
     """
-    Định nghĩa các kiểu ngữ nghĩa cho các giá trị trong cây quy tắc.
-    Điều này là trái tim của Strongly Typed Genetic Programming (STGP).
+    Defines semantic types for values in rule trees.
+    This is the heart of Strongly Typed Genetic Programming (STGP).
     """
-    # Kiểu dữ liệu cơ bản
-    NUMERICAL = 'NUMERICAL'      # Một con số bất kỳ, ko có ý nghĩa
-    BOOLEAN = 'BOOLEAN'        # Tín hiệu Đúng/Sai (1.0 / 0.0)
     
-    # Kiểu ngữ nghĩa tài chính
-    PRICE = 'PRICE'              # Giá trị liên quan đến giá (ví dụ: close, open)
-    PERCENTAGE = 'PERCENTAGE'         # Một giá trị phần trăm (ví dụ: thay đổi giá, mức lợi nhuận)
-    FINANCIAL_RATIO = 'FINANCIAL_RATIO'    # Một tỷ lệ tài chính (ví dụ: P/E)
+    # Basic data types
+    NUMERICAL = 'NUMERICAL'      # Any number, no specific meaning
+    BOOLEAN = 'BOOLEAN'          # True/False signal (1.0 / 0.0)
     
-    # Kiểu chỉ báo kỹ thuật
-    MOMENTUM = 'MOMENTUM'           # Chỉ báo động lượng (RSI, Stochastic)
-    TREND = 'TREND'              # Chỉ báo xu hướng (MACD, ADX)
-    VOLATILITY = 'VOLATILITY'         # Chỉ báo biến động (ATR, Bollinger Bands)
-    VOLUME = 'VOLUME'             # Chỉ báo khối lượng (OBV)
+    # Financial semantic types
+    PRICE = 'PRICE'              # Price-related values (e.g., close, open)
+    PERCENTAGE = 'PERCENTAGE'    # Percentage values (e.g., price change, return rate)
+    FINANCIAL_RATIO = 'FINANCIAL_RATIO'  # Financial ratios (e.g., P/E)
     
-    # Kiểu phân tích khác
-    SENTIMENT = 'SENTIMENT'         # Điểm số cảm tính
-    FORECAST_PROB = 'FORECAST_PROB'      # Xác suất dự báo
+    # Technical indicator types
+    MOMENTUM = 'MOMENTUM'        # Momentum indicators (RSI, Stochastic)
+    TREND = 'TREND'              # Trend indicators (MACD, ADX)
+    VOLATILITY = 'VOLATILITY'    # Volatility indicators (ATR, Bollinger Bands)
+    VOLUME = 'VOLUME'            # Volume indicators (OBV)
     
-    # Kiểu ngữ nghĩa quyết định
+    # Other analysis types
+    SENTIMENT = 'SENTIMENT'      # Sentiment score
+    FORECAST_PROB = 'FORECAST_PROB'  # Forecast probability
+    
+    # Decision semantic types
     DECISION_SIGNAL = 'DECISION_SIGNAL'
     RISK_LEVEL = 'RISK_LEVEL'
     OPPORTUNITY_RATING = 'OPPORTUNITY_RATING'
     
-    # Kiểu đặc biệt
-    ANY = 'ANY'                # Có thể là bất kỳ kiểu nào (dùng cho các toán tử linh hoạt)
-    ANY_NUMERIC = 'ANY_NUMERIC'        # Có thể là bất kỳ kiểu số nào (dùng cho các toán tử linh hoạt)
+    # Special types
+    ANY = 'ANY'                  # Can be any type (used for flexible operators)
+    ANY_NUMERIC = 'ANY_NUMERIC'  # Can be any numeric type (used for flexible operators)
     
     def __init__(self, value: str):
         self.concreates: List[SemanticType] = []
@@ -55,6 +56,8 @@ SemanticType.ANY_NUMERIC.concreates = [SemanticType.NUMERICAL, SemanticType.PRIC
                                        SemanticType.SENTIMENT, SemanticType.FORECAST_PROB]
     
 class NodeType(str, Enum):
+    """Type of node in a rule tree."""
+    
     CONSTANT = 'constant'
     VARIABLE = 'variable'
     OPERATOR = 'operator'
@@ -62,16 +65,22 @@ class NodeType(str, Enum):
     ANY = 'any'
     
 class RuleStatus(str, Enum):
+    """Status of a rule."""
+    
     READY = 'READY'
     EVOLVING = 'EVOLVING'
     DEPRECATED = 'DEPRECATED'
 
 class SemanticLevel(str, Enum):
+    """Semantic level of a rule or value."""
+    
     HIGH = 'HIGH'
     MODERATE = 'MODERATE'
     LOW = 'low'
 
 class NodeEntity(BaseModel):
+    """Node entity in a rule tree."""
+    
     node_name: str
     children: Optional[List['NodeEntity']] = Field(default=None)
      
@@ -79,16 +88,20 @@ class NodeEntity(BaseModel):
         from_attributes = True
 
 class NodeSpecEntity(BaseModel):
+    """Node specification entity."""
+    
     node_name: str
     description: str
     node_type: NodeType
-    return_type: SemanticType = Field(..., description='return type of a nodes')
-    args_type: Optional[List[SemanticType]] = Field(default=None, description='Argument type, only need for operator node')
+    return_type: SemanticType = Field(..., description="Return type of a node")
+    args_type: Optional[List[SemanticType]] = Field(default=None, description="Argument type, only needed for operator node")
     
     class Config:
         from_attributes = True
         
 class RuleEntity(BaseModel):
+    """Rule entity."""
+    
     rule_id: str
     name: str
     description: str
@@ -97,7 +110,7 @@ class RuleEntity(BaseModel):
     created_at: datetime
     updated_at: datetime
     
-    # Định nghĩa quy tắc được giữ dưới dạng dictionary
+    # Rule definition is stored as a dictionary
     root: NodeEntity
     
     metrics: Optional[PerformanceMetrics] = Field(default=None)
@@ -106,5 +119,7 @@ class RuleEntity(BaseModel):
         from_attributes = True
         
 class ExplainationRuleEntity(RuleEntity):
+    """Rule entity with explanation."""
+    
     explain: str
     

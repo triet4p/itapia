@@ -1,8 +1,22 @@
+/**
+ * Navigation Guards
+ * 
+ * Implements route protection logic for the application.
+ * Contains middleware that runs before each navigation to check
+ * authentication status and route permissions.
+ */
+
 import type { Router } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 
-const protectedRoutes = ['/profiles', '/advisor/[ticker]']
+// List of routes that require authentication
+const protectedRoutes = ['/profiles', '/advisor/[ticker]'];
 
+/**
+ * Sets up navigation guards for the router.
+ * 
+ * @param router - The Vue Router instance to attach guards to
+ */
 export function setupNavigationGuards(router: Router) {
     router.beforeEach((to, from, next) => {
         const authStore = useAuthStore();
@@ -10,17 +24,17 @@ export function setupNavigationGuards(router: Router) {
 
         const requiresAuth = protectedRoutes.some(path => to.path.startsWith(path));
 
-        //Quy tắc 1: Cố gắng truy cập vào trang được bảo vệ khi đang đăng nhập
+        // Rule 1: Attempting to access a protected route while not logged in
         if (requiresAuth && !isLoggedIn) {
-            //Điều hướng về trang đăng nhập
+            // Redirect to login page
             next({ name: '/login' });
         }
-        // Quy tắc 2: Cố gắng truy cập trang /login khi đã đăng nhập
+        // Rule 2: Attempting to access login page while already logged in
         else if (to.path == '/login' && isLoggedIn) {
-            //Điều về home page
+            // Redirect to home page
             next({ name: '/' });
         } 
-        // Quy tắc 3: Cho phép đi tiếp
+        // Rule 3: Allow navigation to proceed
         else {
             next();
         }

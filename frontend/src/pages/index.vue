@@ -11,8 +11,7 @@ function startQuickAnalysis() {
   if (tickerSym.value) {
     const upperTickerSym = tickerSym.value.toUpperCase();
     
-    // Chỉ điều hướng mà không gửi bất kỳ query params nào
-    // Trang kết quả sẽ tự động dùng giá trị mặc định
+    // Only push, the result page will use default value for query params
     router.push({
       name: '/analysis/[ticker]',
       params: { ticker: upperTickerSym },
@@ -25,9 +24,9 @@ function startQuickAnalysis() {
   }
 }
 
-// Hàm mới để điều hướng đến trang phân tích nâng cao
+// Route to Advanced analysis page
 function goToAdvancedAnalysis() {
-    router.push({ name: '/analysis/' }); // Điều hướng đến /analysis
+    router.push({ name: '/analysis/' }); 
 }
 </script>
 
@@ -62,7 +61,7 @@ function goToAdvancedAnalysis() {
           <v-divider class="my-4"></v-divider>
           
           <v-card-actions class="justify-center">
-            <!-- Nút điều hướng đến trang nâng cao -->
+            <!-- Button route to Advanced Analysis Page -->
             <v-btn 
               variant="text" 
               @click="goToAdvancedAnalysis"

@@ -35,7 +35,6 @@ function handleLogin() {
 </template>
 
 <style scoped>
-/* Thêm một chút style cho nút Google */
 .v-btn {
   color: white !important;
 }

@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router';
 
 // --- STATE MANAGEMENT ---
 type ProcessType = 'quick' | 'deep' | null;
-const selectedProcess = ref<ProcessType>('quick'); // Mặc định là 'quick'
+const selectedProcess = ref<ProcessType>('quick');
 const ticker = ref('');
 
 const router = useRouter();
@@ -28,12 +28,11 @@ function startAdvisory() {
     return;
   }
 
-  // Đối với Advisor, chúng ta chỉ cần truyền loại quy trình
   const query = {
     processType: selectedProcess.value,
   };
 
-  // Điều hướng đến trang kết quả Advisor
+  // Navigate to result page
   router.push({
     name: '/advisor/[ticker]',
     params: { ticker: ticker.value.toUpperCase() },
@@ -71,7 +70,7 @@ function startAdvisory() {
             </v-row>
           </v-card-text>
 
-          <!-- Quick Check không có tùy chọn gì thêm -->
+          <!-- Quick Check has no additional option -->
 
           <v-card-actions>
             <v-spacer></v-spacer>

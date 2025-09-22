@@ -331,4 +331,13 @@ class AIServiceQuickOrchestrator:
             raise
         
     def get_suggest_config(self, profile: ProfileEntity) -> QuantitivePreferencesConfig:
+        """
+        Get personal suggest quantitive config base on profile. 
+
+        Args:
+            profile (ProfileEntity): Profile entity need to analyze
+
+        Returns:
+            QuantitivePreferencesConfig: The suggested config
+        """
         return self.personal.get_suggest_config(profile)

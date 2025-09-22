@@ -1,4 +1,5 @@
 # itapia_common/contracts/schemas/entities/advisor.py
+"""Advisor module schemas for ITAPIA."""
 
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any
@@ -6,40 +7,43 @@ from .action import Action
 
 class TriggeredRuleInfo(BaseModel):
     """
-    Thông tin tóm tắt về một quy tắc (Rule) đã được kích hoạt.
-    'Kích hoạt' có nghĩa là quy tắc đó đã trả về một điểm số khác 0.
+    Summary information about a triggered rule.
+    'Triggered' means the rule returned a non-zero score.
     """
-    rule_id: str = Field(..., description="ID của quy tắc.")
-    name: str = Field(..., description="Tên của quy tắc để con người đọc.")
-    score: float = Field(..., description="Điểm số mà quy tắc trả về (đã chuẩn hóa).")
-    purpose: str = Field(..., description="Mục đích của quy tắc, ví dụ: 'DECISION_SIGNAL'.")
+    
+    rule_id: str = Field(..., description="ID of the rule.")
+    name: str = Field(..., description="Human-readable name of the rule.")
+    score: float = Field(..., description="Normalized score returned by the rule.")
+    purpose: str = Field(..., description="Purpose of the rule, e.g., 'DECISION_SIGNAL'.")
     
     class Config:
         from_attributes = True
 
 class AggregatedScoreInfo(BaseModel):
     """
-    Thông tin về các điểm số đã được tổng hợp từ các bộ quy tắc.
+    Information about scores aggregated from rule sets.
     """
-    raw_decision_score: float = Field(..., description="Điểm số quyết định thô, -1 là sell immediate, 1 là very strong buy, từ -1 tới 1")
-    raw_risk_score: float = Field(..., description="Điểm số rủi ro thô, 0 là ko rủi ro, 1 là rủi ro rất cao, từ 0 tới 1.")
-    raw_opportunity_score: float = Field(..., description="Điểm số cơ hội thô 0 là ko có cơ hội, 1 là cơ hội rất cao, từ 0 tới 1.")
+    
+    raw_decision_score: float = Field(..., description="Raw decision score, -1 is immediate sell, 1 is very strong buy, range from -1 to 1")
+    raw_risk_score: float = Field(..., description="Raw risk score, 0 is no risk, 1 is very high risk, range from 0 to 1.")
+    raw_opportunity_score: float = Field(..., description="Raw opportunity score, 0 is no opportunity, 1 is very high opportunity, range from 0 to 1.")
     
     class Config:
         from_attributes = True
 
 class FinalRecommendation(BaseModel):
     """
-    Thông tin về khuyến nghị cuối cùng sau khi đã qua tất cả các tầng.
+    Information about the final recommendation after all layers.
     """
-    # Điểm số cuối cùng sau khi đã qua MetaRule
-    final_score: float = Field(..., description="Điểm số cuối cùng sau khi đã tổng hợp và cá nhân hóa.")
+    
+    # Final score after going through MetaRule
+    final_score: float = Field(..., description="Final score after aggregation and personalization.")
     purpose: str
     label: str
-    # Nhãn diễn giải từ điểm số
-    final_recommend: str = Field(..., description='Final recommend')
+    # Label interpreted from the score
+    final_recommend: str = Field(..., description="Final recommendation")
     
-    triggered_rules: List[TriggeredRuleInfo] = Field(..., description="Danh sách các quy tắc đã được kích hoạt và đóng góp vào kết quả.")
+    triggered_rules: List[TriggeredRuleInfo] = Field(..., description="List of triggered rules that contributed to the result.")
 
     class Config:
         from_attributes = True
@@ -47,23 +51,24 @@ class FinalRecommendation(BaseModel):
 
 class AdvisorReportSchema(BaseModel):
     """
-    Schema cho báo cáo tổng hợp cuối cùng từ Advisor Module.
-    Đây là "hợp đồng" dữ liệu chính, được sử dụng cả trong nội bộ
-    và trả về cho API trong giai đoạn MVP.
+    Schema for the final consolidated report from the Advisor Module.
+    This is the main data "contract", used both internally and returned by the API in the MVP phase.
     """
-    # --- Phần Kết luận Chính (Quan trọng nhất cho người dùng) ---
-    final_decision: FinalRecommendation = Field(..., description="Khuyến nghị Quyết định cuối cùng.")
-    final_risk: FinalRecommendation = Field(..., description="Đánh giá Rủi ro cuối cùng.")
-    final_opportunity: FinalRecommendation = Field(..., description="Đánh giá Cơ hội cuối cùng.")
     
-    final_action: Action = Field(..., description="Action được mapper cuối cùng")
+    # --- Main Conclusion Section (Most important for users) ---
+    final_decision: FinalRecommendation = Field(..., description="Final Decision recommendation.")
+    final_risk: FinalRecommendation = Field(..., description="Final Risk assessment.")
+    final_opportunity: FinalRecommendation = Field(..., description="Final Opportunity assessment.")
     
-    # --- Phần Bằng chứng và Diễn giải (Cho việc debug và XAI) ---
-    aggregated_scores: AggregatedScoreInfo = Field(..., description="Các điểm số tổng hợp trước khi qua MetaRule.")
-    # --- Metadata của Báo cáo ---
-    ticker: str = Field(..., description="Mã cổ phiếu được phân tích.")
-    generated_at_utc: str = Field(..., description="Thời gian tạo báo cáo (ISO format).")
-    generated_timestamp: int = Field(..., description='Generate with timestamp')
+    final_action: Action = Field(..., description="Final mapped action")
+    
+    # --- Evidence and Explanation Section (For debugging and XAI) ---
+    aggregated_scores: AggregatedScoreInfo = Field(..., description="Aggregated scores before going through MetaRule.")
+    
+    # --- Report Metadata ---
+    ticker: str = Field(..., description="Stock symbol being analyzed.")
+    generated_at_utc: str = Field(..., description="Report generation time (ISO format).")
+    generated_timestamp: int = Field(..., description="Generated with timestamp")
 
     class Config:
         from_attributes = True

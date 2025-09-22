@@ -1,43 +1,50 @@
 // src/plugins/axios.ts
+/**
+ * Axios Configuration Plugin
+ * 
+ * Configures axios with default settings and interceptors for API requests.
+ * Sets up request and response interceptors for authentication token handling
+ * and automatic logout on 401 responses.
+ */
 
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
 
-// Cấu hình các giá trị mặc định cho axios
-axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL; // Đặt base URL ở đây
+// Configure default values for axios
+axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL + import.meta.env.VITE_BACKEND_API_BASE_ROUTE; // Set base URL
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
 // --- Axios Request Interceptor ---
-// Đây là "người gác cổng" cho các request gửi đi.
+// This is the "gatekeeper" for outgoing requests
 axios.interceptors.request.use(
   (config) => {
-    // Khởi tạo authStore để lấy token
-    // Lưu ý: Không dùng storeToRefs ở đây
+    // Initialize authStore to get token
+    // Note: Not using storeToRefs here
     const authStore = useAuthStore();
-    const token = authStore.token; // Lấy token từ state của authStore
+    const token = authStore.token; // Get token from authStore state
 
-    // Nếu có token, đính kèm nó vào header Authorization
+    // If there's a token, attach it to the Authorization header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    return config; // Trả về config đã được sửa đổi
+    return config; // Return the modified config
   },
   (error) => {
-    // Xử lý lỗi nếu có
+    // Handle errors if any
     return Promise.reject(error);
   }
 );
 
-// (Tùy chọn) Bạn cũng có thể thêm interceptor cho response ở đây
-// để xử lý các lỗi chung như 401 Unauthorized
+// (Optional) You can also add interceptor for responses here
+// to handle common errors like 401 Unauthorized
 axios.interceptors.response.use(
   response => response,
   error => {
     if (error.response && error.response.status === 401) {
-      // Nếu nhận được lỗi 401 (token không hợp lệ/hết hạn)
+      // If we receive a 401 error (invalid/expired token)
       const authStore = useAuthStore();
-      authStore.logout(); // Tự động logout người dùng
+      authStore.logout(); // Automatically logout the user
     }
     return Promise.reject(error);
   }

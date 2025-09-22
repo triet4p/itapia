@@ -17,10 +17,9 @@ const notificationStore = useNotificationStore();
 
 const dialogCreate = ref(false);
 const wizardStep = ref(1);
-const totalWizardSteps = 6; // Tổng số bước để quản lý nút Next/Create
+const totalWizardSteps = 6; // Total step to manage create profile
 
 // --- FORM STATE ---
-// Dữ liệu mặc định cho form tạo mới
 const defaultFormState = (): ProfileCreate => ({
   profile_name: '',
   description: '',
@@ -52,9 +51,7 @@ async function handleCreateProfile() {
   const success = await profileStore.createProfile(newProfileForm.value);
   if (success) {
     dialogCreate.value = false;
-    // Không cần reset form ở đây vì đã reset khi mở
   } else {
-    // TODO: Hiển thị lỗi bằng snackbar
     notificationStore.showNotification({
       message: 'Creation failed! Please check the console for details.',
       color: 'error',
@@ -97,7 +94,7 @@ async function handleCreateProfile() {
       </v-list>
     </v-card>
 
-    <!-- DIALOG TẠO MỚI DẠNG WIZARD -->
+    <!-- DIALOG CREATION GUI BY WIZARD -->
     <v-dialog v-model="dialogCreate" persistent max-width="800px">
       <v-card>
         <v-card-title>
@@ -106,14 +103,14 @@ async function handleCreateProfile() {
         
         <v-card-text class="dialog-scrollable-content">
           <v-window v-model="wizardStep">
-            <!-- BƯỚC 1: Basic Info -->
+            <!-- Step 1: Basic Info -->
             <v-window-item :value="1">
               <p class="text-h6 mb-4">Basic Info</p>
               <v-text-field v-model="newProfileForm.profile_name" label="Profile Name" hint="e.g., Long-term Growth, Safe Retirement" persistent-hint></v-text-field>
               <v-textarea v-model="newProfileForm.description" label="Description" hint="Describe the strategy for this profile" persistent-hint class="mt-4"></v-textarea>
             </v-window-item>
             
-            <!-- BƯỚC 2: Risk Tolerance -->
+            <!-- Step 2: Risk Tolerance -->
             <v-window-item :value="2">
               <p class="text-h6 mb-4">Risk Tolerance</p>
               <p>1. What is your overall risk tolerance?</p>
@@ -133,7 +130,7 @@ async function handleCreateProfile() {
               </v-radio-group>
             </v-window-item>
             
-            <!-- BƯỚC 3: Investment Goals -->
+            <!-- Step 3: Investment Goals -->
             <v-window-item :value="3">
               <p class="text-h6 mb-4">Investment Goals</p>
                <p>1. What is your primary investment goal?</p>
@@ -157,7 +154,7 @@ async function handleCreateProfile() {
                </v-slider>
             </v-window-item>
 
-            <!-- BƯỚC 4: Knowledge & Experience -->
+            <!-- Step 4: Knowledge & Experience -->
             <v-window-item :value="4">
               <p class="text-h6 mb-4">Knowledge & Experience</p>
               <p>1. How would you rate your investment knowledge?</p>
@@ -171,7 +168,7 @@ async function handleCreateProfile() {
               <v-slider v-model="newProfileForm.knowledge_exp.years_of_experience" thumb-label="always" :step="1" min="0" max="50"></v-slider>
             </v-window-item>
 
-            <!-- BƯỚC 5: Capital & Income -->
+            <!-- Step 5: Capital & Income -->
             <v-window-item :value="5">
               <p class="text-h6 mb-4">Capital & Income</p>
               <p>1. Initial capital for this profile?</p>
@@ -184,7 +181,7 @@ async function handleCreateProfile() {
               </v-radio-group>
             </v-window-item>
             
-            <!-- BƯỚC 6: Preferences & Settings -->
+            <!-- Step 6: Preferences & Settings -->
             <v-window-item :value="6">
               <p class="text-h6 mb-4">Preferences & Settings</p>
               <v-combobox
@@ -224,7 +221,7 @@ async function handleCreateProfile() {
 
 <style scoped>
 .dialog-scrollable-content {
-  max-height: calc(80vh - 150px); /* 80% chiều cao màn hình trừ đi các phần khác */
+  max-height: calc(80vh - 150px); 
   overflow-y: auto;
 }
 </style>

@@ -58,8 +58,8 @@ class AdvisorOrchestrator:
             decision_results (Tuple[List[float], List[TriggeredRuleInfo]]): Decision rule results
             risk_results (Tuple[List[float], List[TriggeredRuleInfo]]): Risk rule results
             opportunity_results (Tuple[List[float], List[TriggeredRuleInfo]]): Opportunity rule results
-            behavior_modifiers: Optional[BehaviorModifiers]: Use for modify final results base on specific demand of user.
-            action_mapper: Optional[_BaseActionMapper]: An action mapper to map final score to an action
+            behavior_modifiers (Optional[BehaviorModifiers]): Used to modify final results based on specific user demands
+            action_mapper (Optional[_BaseActionMapper]): An action mapper to map final score to an action
             
         Returns:
             AdvisorReportSchema: Complete advisor report
@@ -82,17 +82,17 @@ class AdvisorOrchestrator:
         final_action = self._apply_behavior_modifiers(gated_action, behavior_modifiers)
         
 
-        # --- BƯỚC 3: TẠO CÁC NHÃN VÀ KHUYẾN NGHỊ CUỐI CÙNG ---
-        # Sử dụng mapper của AggregationOrchestrator để lấy nhãn cho các điểm số thô
+        # --- STEP 3: CREATE FINAL LABELS AND RECOMMENDATIONS ---
+        # Use AggregationOrchestrator mapper to get labels for raw scores
         decision_label, decision_recommend = self.agg_orc.mapper.map(agg_scores.raw_decision_score, SemanticType.DECISION_SIGNAL)
         risk_label, risk_recommend = self.agg_orc.mapper.map(agg_scores.raw_risk_score, SemanticType.RISK_LEVEL)
         opportunity_label, opportunity_recommend = self.agg_orc.mapper.map(agg_scores.raw_opportunity_score, SemanticType.OPPORTUNITY_RATING)
 
-        # Tạo một khuyến nghị cuối cùng dựa trên final_action
-        # Đây là phần diễn giải cuối cùng cho người dùng
+        # Create a final recommendation based on final_action
+        # This is the final interpretation for the user
         final_decision_recommendation = self._create_final_recommendation_text(final_action, triggered_d)
 
-        # --- BƯỚC 4: XÂY DỰNG BÁO CÁO HOÀN CHỈNH ---
+        # --- STEP 4: BUILD COMPLETE REPORT ---
         generate_time = datetime.now(timezone.utc)
         return AdvisorReportSchema(
             final_decision=FinalRecommendation(
@@ -117,7 +117,7 @@ class AdvisorOrchestrator:
                 label=opportunity_label
             ),
             aggregated_scores=agg_scores,
-            # (Quan trọng) Thêm final_action vào schema để Frontend có thể sử dụng
+            # (Important) Add final_action to schema so Frontend can use it
             final_action=final_action, 
             ticker=analysis_report.ticker,
             generated_at_utc=generate_time.isoformat(),
@@ -125,26 +125,32 @@ class AdvisorOrchestrator:
         )
         
     def _apply_gating_logic(self, base_action: Action, agg_scores: AggregatedScoreInfo) -> Action:
-        """
-        Áp dụng logic if-else đơn giản để điều chỉnh hành động cơ sở.
+        """Apply simple if-else logic to adjust the base action.
+        
+        Args:
+            base_action (Action): Base action to adjust
+            agg_scores (AggregatedScoreInfo): Aggregated scores for decision making
+            
+        Returns:
+            Action: Adjusted action based on gating logic
         """
         action = base_action
         
-        # CỔNG RỦI RO (RISK GATE): Ưu tiên cao nhất
-        # Giả sử RISK_THRESHOLDS: VERY_HIGH > 0.9, HIGH > 0.8
-        if agg_scores.raw_risk_score >= 0.9: # Rủi ro Cực cao
+        # RISK GATE: Highest priority
+        # Assume RISK_THRESHOLDS: VERY_HIGH > 0.9, HIGH > 0.8
+        if agg_scores.raw_risk_score >= 0.9: # Very high risk
             if action.action_type == 'BUY':
                 logger.info("RISK GATE: Very High risk detected. Overriding BUY signal to HOLD.")
                 return Action(action_type='HOLD')
-        elif agg_scores.raw_risk_score >= 0.8: # Rủi ro Cao
+        elif agg_scores.raw_risk_score >= 0.8: # High risk
              if action.action_type == 'BUY':
                 logger.info("RISK GATE: High risk detected. Reducing position size by 50%.")
                 action_dict = action.model_dump()
                 action_dict['position_size_pct'] = action.position_size_pct * 0.5
                 action = Action.model_validate(action_dict)
 
-        # CỔNG CƠ HỘI (OPPORTUNITY GATE): Chỉ áp dụng nếu không có rủi ro cao
-        # Giả sử OPPORTUNITY_THRESHOLDS: TOP_TIER > 0.9
+        # OPPORTUNITY GATE: Only apply if no high risk
+        # Assume OPPORTUNITY_THRESHOLDS: TOP_TIER > 0.9
         if agg_scores.raw_risk_score < 0.8 and agg_scores.raw_opportunity_score >= 0.9:
             if action.action_type == 'BUY':
                 logger.info("OPPORTUNITY GATE: Top-tier opportunity. Increasing position size by 20%.")
@@ -156,8 +162,14 @@ class AdvisorOrchestrator:
         return action
     
     def _apply_behavior_modifiers(self, base_action: Action, modifiers: Optional[BehaviorModifiers]) -> Action:
-        """
-        Áp dụng các tham số điều chỉnh cá nhân hóa của người dùng.
+        """Apply personalized user behavior adjustment parameters.
+        
+        Args:
+            base_action (Action): Base action to adjust
+            modifiers (Optional[BehaviorModifiers]): User behavior modifiers
+            
+        Returns:
+            Action: Action adjusted with user behavior modifiers
         """
         if not modifiers or base_action.action_type == 'HOLD':
             return base_action
@@ -179,7 +191,15 @@ class AdvisorOrchestrator:
         )
 
     def _create_final_recommendation_text(self, final_action: Action, triggered_rules: List[TriggeredRuleInfo]) -> str:
-        """Tạo ra chuỗi văn bản khuyến nghị cuối cùng cho người dùng."""
+        """Create final recommendation text for the user.
+        
+        Args:
+            final_action (Action): Final action to create text for
+            triggered_rules (List[TriggeredRuleInfo]): List of triggered rules
+            
+        Returns:
+            str: Natural language recommendation text
+        """
         if final_action.action_type == 'HOLD':
             return "Recommendation: HOLD. No clear trading signal based on current analysis and risk assessment."
         
@@ -203,7 +223,8 @@ class AdvisorOrchestrator:
             decision_results (Tuple[List[float], List[TriggeredRuleInfo]]): Decision rule results
             risk_results (Tuple[List[float], List[TriggeredRuleInfo]]): Risk rule results
             opportunity_results (Tuple[List[float], List[TriggeredRuleInfo]]): Opportunity rule results
-            meta_weights (Dict[str, float]): Meta-rule weights for final synthesis
+            behavior_modifiers (Optional[BehaviorModifiers]): Behavior modifiers for personalization
+            action_mapper (Optional[_BaseActionMapper]): Action mapper to use
             
         Returns:
             str: Natural language explanation of the advisor recommendations

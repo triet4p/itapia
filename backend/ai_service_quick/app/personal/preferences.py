@@ -1,32 +1,53 @@
+"""Preferences manager for filtering and ranking rules based on user preferences."""
+
 from typing import List, Tuple
-from itapia_common.dblib.services import RuleService
 from itapia_common.schemas.entities.performance import PerformanceHardConstraints, PerformanceMetrics
 from itapia_common.schemas.entities.personal import QuantitivePreferencesConfig
-from itapia_common.schemas.entities.rules import RuleEntity, RuleStatus
+from itapia_common.schemas.entities.rules import RuleEntity
 from .scorer import Scorer
 
+
 def sample_rules(scored_rules: List[Tuple[RuleEntity, float]], limit: int):
+    """Sample rules evenly from a sorted list of scored rules.
+    
+    Args:
+        scored_rules (List[Tuple[RuleEntity, float]]): List of rules with their scores, sorted by score
+        limit (int): Maximum number of rules to return
+        
+    Returns:
+        List[Tuple[RuleEntity, float]]: Sampled list of rules
+    """
     n = len(scored_rules)
-    if limit >= n:  # Nếu limit lớn hơn số rule thì lấy hết
+    if limit >= n:  # If limit is greater than number of rules, return all
         return scored_rules
     
-    # Luôn đảm bảo lấy index 0 và index cuối
+    # Always ensure first and last indices are included
     indices = [0]
     
-    # Tính step để chia đều
+    # Calculate step to distribute evenly
     step = (n - 1) / (limit - 1)
     for i in range(1, limit - 1):
         idx = round(i * step)
         indices.append(idx)
     
     indices.append(n - 1)
-    indices = sorted(set(indices))  # tránh trùng lặp
+    indices = sorted(set(indices))  # Avoid duplicates
     
     return [scored_rules[i] for i in indices]
 
+
 class PreferencesManager:
+    """Manager for handling user preferences in rule filtering and ranking."""
         
     def _fill_metrics_available(self, rules: List[RuleEntity]) -> List[RuleEntity]:
+        """Fill missing metrics with default values.
+        
+        Args:
+            rules (List[RuleEntity]): List of rules to process
+            
+        Returns:
+            List[RuleEntity]: List of rules with metrics filled
+        """
         filled_rules = []
         for rule_ent in rules:
             if rule_ent.metrics is None:
@@ -37,6 +58,15 @@ class PreferencesManager:
                 
     def _check_constraint(self, rule_ent: RuleEntity,
                           constraints: PerformanceHardConstraints) -> bool:
+        """Check if a rule meets the hard constraints.
+        
+        Args:
+            rule_ent (RuleEntity): Rule to check
+            constraints (PerformanceHardConstraints): Constraints to apply
+            
+        Returns:
+            bool: True if rule meets constraints, False otherwise
+        """
         metrics_dict = rule_ent.metrics.model_dump()
         constraints_dict = constraints.model_dump()
         
@@ -56,6 +86,17 @@ class PreferencesManager:
     def filter_rules(self, rules: List[RuleEntity], scorer: Scorer, 
                      quantitive_config: QuantitivePreferencesConfig,
                      limit: int = 10) -> List[RuleEntity]:
+        """Filter and rank rules based on quantitative preferences.
+        
+        Args:
+            rules (List[RuleEntity]): List of rules to filter
+            scorer (Scorer): Scorer to evaluate rules
+            quantitive_config (QuantitivePreferencesConfig): Quantitative preferences configuration
+            limit (int): Maximum number of rules to return
+            
+        Returns:
+            List[RuleEntity]: Filtered and ranked list of rules
+        """
         if not rules:
             return []
         

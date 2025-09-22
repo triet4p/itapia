@@ -1,8 +1,15 @@
+/**
+ * Analysis Store
+ * 
+ * Manages state and logic for market analysis functionality.
+ * Handles fetching and storing analysis reports and explanations.
+ */
+
 import { defineStore } from "pinia";
 import axios from "@/plugins/axios";
 import type { components } from "@/types/api";
 
-type AnalysisReport = components['schemas']['QuickCheckReportResponse']
+type AnalysisReport = components['schemas']['QuickCheckReportResponse'];
 
 interface State {
   report: AnalysisReport | null;
@@ -20,7 +27,7 @@ export const useAnalysisStore = defineStore('analysis', {
   }), 
   actions: {
     async fetchReport(ticker: string, queryParams: Record<string, any>) {
-      this.$reset(); // Reset state trước mỗi lần gọi mới
+      this.$reset(); // Reset state before each new call
       this.isLoading = true;
       try {
         const jsonPromise = axios.get(`/analysis/quick/${ticker}/full`, { params: queryParams });

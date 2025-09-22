@@ -9,9 +9,19 @@ from itapia_common.schemas.entities.profiles import ProfileEntity
 router = APIRouter()
 
 @router.post("/personal/suggested_config",
-             response_model=QuantitivePreferencesConfigResponse)
+             response_model=QuantitivePreferencesConfigResponse,
+             summary="Get suggested quantitative preferences configuration based on user profile")
 async def get_suggest_config(profile: ProfileRequest,
-                       orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator)) -> QuantitivePreferencesConfigResponse:
+                             orchestrator: AIServiceQuickOrchestrator = Depends(get_ceo_orchestrator)) -> QuantitivePreferencesConfigResponse:
+    """Get suggested quantitative preferences configuration based on user profile.
+    
+    Args:
+        profile (ProfileRequest): User investment profile
+        orchestrator (AIServiceQuickOrchestrator): Service orchestrator dependency
+        
+    Returns:
+        QuantitivePreferencesConfigResponse: Suggested quantitative preferences configuration
+    """
     config = orchestrator.get_suggest_config(ProfileEntity(
         created_at=datetime.fromtimestamp(profile.created_at_ts, tz=timezone.utc),
         updated_at=datetime.fromtimestamp(profile.updated_at_ts, tz=timezone.utc),

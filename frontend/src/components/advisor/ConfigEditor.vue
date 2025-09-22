@@ -1,3 +1,9 @@
+<!--
+  Configuration Editor Component
+  
+  Allows users to customize quantitative preferences for the investment advisor.
+  Includes controls for adjusting weights, constraints, and behavior modifiers.
+-->
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { components } from '@/types/api';
@@ -9,18 +15,28 @@ type Constraints = components['schemas']['PerformanceHardConstraints'];
 type ConstraintKeys = keyof Constraints;
 
 // --- PROPS & EMITS ---
+/**
+ * Props for the Configuration Editor component
+ * 
+ * @prop modelValue - The quantitative configuration to edit (supports v-model)
+ */
 const props = defineProps<{
-  // Dùng `modelValue` để có thể sử dụng v-model từ component cha
+  // Use `modelValue` to enable v-model usage from parent component
   modelValue: QuantitativeConfig;
 }>();
 
+/**
+ * Emits events from the Configuration Editor component
+ * 
+ * @event update:modelValue - Emitted when the configuration is updated
+ */
 const emit = defineEmits<{
   (e: 'update:modelValue', value: QuantitativeConfig): void;
 }>();
 
 // --- COMPUTED PROPERTIES ---
-// Tạo các computed có get/set để làm việc với v-model
-// Điều này ngăn việc thay đổi trực tiếp prop và phát ra sự kiện một cách an toàn
+// Create computed properties with get/set to work with v-model
+// This prevents direct prop mutation and safely emits events
 const editableWeights = computed<Weights>({
   get: () => props.modelValue.weights,
   set: (newWeights) => {
@@ -35,6 +51,10 @@ const editableConstraints = computed<Constraints>({
   }
 });
 
+/**
+ * Metadata for constraint configuration options
+ * Contains display information and descriptions for each constraint
+ */
 const constraintMetadata: { key: ConstraintKeys, title: string, description: string }[] = [
   { 
     key: 'total_return_pct', 
@@ -81,14 +101,14 @@ const constraintMetadata: { key: ConstraintKeys, title: string, description: str
     title: 'Num of trades',
     description: 'Number of trades generated in past. An non-negative integer'
   }
-  // Thêm các constraints khác vào đây một cách dễ dàng
+  // Additional constraints can be easily added here
 ];
 </script>
 
 <template>
   <v-card flat>
     <v-card-text>
-      <!-- PHẦN 1: TRỌNG SỐ (WEIGHTS) -->
+      <!-- SECTION 1: WEIGHTS -->
       <p class="text-h6 mb-2">Fitness Weights</p>
       <p class="text-body-2 mb-4">
         Adjust the importance of each metric (from 0 to 1). Higher values mean greater importance.
@@ -108,22 +128,22 @@ const constraintMetadata: { key: ConstraintKeys, title: string, description: str
 
       <v-divider class="my-6"></v-divider>
 
-      <!-- PHẦN 2: RÀNG BUỘC (CONSTRAINTS) -->
+      <!-- SECTION 2: CONSTRAINTS -->
       <p class="text-h6 mb-2">Hard Constraints</p>
       <p class="text-body-2 mb-4">
         Set the minimum and maximum acceptable values. Leave blank for no limit.
       </p>
       
-      <!-- Bắt đầu vòng lặp -->
+      <!-- Begin loop -->
       <div v-for="constraint in constraintMetadata" :key="constraint.key" class="constraint-row">
         <v-row align="center" no-gutters>
-          <!-- Cột Tên và Mô tả -->
+          <!-- Name and Description Column -->
           <v-col cols="12" md="6" class="pr-4">
             <p class="font-weight-medium">{{ constraint.title }}</p>
             <p class="text-caption text-medium-emphasis">{{ constraint.description }}</p>
           </v-col>
 
-          <!-- Cột ô nhập liệu Min -->
+          <!-- Min Input Column -->
           <v-col cols="6" md="3">
             <v-text-field
               v-model.number="modelValue.constraints[constraint.key][0]"
@@ -136,7 +156,7 @@ const constraintMetadata: { key: ConstraintKeys, title: string, description: str
             ></v-text-field>
           </v-col>
 
-          <!-- Cột ô nhập liệu Max -->
+          <!-- Max Input Column -->
           <v-col cols="6" md="3">
             <v-text-field
               v-model.number="modelValue.constraints[constraint.key][1]"
@@ -155,7 +175,7 @@ const constraintMetadata: { key: ConstraintKeys, title: string, description: str
       <v-divider class="my-6"></v-divider>
 
       <!-- =============================================== -->
-      <!-- PHẦN 3: ĐIỀU CHỈNH HÀNH VI (MODIFIERS)       -->
+      <!-- SECTION 3: BEHAVIOR MODIFIERS                  -->
       <!-- =============================================== -->
       <p class="text-h6 mb-2">Behavior Modifiers</p>
       <p class="text-body-2 mb-4">Fine-tune the final trading action.</p>

@@ -1,11 +1,12 @@
-# schemas/entites/profiles.py
+# schemas/entities/profiles.py
+"""Investment profile schemas for ITAPIA."""
 
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from datetime import datetime, timezone
 
 # ===================================================================
-# == A. Các kiểu dữ liệu Enum/Literal để định nghĩa các lựa chọn
+# == A. Enum/Literal data types to define choices
 # ===================================================================
 
 RiskAppetite = Literal[
@@ -17,16 +18,16 @@ RiskAppetite = Literal[
 ]
 
 InvestmentHorizon = Literal[
-    "short_term",  # Dưới 1 năm
-    "mid_term",    # 1-5 năm
-    "long_term"    # Trên 5 năm
+    "short_term",  # Under 1 year
+    "mid_term",    # 1-5 years
+    "long_term"    # Over 5 years
 ]
 
 LossReaction = Literal[
-    "panic_sell",      # Bán ngay lập tức
-    "reduce_exposure", # Giảm tỷ trọng
-    "hold_and_wait",   # Giữ và chờ đợi
-    "buy_the_dip"      # Mua thêm
+    "panic_sell",      # Sell immediately
+    "reduce_exposure", # Reduce exposure
+    "hold_and_wait",   # Hold and wait
+    "buy_the_dip"      # Buy the dip
 ]
 
 InvestmentKnowledge = Literal[
@@ -37,13 +38,15 @@ InvestmentKnowledge = Literal[
 ]
 
 PrimaryGoal = Literal[
-    "capital_preservation", # Bảo toàn vốn
-    "income_generation",    # Tạo thu nhập (cổ tức)
-    "capital_growth",       # Tăng trưởng vốn
-    "speculation"           # Đầu cơ
+    "capital_preservation", # Capital preservation
+    "income_generation",    # Income generation (dividends)
+    "capital_growth",       # Capital growth
+    "speculation"           # Speculation
 ]
 
 class RiskTolerancePart(BaseModel):
+    """Risk tolerance profile part."""
+    
     risk_appetite: RiskAppetite = Field(..., description="Overall risk tolerance")
     loss_reaction: LossReaction = Field(..., description="Typical reaction when the market drops sharply.")
 
@@ -51,6 +54,8 @@ class RiskTolerancePart(BaseModel):
         from_attributes = True
         
 class InvestGoalPart(BaseModel):
+    """Investment goal profile part."""
+    
     primary_goal: PrimaryGoal = Field(..., description="The primary goal of this investment profile.")
     investment_horizon: InvestmentHorizon = Field(..., description="The expected investment time frame.")
     expected_annual_return_pct: int = Field(..., ge=0, le=100, description="Expected annual rate of return (%)")
@@ -59,6 +64,8 @@ class InvestGoalPart(BaseModel):
         from_attributes = True
         
 class KnowledgeExpPart(BaseModel):
+    """Knowledge and experience profile part."""
+    
     investment_knowledge: InvestmentKnowledge = Field(..., description="Level of knowledge of financial markets.")
     years_of_experience: int = Field(..., ge=0, le=50, description="Number of years of investment experience.")
 
@@ -66,6 +73,8 @@ class KnowledgeExpPart(BaseModel):
         from_attributes = True
 
 class CapitalIncomePart(BaseModel):
+    """Capital and income profile part."""
+    
     initial_capital: float = Field(..., gt=0, description="Initial capital for this profile.")
     income_dependency: Literal["low", "medium", "high"] = Field(..., description="Degree of dependence on investment income.")
 
@@ -73,14 +82,18 @@ class CapitalIncomePart(BaseModel):
         from_attributes = True
         
 class PersonalPreferPart(BaseModel):
+    """Personal preferences profile part."""
+    
     preferred_sectors: Optional[list[str]] = Field(default=None, description="Preferred sectors (eg: ['TECH', 'HEALTHCARE']).")
     excluded_sectors: Optional[list[str]] = Field(default=None, description="Sectors you want to exclude.")
     ethical_investing: bool = Field(default=False, description="Prefer ethical investing (ESG) criteria.")       
-     
+    
     class Config:
         from_attributes = True
         
 class ProfileBase(BaseModel):
+    """Base investment profile schema."""
+    
     profile_name: str = Field(..., min_length=3, max_length=100, description="Name of profile")
     description: str = Field(..., description="Short description about this profile")
     
@@ -96,13 +109,15 @@ class ProfileBase(BaseModel):
         from_attributes = True
         
 class ProfileCreate(ProfileBase):
+    """Schema for creating a new investment profile."""
     pass
 
 class ProfileUpdate(BaseModel):
     """
-    Schema dùng khi cập nhật. Mọi trường đều là Optional.
-    Người dùng có thể chỉ gửi những trường họ muốn thay đổi.
+    Schema used when updating. All fields are optional.
+    Users can send only the fields they want to change.
     """
+    
     profile_name: Optional[str] = Field(None, min_length=3, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
     
@@ -119,6 +134,8 @@ class ProfileUpdate(BaseModel):
         from_attributes = True
 
 class ProfileEntity(ProfileBase):
+    """Investment profile entity with database fields."""
+    
     profile_id: str
     user_id: str
     created_at: datetime

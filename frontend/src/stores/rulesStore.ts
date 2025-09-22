@@ -1,3 +1,10 @@
+/**
+ * Rules Store
+ * 
+ * Manages trading rules, explanations, and node definitions.
+ * Handles fetching and caching of rule-related data.
+ */
+
 import { defineStore } from 'pinia';
 import axios from '@/plugins/axios';
 import type { components } from '@/types/api';
@@ -19,7 +26,7 @@ interface State {
 export const useRulesStore = defineStore('rules', {
   state: (): State => ({
     rulesList: [],
-    nodeDictionary: [], // Sẽ được cache ở đây
+    nodeDictionary: [], // Will be cached here
     currentRule: null,
     isLoadingList: false,
     isLoadingDetails: false,
@@ -41,9 +48,9 @@ export const useRulesStore = defineStore('rules', {
       }
     },
     
-    // Action này chỉ gọi API nếu "từ điển" chưa được tải
+    // This action only calls the API if the "dictionary" hasn't been loaded yet
     async fetchNodeDictionary() {
-      if (this.nodeDictionary.length > 0) return; // Đã có dữ liệu, không cần gọi lại
+      if (this.nodeDictionary.length > 0) return; // Already have data, no need to call again
 
       try {
         const response = await axios.get('/rules/nodes');
@@ -58,7 +65,7 @@ export const useRulesStore = defineStore('rules', {
       this.error = null;
       this.currentRule = null;
       try {
-        // Luôn đảm bảo "từ điển" node đã được tải
+        // Always ensure the node "dictionary" has been loaded
         await this.fetchNodeDictionary();
         
         const response = await axios.get(`/rules/${ruleId}/explain`);

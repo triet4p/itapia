@@ -1,18 +1,36 @@
+<!--
+  Final Action Card Component
+  
+  Displays the final investment recommendation from the advisor,
+  including action type, position size, risk/stop loss levels,
+  and supporting signals.
+-->
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import type { components } from '@/types/api';
 
 type AdvisorReport = components['schemas']['AdvisorResponse'];
 type FinalRecommendation = components['schemas']['FinalRecommendation'];
 
-// State cục bộ để điều khiển việc hiển thị JSON
+/**
+ * Local state to control JSON display visibility
+ */
 const showFullJson = ref(false);
 
+/**
+ * Props for the Final Action Card component
+ * 
+ * @prop finalReport - The complete advisor report to display
+ */
 const props = defineProps<{
   finalReport: AdvisorReport;
 }>();
 
-// Helper để lấy ra thông tin hiển thị chính
+/**
+ * Helper to get display information for the main action
+ * 
+ * @returns Object containing text, color, and icon for the action
+ */
 const actionDetails = computed(() => {
   const actionType = props.finalReport.final_action.action_type;
   switch (actionType) {
@@ -27,7 +45,12 @@ const actionDetails = computed(() => {
   }
 });
 
-// Helper để lấy màu cho các chip khuyến nghị
+/**
+ * Helper to determine chip color based on recommendation label
+ * 
+ * @param label - The recommendation label to evaluate
+ * @returns Color string for the chip
+ */
 function getChipColor(label: string): string {
   const upperLabel = label.toUpperCase();
   if (upperLabel.includes('BUY') || upperLabel.includes('POSITIVE') || upperLabel.includes('STRONG') || upperLabel.includes('INTERESTING') || upperLabel.includes('ACCUMULATE')) return 'success';
@@ -35,7 +58,13 @@ function getChipColor(label: string): string {
   return 'grey';
 }
 
-// Helper để làm sạch văn bản khuyến nghị
+/**
+ * Helper to clean recommendation text
+ * 
+ * @param recommend - The raw recommendation text
+ * @param purpose - The purpose/type of recommendation
+ * @returns Cleaned recommendation text
+ */
 function cleanRecommendText(recommend: string, purpose: string): string {
     return recommend.replace(`Threshold match is THRESHOLD_${purpose}_`, "").replace(", which mean ", ": ");
 }
@@ -78,9 +107,9 @@ function cleanRecommendText(recommend: string, purpose: string): string {
     </v-card-text>
   </v-card>
 
-  <!-- BA CARD PHỤ CHO DECISION, RISK, OPPORTUNITY -->
+  <!-- THREE SUPPORTING CARDS FOR DECISION, RISK, OPPORTUNITY -->
     <v-row>
-      <!-- Card cho Quyết định -->
+      <!-- Decision Card -->
       <v-col cols="12">
         <v-card>
           <v-list-item prepend-icon="mdi-lightbulb-on-outline" title="Decision Signals" :subtitle="`Final Score: ${finalReport.final_decision.final_score.toFixed(2)}`"></v-list-item>
@@ -110,7 +139,7 @@ function cleanRecommendText(recommend: string, purpose: string): string {
         </v-card>
       </v-col>
 
-      <!-- Card cho Rủi ro -->
+      <!-- Risk Card -->
       <v-col cols="12" sm="6">
         <v-card>
             <v-list-item prepend-icon="mdi-lightbulb-on-outline" title="Risk Level" :subtitle="`Final Score: ${finalReport.final_risk.final_score.toFixed(2)}`"></v-list-item>
@@ -140,7 +169,7 @@ function cleanRecommendText(recommend: string, purpose: string): string {
         </v-card>
       </v-col>
 
-      <!-- Card cho Cơ hội -->
+      <!-- Opportunity Card -->
       <v-col cols="12" sm="6">
         <v-card>
             <v-list-item prepend-icon="mdi-lightbulb-on-outline" title="Opportunity Rating" :subtitle="`Final Score: ${finalReport.final_opportunity.final_score.toFixed(2)}`"></v-list-item>
@@ -171,7 +200,7 @@ function cleanRecommendText(recommend: string, purpose: string): string {
       </v-col>
     </v-row>
 
-    <!-- CARD HIỂN THỊ JSON -->
+    <!-- JSON DISPLAY CARD -->
     <v-card class="mt-6">
       <v-card-actions>
         <v-btn @click="showFullJson = !showFullJson">
