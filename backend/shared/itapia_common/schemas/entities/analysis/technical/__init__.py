@@ -3,6 +3,6 @@
 This package contains the technical analysis entity schemas used in the ITAPIA system.
 """
 
+from ._full import TechnicalReport
 from .daily import DailyAnalysisReport
 from .intraday import IntradayAnalysisReport
-from ._full import TechnicalReport

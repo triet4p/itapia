@@ -3,8 +3,10 @@ class AIQuickError(Exception):
         super().__init__()
         self.msg = msg
 
+
 class PreloadCacheError(AIQuickError):
     """Ngoại lệ tùy chỉnh cho các lỗi xảy ra trong quá trình preload cache."""
+
     def __init__(self, module_name: str, failed_elements: list):
         self.module_name = module_name
         self.failed_elements = failed_elements
@@ -14,12 +16,15 @@ class PreloadCacheError(AIQuickError):
         )
         self.msg = message
         super().__init__(message)
-        
+
+
 class NoDataError(AIQuickError):
     pass
 
+
 class NotReadyServiceError(AIQuickError):
     pass
+
 
 class MissingReportError(AIQuickError):
     pass

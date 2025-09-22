@@ -2,23 +2,39 @@
 """Provides CRUD operations for news-related data entities."""
 
 from datetime import datetime
-from sqlalchemy.orm import Session
-from sqlalchemy import RowMapping, Sequence, text
 
-def get_relevant_news(rdbms_session: Session, table_name: str, ticker: str, skip: int = 0, limit: int = 10) -> Sequence[RowMapping]:
-    query = text(f"""
+from sqlalchemy import RowMapping, Sequence, text
+from sqlalchemy.orm import Session
+
+
+def get_relevant_news(
+    rdbms_session: Session, table_name: str, ticker: str, skip: int = 0, limit: int = 10
+) -> Sequence[RowMapping]:
+    query = text(
+        f"""
         SELECT news_uuid, ticker, title, summary, provider, link, publish_time, collect_time
         FROM public.{table_name} 
         WHERE ticker = :ticker 
         ORDER BY publish_time DESC, collect_time DESC 
         OFFSET :skip LIMIT :limit
-    """)
-    result = rdbms_session.execute(query, {"ticker": ticker, "skip": skip, "limit": limit})
+    """
+    )
+    result = rdbms_session.execute(
+        query, {"ticker": ticker, "skip": skip, "limit": limit}
+    )
     return result.mappings().all()
 
-def get_universal_news(rdbms_session: Session, table_name: str, search_terms: str, skip: int = 0, limit: int = 10) -> Sequence[RowMapping]:
 
-    query = text(f"""
+def get_universal_news(
+    rdbms_session: Session,
+    table_name: str,
+    search_terms: str,
+    skip: int = 0,
+    limit: int = 10,
+) -> Sequence[RowMapping]:
+
+    query = text(
+        f"""
         SELECT 
             news_uuid, keyword, title, summary, provider, link, 
             publish_time, collect_time, title_hash,
@@ -31,14 +47,24 @@ def get_universal_news(rdbms_session: Session, table_name: str, search_terms: st
             rank DESC, news_prior DESC, publish_time DESC, collect_time DESC
         OFFSET :skip 
         LIMIT :limit
-    """)
-    result = rdbms_session.execute(query, {"search_query": search_terms, "skip": skip, "limit": limit})
+    """
+    )
+    result = rdbms_session.execute(
+        query, {"search_query": search_terms, "skip": skip, "limit": limit}
+    )
     return result.mappings().all()
 
-def get_universal_news_with_date(rdbms_session: Session, table_name: str, search_terms: str, 
-                                 before_date: datetime,
-                                 skip: int = 0, limit: int = 10) -> Sequence[RowMapping]:
-    query = text(f"""
+
+def get_universal_news_with_date(
+    rdbms_session: Session,
+    table_name: str,
+    search_terms: str,
+    before_date: datetime,
+    skip: int = 0,
+    limit: int = 10,
+) -> Sequence[RowMapping]:
+    query = text(
+        f"""
         SELECT 
             news_uuid, keyword, title, summary, provider, link, 
             publish_time, collect_time, title_hash,
@@ -51,7 +77,15 @@ def get_universal_news_with_date(rdbms_session: Session, table_name: str, search
             rank DESC, news_prior DESC, publish_time DESC, collect_time DESC
         OFFSET :skip 
         LIMIT :limit
-    """)
-    result = rdbms_session.execute(query, {"search_query": search_terms, "skip": skip, "limit": limit,
-                                           'before_date': before_date})
+    """
+    )
+    result = rdbms_session.execute(
+        query,
+        {
+            "search_query": search_terms,
+            "skip": skip,
+            "limit": limit,
+            "before_date": before_date,
+        },
+    )
     return result.mappings().all()

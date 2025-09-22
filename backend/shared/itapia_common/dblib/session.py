@@ -8,17 +8,17 @@ for efficient resource usage.
 
 from typing import Generator
 
-from sqlalchemy import create_engine, Engine
-from sqlalchemy.orm import sessionmaker, Session
-
 import redis
-from redis.client import Redis
 import redis.exceptions
+from redis.client import Redis
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from . import db_config as cfg
 
 _SINGLETON_RDBMS_ENGINE = None
 _SINGLETON_REDIS_CLIENT = None
+
 
 def get_singleton_rdbms_engine() -> Engine:
     """Get or create a singleton database engine instance.
@@ -33,6 +33,7 @@ def get_singleton_rdbms_engine() -> Engine:
     if _SINGLETON_RDBMS_ENGINE is None:
         _SINGLETON_RDBMS_ENGINE = create_engine(cfg.DATABASE_URL, pool_pre_ping=True)
     return _SINGLETON_RDBMS_ENGINE
+
 
 def get_singleton_redis_client() -> Redis:
     """Get or create a singleton Redis client instance.
@@ -50,13 +51,13 @@ def get_singleton_redis_client() -> Redis:
     if _SINGLETON_REDIS_CLIENT is None:
         try:
             _SINGLETON_REDIS_CLIENT = redis.Redis(
-                host=cfg.REDIS_HOST, port=cfg.REDIS_PORT, db=0,
-                decode_responses=True
+                host=cfg.REDIS_HOST, port=cfg.REDIS_PORT, db=0, decode_responses=True
             )
             _SINGLETON_REDIS_CLIENT.ping()
         except redis.exceptions.ConnectionError:
             raise
     return _SINGLETON_REDIS_CLIENT
+
 
 def get_rdbms_session() -> Generator[Session, None, None]:
     """FastAPI dependency: Open a new database session for each request.
@@ -74,7 +75,8 @@ def get_rdbms_session() -> Generator[Session, None, None]:
         yield rdbms_session
     finally:
         rdbms_session.close()
-        
+
+
 def get_redis_connection() -> Generator[Redis | None, None, None]:
     """FastAPI dependency: Provide an initialized Redis client.
 

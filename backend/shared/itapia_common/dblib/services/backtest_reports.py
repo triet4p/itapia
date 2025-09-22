@@ -5,30 +5,33 @@ This module provides a high-level interface for saving and retrieving backtest r
 handling the conversion between Pydantic models and database representations.
 """
 
-import uuid
 import json
 from datetime import datetime
-
-from sqlalchemy.orm import Session
-from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
 from typing import List, Optional
+
 from itapia_common.dblib.crud.backtest_reports import BacktestReportCRUD
+from itapia_common.schemas.entities.analysis import QuickCheckAnalysisReport
+from sqlalchemy.orm import Session
+
 
 class BacktestReportService:
     """Service for managing backtest reports in the database."""
-    
+
     def __init__(self, rdbms_session: Optional[Session]):
-        self.crud: BacktestReportCRUD = BacktestReportCRUD(rdbms_session) if rdbms_session else None
-        
+        self.crud: BacktestReportCRUD = (
+            BacktestReportCRUD(rdbms_session) if rdbms_session else None
+        )
+
     def set_rdbms_session(self, rdbms_session: Session) -> None:
         self.crud = BacktestReportCRUD(rdbms_session)
-        
+
     def check_health(self):
         if self.crud is None:
-            raise ValueError('Connection is empty!')
+            raise ValueError("Connection is empty!")
 
-    def save_quick_check_report(self, report: QuickCheckAnalysisReport,
-                                backtest_date: datetime) -> str:
+    def save_quick_check_report(
+        self, report: QuickCheckAnalysisReport, backtest_date: datetime
+    ) -> str:
         """Process and save a QuickCheckAnalysisReport.
 
         This method converts the Pydantic model to a database-compatible format
@@ -45,16 +48,18 @@ class BacktestReportService:
         report_id = f'{report.ticker.upper()}_{backtest_date.strftime("%Y-%m-%d")}'
 
         data_to_save = {
-            'report_id': report_id,
-            'backtest_date': backtest_date,
-            'ticker': report.ticker,
-            'report': json.dumps(report.model_dump(mode='json'))
+            "report_id": report_id,
+            "backtest_date": backtest_date,
+            "ticker": report.ticker,
+            "report": json.dumps(report.model_dump(mode="json")),
         }
-        
+
         self.crud.save_report(data_to_save)
         return report_id
 
-    def get_backtest_report(self, ticker: str, backtest_date: datetime) -> Optional[QuickCheckAnalysisReport]:
+    def get_backtest_report(
+        self, ticker: str, backtest_date: datetime
+    ) -> Optional[QuickCheckAnalysisReport]:
         """Retrieve the latest QuickCheckAnalysisReport for a ticker on or before a given date.
 
         If no report is found for the exact date, it fetches the most recent one before it.
@@ -73,10 +78,10 @@ class BacktestReportService:
             return None
 
         # The 'report' column is a JSONB string, which needs to be parsed.
-        report_dict = report_data['report']
+        report_dict = report_data["report"]
 
         return QuickCheckAnalysisReport.model_validate(report_dict)
-    
+
     def get_all_backtest_reports(self, ticker: str) -> List[QuickCheckAnalysisReport]:
         """Retrieve all backtest reports for a given ticker.
 
@@ -91,9 +96,9 @@ class BacktestReportService:
         reports = []
         for report_data in report_datas:
             # The 'report' column is a JSONB string, which needs to be parsed.
-            report_dict = report_data['report']
+            report_dict = report_data["report"]
             report = QuickCheckAnalysisReport.model_validate(report_dict)
-        
+
             reports.append(report)
-            
+
         return reports

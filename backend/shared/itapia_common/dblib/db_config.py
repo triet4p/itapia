@@ -6,11 +6,12 @@ for both PostgreSQL and Redis, as well as table names used throughout the applic
 """
 
 import os
-from dotenv import load_dotenv
-from urllib.parse import quote_plus
 from pathlib import Path
+from urllib.parse import quote_plus
 
-env_path = Path(__file__).parent.parent.parent.parent / '.env'
+from dotenv import load_dotenv
+
+env_path = Path(__file__).parent.parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 # PostgreSQL Configuration
@@ -29,9 +30,9 @@ REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
 # Table Names
-DAILY_PRICES_TABLE_NAME = 'daily_prices'
-RELEVANT_NEWS_TABLE_NAME = 'relevant_news'
-UNIVERSAL_NEWS_TABLE_NAME = 'universal_news'
-INTRADAY_STREAM_PREFIX = 'intraday_stream'
-TICKER_METADATA_TABLE_NAME = 'tickers'
-ANALYSIS_REPORTS_TABLE_NAME = 'backtest_reports'
+DAILY_PRICES_TABLE_NAME = "daily_prices"
+RELEVANT_NEWS_TABLE_NAME = "relevant_news"
+UNIVERSAL_NEWS_TABLE_NAME = "universal_news"
+INTRADAY_STREAM_PREFIX = "intraday_stream"
+TICKER_METADATA_TABLE_NAME = "tickers"
+ANALYSIS_REPORTS_TABLE_NAME = "backtest_reports"

@@ -6,26 +6,35 @@ This module sets up the FastAPI application, configures CORS middleware,
 includes all API routers, and manages the application lifecycle.
 """
 
+from contextlib import asynccontextmanager
+
+from app.api.v1.endpoints import (
+    ai_quick_advisor,
+    ai_quick_analysis,
+    ai_rules,
+    auth,
+    data_viewer,
+    personal,
+    profiles,
+    root,
+    users,
+)
+from app.clients.ai_quick_advisor import ai_quick_advisor_client
+from app.clients.ai_quick_analysis import ai_quick_analysis_client
+from app.clients.ai_rules import ai_rules_client
+from app.core.config import GATEWAY_ALLOW_ORIGINS, GATEWAY_V1_BASE_ROUTE
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from contextlib import asynccontextmanager
-
-from app.api.v1.endpoints import data_viewer, ai_quick_analysis, ai_quick_advisor, ai_rules, \
-    auth, users, profiles, root, personal
-from app.clients.ai_quick_analysis import ai_quick_analysis_client
-from app.clients.ai_quick_advisor import ai_quick_advisor_client
-from app.clients.ai_rules import ai_rules_client
-from app.core.config import GATEWAY_V1_BASE_ROUTE, GATEWAY_ALLOW_ORIGINS
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
-    
+
     This function manages the application lifecycle, initializing and cleaning up
     resources when the application starts and stops.
-    
+
     Args:
         app (FastAPI): The FastAPI application instance
     """
@@ -36,11 +45,12 @@ async def lifespan(app: FastAPI):
             async with ai_rules_client:
                 yield
 
+
 app = FastAPI(
     title="ITAPIA API Service",
     description="API Gateway for the ITAPIA system, serving data and coordinating AI tasks.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Define the list of allowed origins (frontend sources)
@@ -51,10 +61,10 @@ origins = GATEWAY_ALLOW_ORIGINS
 # THIS CODE MUST BE ADDED BEFORE INCLUDING ANY ROUTERS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,      # Allow origins in the `origins` list
-    allow_credentials=True,     # Allow sending cookies (important for future authentication)
-    allow_methods=["*"],        # Allow all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],        # Allow all headers
+    allow_origins=origins,  # Allow origins in the `origins` list
+    allow_credentials=True,  # Allow sending cookies (important for future authentication)
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Include routers from all endpoint modules

@@ -1,2 +1,10 @@
-from ._nodes import _TreeNode, ConstantNode, VarNode, NumericalVarNode, CategoricalVarNode, OperatorNode, \
-    FunctionalOperatorNode, BranchOperatorNode
+from ._nodes import (
+    BranchOperatorNode,
+    CategoricalVarNode,
+    ConstantNode,
+    FunctionalOperatorNode,
+    NumericalVarNode,
+    OperatorNode,
+    VarNode,
+    _TreeNode,
+)

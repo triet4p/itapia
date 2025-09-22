@@ -4,15 +4,22 @@ This module defines dependency injection functions for FastAPI that help manage
 database connections and service instances in a clean and reusable way.
 """
 
-from .services import APIMetadataService, APINewsService, APIPricesService, BacktestReportService
+from fastapi import Depends
+from redis.client import Redis
+from sqlalchemy.orm import Session
+
+from .services import (
+    APIMetadataService,
+    APINewsService,
+    APIPricesService,
+    BacktestReportService,
+)
 from .session import get_rdbms_session, get_redis_connection
 
-from sqlalchemy.orm import Session
-from redis.client import Redis
 
-from fastapi import Depends
-
-def get_metadata_service(rdbms_session: Session = Depends(get_rdbms_session)) -> APIMetadataService:
+def get_metadata_service(
+    rdbms_session: Session = Depends(get_rdbms_session),
+) -> APIMetadataService:
     """Create and return an APIMetadataService instance.
 
     Args:
@@ -23,9 +30,12 @@ def get_metadata_service(rdbms_session: Session = Depends(get_rdbms_session)) ->
     """
     return APIMetadataService(rdbms_session)
 
-def get_prices_service(rdbms_session: Session = Depends(get_rdbms_session),
-                       redis_client: Redis = Depends(get_redis_connection),
-                       metadata_service: APIMetadataService = Depends(get_metadata_service)) -> APIPricesService:
+
+def get_prices_service(
+    rdbms_session: Session = Depends(get_rdbms_session),
+    redis_client: Redis = Depends(get_redis_connection),
+    metadata_service: APIMetadataService = Depends(get_metadata_service),
+) -> APIPricesService:
     """Create and return an APIPricesService instance.
 
     Args:
@@ -38,8 +48,11 @@ def get_prices_service(rdbms_session: Session = Depends(get_rdbms_session),
     """
     return APIPricesService(rdbms_session, redis_client, metadata_service)
 
-def get_news_service(rdbms_session: Session = Depends(get_rdbms_session),
-                     metadata_service: APIMetadataService = Depends(get_metadata_service)) -> APINewsService:
+
+def get_news_service(
+    rdbms_session: Session = Depends(get_rdbms_session),
+    metadata_service: APIMetadataService = Depends(get_metadata_service),
+) -> APINewsService:
     """Create and return an APINewsService instance.
 
     Args:
@@ -51,7 +64,10 @@ def get_news_service(rdbms_session: Session = Depends(get_rdbms_session),
     """
     return APINewsService(rdbms_session, metadata_service)
 
-def get_backtest_report_service(rdbms_session: Session = Depends(get_rdbms_session)) -> BacktestReportService:
+
+def get_backtest_report_service(
+    rdbms_session: Session = Depends(get_rdbms_session),
+) -> BacktestReportService:
     """Create and return a BacktestReportService instance.
 
     Args:

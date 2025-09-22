@@ -1,5 +1,7 @@
-import pandas as pd
-from app.analysis.technical.analysis_engine.intraday.status_analyzer import IntradayStatusAnalyzer
+from app.analysis.technical.analysis_engine.intraday.status_analyzer import (
+    IntradayStatusAnalyzer,
+)
+
 
 def test_status_analyzer(sample_intraday_data_for_analysis):
     analyzer = IntradayStatusAnalyzer(sample_intraday_data_for_analysis)
@@ -16,5 +18,5 @@ def test_status_analyzer(sample_intraday_data_for_analysis):
     assert report["price_vs_open"] == "Positive"
     # RSI là 80 -> Overbought
     assert report["rsi_status"] == "Overbought"
-    
+
     assert report["evidence"]["current_price"] == 156.0

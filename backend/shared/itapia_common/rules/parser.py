@@ -1,11 +1,13 @@
 # itapia_common/rules/serializer.py
 
-from typing import Dict, Any, List
+from typing import Any, Dict
+
+from itapia_common.schemas.entities.rules import NodeEntity
 
 # Import node classes for type checking
-from .nodes import _TreeNode, ConstantNode, VarNode, OperatorNode
+from .nodes import OperatorNode, _TreeNode
 from .nodes.registry import create_node
-from itapia_common.schemas.entities.rules import NodeEntity
+
 
 def serialize_tree(node: _TreeNode) -> NodeEntity:
     """Serialize a Node tree (starting from the root node) into a nested dictionary structure.
@@ -16,7 +18,7 @@ def serialize_tree(node: _TreeNode) -> NodeEntity:
 
     Returns:
         Dict[str, Any]: A dictionary representing the tree.
-        
+
     Raises:
         TypeError: If the input is not an instance of _TreeNode.
     """
@@ -27,16 +29,17 @@ def serialize_tree(node: _TreeNode) -> NodeEntity:
     # Note: node.node_name has been .upper() in the constructor
     node_name = node.node_name
     node_children = None
-    
+
     # If it's an Operator, recursively serialize its children
     if isinstance(node, OperatorNode):
         if node.children:  # Only add 'children' key if present
             node_children = [serialize_tree(child) for child in node.children]
-            
+
     # Other node types (Constant, Var) don't have 'children' or special parameters
     # so no additional processing is needed. Their names (node_name) are sufficient for reconstruction.
 
     return NodeEntity(node_name=node_name, children=node_children)
+
 
 def parse_tree(data: NodeEntity) -> _TreeNode:
     """Parse a dictionary structure and reconstruct a complete Node tree.
@@ -47,7 +50,7 @@ def parse_tree(data: NodeEntity) -> _TreeNode:
 
     Returns:
         _TreeNode: The root node of the reconstructed tree or branch.
-        
+
     Raises:
         TypeError: If children data is not a list.
         ValueError: If there's an error creating the node.
@@ -63,10 +66,12 @@ def parse_tree(data: NodeEntity) -> _TreeNode:
         children_data = data.children
         if not isinstance(children_data, list):
             raise TypeError("'children' must be a list.")
-        
+
         # Recreate each child node and add to kwargs
-        factory_kwargs["children"] = [parse_tree(child_data) for child_data in children_data]
-        
+        factory_kwargs["children"] = [
+            parse_tree(child_data) for child_data in children_data
+        ]
+
     # Add other special parameters here if needed...
 
     # 3. Call Node Factory to create the current node
@@ -77,6 +82,8 @@ def parse_tree(data: NodeEntity) -> _TreeNode:
         node_instance = create_node(node_name=node_name, **factory_kwargs)
     except Exception as e:
         # Wrap the original error to provide additional context when debugging
-        raise ValueError(f"Error creating node with name '{node_name}'. Original error: {e}") from e
+        raise ValueError(
+            f"Error creating node with name '{node_name}'. Original error: {e}"
+        ) from e
 
     return node_instance

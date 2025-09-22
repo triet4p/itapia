@@ -1,6 +1,6 @@
 """Tests for custom exceptions."""
 
-from app.core.exceptions import AuthError, NoDataError, DBError, ServerCredError
+from app.core.exceptions import AuthError, DBError, NoDataError, ServerCredError
 
 
 def test_auth_error():
@@ -34,4 +34,6 @@ def test_server_cred_error():
     exc = ServerCredError(detail, header)
     assert exc.detail == detail
     assert exc.header == header
-    assert str(exc) == ""  # ServerCredError doesn't call super().__init__() with message
+    assert (
+        str(exc) == ""
+    )  # ServerCredError doesn't call super().__init__() with message

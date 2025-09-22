@@ -1,23 +1,24 @@
-from typing import Literal
-from fastapi import HTTPException
 import httpx
 from app.core.config import AI_SERVICE_QUICK_BASE_URL
-
+from fastapi import HTTPException
 from itapia_common.schemas.api.advisor import AdvisorResponse
 from itapia_common.schemas.api.personal import QuantitivePreferencesConfigRequest
 
-ai_quick_advisor_client = httpx.AsyncClient(base_url=AI_SERVICE_QUICK_BASE_URL, timeout=30.0)
+ai_quick_advisor_client = httpx.AsyncClient(
+    base_url=AI_SERVICE_QUICK_BASE_URL, timeout=30.0
+)
 
-async def get_full_quick_advisor(quantitive_config: QuantitivePreferencesConfigRequest,
-                                  ticker: str, 
-                                  limit: int = 10) -> AdvisorResponse:
+
+async def get_full_quick_advisor(
+    quantitive_config: QuantitivePreferencesConfigRequest, ticker: str, limit: int = 10
+) -> AdvisorResponse:
     try:
-        print(f'Get for url {ai_quick_advisor_client.base_url}/advisor/{ticker}/full')
-        params = {'limit': limit}
+        print(f"Get for url {ai_quick_advisor_client.base_url}/advisor/{ticker}/full")
+        params = {"limit": limit}
         body = quantitive_config.model_dump()
-        response = await ai_quick_advisor_client.post(f"/advisor/{ticker}/full", 
-                                                      params=params,
-                                                      json=body)
+        response = await ai_quick_advisor_client.post(
+            f"/advisor/{ticker}/full", params=params, json=body
+        )
         response.raise_for_status()
         return AdvisorResponse.model_validate(response.json())
     except httpx.HTTPStatusError as e:
@@ -25,19 +26,24 @@ async def get_full_quick_advisor(quantitive_config: QuantitivePreferencesConfigR
         raise HTTPException(status_code=e.response.status_code, detail=detail)
     except httpx.RequestError as e:
         # Xử lý lỗi kết nối
-        raise HTTPException(status_code=503, detail=f"AI Service is unavailable: {type(e).__name__}")
-    
-async def get_full_quick_advisor_explain(quantitive_config: QuantitivePreferencesConfigRequest,
-                                  ticker: str, 
-                                  limit: int = 10) -> str:
+        raise HTTPException(
+            status_code=503, detail=f"AI Service is unavailable: {type(e).__name__}"
+        )
+
+
+async def get_full_quick_advisor_explain(
+    quantitive_config: QuantitivePreferencesConfigRequest, ticker: str, limit: int = 10
+) -> str:
     try:
-        print(f'Get for url {ai_quick_advisor_client.base_url}/advisor/{ticker}/full')
-        params = {'limit': limit}
+        print(f"Get for url {ai_quick_advisor_client.base_url}/advisor/{ticker}/full")
+        params = {"limit": limit}
         body = quantitive_config.model_dump()
-        print(f'Get for url {ai_quick_advisor_client.base_url}/advisor/{ticker}/explain')
-        response = await ai_quick_advisor_client.post(f"/advisor/{ticker}/explain",
-                                                      params=params,
-                                                      json=body)
+        print(
+            f"Get for url {ai_quick_advisor_client.base_url}/advisor/{ticker}/explain"
+        )
+        response = await ai_quick_advisor_client.post(
+            f"/advisor/{ticker}/explain", params=params, json=body
+        )
         response.raise_for_status()
         return response.text
     except httpx.HTTPStatusError as e:
@@ -45,4 +51,6 @@ async def get_full_quick_advisor_explain(quantitive_config: QuantitivePreference
         raise HTTPException(status_code=e.response.status_code, detail=detail)
     except httpx.RequestError as e:
         # Xử lý lỗi kết nối
-        raise HTTPException(status_code=503, detail=f"AI Service is unavailable: {type(e).__name__}")
+        raise HTTPException(
+            status_code=503, detail=f"AI Service is unavailable: {type(e).__name__}"
+        )

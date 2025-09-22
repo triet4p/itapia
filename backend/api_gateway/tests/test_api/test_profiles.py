@@ -1,20 +1,17 @@
 """Tests for the profiles endpoints."""
 
-import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import Mock
-
 from app.main import app
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
 
 def test_create_user_profile_unauthorized():
     """Test that creating a profile requires authentication."""
-    response = client.post("/profiles", json={
-        "profile_name": "Test Profile",
-        "description": "A test profile"
-    })
+    response = client.post(
+        "/profiles",
+        json={"profile_name": "Test Profile", "description": "A test profile"},
+    )
     # Should return authentication error
     assert response.status_code in [401, 403, 422]
 
@@ -35,9 +32,9 @@ def test_get_user_profile_details_unauthorized():
 
 def test_update_user_profile_unauthorized():
     """Test that updating a profile requires authentication."""
-    response = client.put("/profiles/test_profile_id", json={
-        "profile_name": "Updated Profile"
-    })
+    response = client.put(
+        "/profiles/test_profile_id", json={"profile_name": "Updated Profile"}
+    )
     # Should return authentication error
     assert response.status_code in [401, 403, 422]
 

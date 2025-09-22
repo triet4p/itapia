@@ -1,14 +1,13 @@
 # common/dblib/crud/metadata.py
 """Provides CRUD operations for metadata entities like tickers and sectors."""
 
-from sqlalchemy.orm import Session
-from sqlalchemy import Engine, RowMapping, Sequence, text, Connection
 import pandas as pd
-from threading import Lock
-
 from itapia_common.dblib.cache.memory import SingletonInMemoryCache
+from sqlalchemy import Connection, Engine, RowMapping, Sequence, text
+from sqlalchemy.orm import Session
 
-def _load_ticker_metadata_from_db(db_connectable: Session|Connection) -> dict:
+
+def _load_ticker_metadata_from_db(db_connectable: Session | Connection) -> dict:
     """Load ticker metadata from the database and format it as a dictionary.
 
     This function joins the tickers, exchanges, and sectors tables to retrieve
@@ -20,7 +19,8 @@ def _load_ticker_metadata_from_db(db_connectable: Session|Connection) -> dict:
     Returns:
         dict: A dictionary with ticker symbols as keys and metadata as values.
     """
-    query = text("""
+    query = text(
+        """
                 SELECT 
                     t.ticker_sym as ticker, 
                     t.company_name, 
@@ -39,14 +39,17 @@ def _load_ticker_metadata_from_db(db_connectable: Session|Connection) -> dict:
                     public.sectors s ON t.sector_code = s.sector_code
                 WHERE 
                     t.is_active = TRUE;
-            """)
+            """
+    )
     result = db_connectable.execute(query)
 
     df = pd.DataFrame(result.fetchall(), columns=result.keys())
-    return df.set_index('ticker').to_dict('index')
+    return df.set_index("ticker").to_dict("index")
 
-def get_ticker_metadata(rdbms_connection: Session|Connection = None,
-                        rdbms_engine: Engine = None) -> dict[str, any]:
+
+def get_ticker_metadata(
+    rdbms_connection: Session | Connection = None, rdbms_engine: Engine = None
+) -> dict[str, any]:
     """Get ticker metadata with caching support.
 
     This function retrieves ticker metadata from the database, using a singleton
@@ -64,24 +67,23 @@ def get_ticker_metadata(rdbms_connection: Session|Connection = None,
     """
     if rdbms_connection is None and rdbms_engine is None:
         raise ValueError("Required at least connection or engine")
-    
+
     def loader():
         """Loader function passed to the cache manager."""
         if rdbms_connection:
             return _load_ticker_metadata_from_db(rdbms_connection)
-        else: # rdbms_engine
+        else:  # rdbms_engine
             with rdbms_engine.connect() as connection:
                 return _load_ticker_metadata_from_db(connection)
-    
-    _metadata_cache = SingletonInMemoryCache()
-    
-    return _metadata_cache.get_or_set(
-        cache_key='ticker_metadata',
-        loader_func=loader
-    )
 
-def get_all_sectors(rdbms_connection: Session|Connection = None,
-                    rdbms_engine: Engine = None) -> Sequence[RowMapping]:
+    _metadata_cache = SingletonInMemoryCache()
+
+    return _metadata_cache.get_or_set(cache_key="ticker_metadata", loader_func=loader)
+
+
+def get_all_sectors(
+    rdbms_connection: Session | Connection = None, rdbms_engine: Engine = None
+) -> Sequence[RowMapping]:
     """Retrieve all sector information from the database.
 
     Args:
@@ -96,9 +98,11 @@ def get_all_sectors(rdbms_connection: Session|Connection = None,
     """
     if rdbms_connection is None and rdbms_engine is None:
         raise ValueError("Required at least connection or engine")
-    
-    query = text("SELECT sector_code, sector_name FROM public.sectors ORDER BY sector_name;")
-    
+
+    query = text(
+        "SELECT sector_code, sector_name FROM public.sectors ORDER BY sector_name;"
+    )
+
     if rdbms_connection is not None:
         result = rdbms_connection.execute(query)
     else:

@@ -1,7 +1,5 @@
 """Tests for the main application module."""
 
-import pytest
-from fastapi.testclient import TestClient
 from app.main import app
 
 
