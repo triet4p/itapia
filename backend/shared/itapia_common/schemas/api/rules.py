@@ -6,6 +6,7 @@ from itapia_common.schemas.entities.rules import (
     NodeSpecEntity,
     RuleStatus,
     SemanticType,
+    NodeType
 )
 from pydantic import BaseModel, Field
 
