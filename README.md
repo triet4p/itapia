@@ -16,7 +16,7 @@ ITAPIA is an intelligent stock investment assistant platform, built with the cor
 
 ### Demo
 <!-- Insert screenshot or GIF demo here -->
-![ITAPIA Demo](./doc/public/itapia-demo.gif)
+![ITAPIA Demo](./docs/public/itapia-demo.gif)
 *(The Advisor Interface)*
 
 ---
@@ -35,9 +35,9 @@ ITAPIA is an intelligent stock investment assistant platform, built with the cor
 
 ITAPIA is designed with a microservices architecture, ensuring modularity, scalability, and maintainability.
 
-![Deployment Architecture](./doc/diagram/UML-deployment.png)
+![Deployment Architecture](./docs/diagram/UML-deployment.png)
 
-> Dive deeper into our system design in the **[Architecture Documentation](./doc/public/itapia-mvp-v2.0.md)**.
+> Dive deeper into our system design in the **[Architecture Documentation](./docs/public/itapia-mvp-v2.0.md)**.
 
 ---
 
@@ -201,7 +201,7 @@ itapia/
 │   ├── shared/         # Shared code between services
 │   ├── .env.template   # Backend environment template
 ├── frontend/           # The Vue.js SPA, contains its own .env for the frontend
-├── doc/                # Documentation files
+├── docs/                # Documentation files
 ├── .gitignore
 └── docker-compose.yml # Docker Compose configuration
 └── README.md           # You are here
@@ -220,9 +220,9 @@ itapia/
 
 ### 📚 Detailed Documentation
 
-*   **[System Architecture](./doc/public/itapia-mv-p-v1.0.md):** A deep dive into the microservices, data flow, and design decisions.
-*   **[API Reference](./doc/public/API-doc-v1.pdf):** A detailed list and description of all API endpoints.
-*   **[Rule Engine Architecture](./doc/public/rule-architecture.pdf):** An explanation of the Symbolic Expression Tree design.
+*   **[System Architecture](./docs/public/itapia-mv-p-v1.0.md):** A deep dive into the microservices, data flow, and design decisions.
+*   **[API Reference](./docs/public/API-doc-v1.pdf):** A detailed list and description of all API endpoints.
+*   **[Rule Engine Architecture](./docs/public/rule-architecture.pdf):** An explanation of the Symbolic Expression Tree design.
 *   **[API Gateway Documentation](./backend/api_gateway/README.md):** Detailed documentation for the API Gateway service.
 
 ---
