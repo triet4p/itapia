@@ -1,3 +1,8 @@
+---
+layout: default
+title: Home
+---
+
 # ITAPIA Tutorials
 
 Here are the tutorials that explain how we build ITAPIA, covering both backend and frontend components.
