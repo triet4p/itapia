@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+import pandas_ta as ta
 from itapia_common.logger import ITAPIALogger
 
 logger = ITAPIALogger("Feature Engine")
