@@ -229,7 +229,7 @@ itapia/
 
 ### Tutorials
 To understand the development process, roles, and responsibilities of each component, you can read the:
-*   **[Tutorials Page](https://itapia.github.io)**
+*   **[Tutorials Page](./tutorials/index.md)**
 
 
 ---
