@@ -1,0 +1,2 @@
+# Nói cho Jekyll (engine của GitHub Pages) biết rằng site source nằm ở thư mục tutorials
+source: tutorials

@@ -37,7 +37,7 @@ ITAPIA is designed with a microservices architecture, ensuring modularity, scala
 
 ![Deployment Architecture](./doc/diagram/UML-deployment.png)
 
-> Dive deeper into our system design in the **[Architecture Documentation](./doc/public/itapia-mvp-v1.0.md)**.
+> Dive deeper into our system design in the **[Architecture Documentation](./doc/public/itapia-mvp-v2.0.md)**.
 
 ---
 
@@ -92,6 +92,9 @@ cp ./backend/.env.template ./backend/.env
 
 # Frontend
 cp ./frontend/.env.template ./frontend/.env
+
+# Entire
+cp ./.env.template ./.env
 ```
 **e. Download require models**
 *   You need to download Spacy Models before build docker images. You can find at
@@ -102,19 +105,12 @@ cp ./frontend/.env.template ./frontend/.env
 
 *   Then, you needs to move this file to a directory and modify in [Dockerfile](./backend/ai_service_quick/Dockerfile)
     ```dockerfile
-    # --- BƯỚC 2: KÍCH HOẠT MÔI TRƯỜNG MỚI VÀ CÀI ĐẶT THƯ VIỆN ---
-    # Change spacy=3.6.* to your version, but we recommend spacy 3.6 to compatible with ta-lib
     RUN conda run -n itapia conda install -c conda-forge -y ta-lib "spacy=3.6.*" pandas-ta
 
-    # 2.2. Cài đặt các gói còn lại bằng pip
     COPY ./ai_service_quick/requirements.txt /ai-service-quick/requirements.txt
     RUN conda run -n itapia pip install --no-cache-dir --upgrade -r /ai-service-quick/requirements.txt
 
-    # --- BƯỚC 3: COPY MODEL LOCAL ---
-    # Copy wheel model đã tải sẵn
-    # Thay
     COPY ./path_to_your_wheel/wheel_file.whl /tmp/
-    # Install model từ local wheel, đảm bảo reproducible
     RUN conda run -n itapia pip install /tmp/wheel_file.whl
     ```
 #### 3. Run the Backend
@@ -124,7 +120,7 @@ cp ./frontend/.env.template ./frontend/.env
 cd backend
 
 # Build and run all backend services in detached mode
-docker-compose up -d api-gateway
+docker-compose -f docker-compose.local.yaml up -d api-gateway
 ```
 
 #### 4. Run the Frontend
@@ -147,6 +143,49 @@ npm run dev
 *   **Frontend Application:** [http://localhost:3000](http://localhost:3000)
 *   **Backend API Docs (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
 
+#### 6. Use pre-built docker images
+After step 1 and 2 (after setup credentials and enviroment), you can use my pre-built docker images by using default docker-compose:
+```bash
+docker-compose -f docker-compose.yml up -d api-gateway frontend
+```
+
+---
+
+### Utils Command
+We provided some utils command to help you easily run this project.
+
+#### Docker images
+-   You can rebuild all custom image from code using
+    ```bash
+    utils-cmd/rebuild-all [--tag ^<tag_name^>] [--help]
+    ```
+    If `--tag` is not provided, these image will use default tag `latest`.
+
+-   You can push you images to Docker Hub using 
+    ```bash
+    utils-cmd/push-docker-hub [--local-tag ^<tag^>] [--hub-tag ^<tag^>] [--user ^<username^>]
+    ```
+    If any tag not be used, use default arg. See `--help`
+
+#### Seed data
+For data seeding, you can use
+```bash
+utils-cmd/seed-data
+```
+This cmd can be used after run DB Service (Postgre). And will seed important data like tickers, sector, exchanges and rules.
+
+#### Run and stop
+You can run all services (backend and frontend) by
+```bash
+utils-cmd/run-all [--local-images] [--help]
+```
+If tag `--local-images` is setted, your local images (build from code) will be used, if no, my pre-built images will be used
+
+And you can stop by using
+```bash
+utils-cmd/stop-all
+```
+
 ---
 
 ### 📁 Project Structure
@@ -161,10 +200,10 @@ itapia/
 │   ├── evo_worker/     # Evolutionary algorithms worker
 │   ├── shared/         # Shared code between services
 │   ├── .env.template   # Backend environment template
-│   └── docker-compose.yml # Docker Compose configuration
 ├── frontend/           # The Vue.js SPA, contains its own .env for the frontend
 ├── doc/                # Documentation files
 ├── .gitignore
+└── docker-compose.yml # Docker Compose configuration
 └── README.md           # You are here
 ```
 
@@ -174,7 +213,7 @@ itapia/
 
 -   ✅ **Phase 1: Core MVP** (Analysis, Advisor, Rules, Auth)
 -   ✅ **Phase 2: UI/UX Polish & Personalization** (UX Polish, Profile Management)
--   ▶️ **Phase 3: Automatic Optimization (`Evo-worker`)**
+-   ✅ **Phase 3: Automatic Optimization (`Evo-worker`)**
 -   ▶️ **Phase 4: Deep Dive & LLM Integration**
 
 ---
@@ -190,7 +229,7 @@ itapia/
 
 ### Tutorials
 To understand the development process, roles, and responsibilities of each component, you can read the:
-*   **[Tutorials](https://code2tutorial.com/tutorial/d3f6570c-01c8-48f7-b9df-51b759f36261/index.md)**
+*   **[Tutorials Page](https://itapia.github.io)**
 
 
 ---

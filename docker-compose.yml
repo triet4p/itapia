@@ -1,0 +1,151 @@
+services:
+  stocks_postgre_db:
+    image: postgres:${POSTGRES_TAG:-15-alpine}
+    container_name: ${PROJECT_NAME:-itapia}-stocks_postgre_db
+    restart: ${RESTART_POLICY:-unless-stopped}
+    env_file:
+      - ./backend/.env
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - local-network
+
+  realtime_redis_db:
+    image: redis:${REDIS_TAG:-7-alpine}
+    container_name: ${PROJECT_NAME:-itapia}-redis_db
+    restart: ${RESTART_POLICY:-unless-stopped}
+    env_file:
+      - ./backend/.env
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - local-network
+
+  batch-data-processor:
+    image: ${DOCKER_USERNAME}/${PROJECT_NAME:-itapia}-data-processor:${ITAPIA_TAG:-latest}
+    container_name: ${PROJECT_NAME:-itapia}-batch-data-processor
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend/data_processing:/data-processing
+    depends_on:
+      - stocks_postgre_db
+    networks:
+      - local-network
+
+  realtime-data-processor:
+    image: ${DOCKER_USERNAME}/${PROJECT_NAME:-itapia}-data-processor:${ITAPIA_TAG:-latest}
+    restart: ${RESTART_POLICY:-always}
+    container_name: ${PROJECT_NAME:-itapia}-realtime-data-processor
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - realtime_redis_db
+      - stocks_postgre_db
+    networks:
+      - local-network
+    volumes:
+      - ./backend/data_processing:/data-processing
+    command: python -m scripts.fetch_realtime_prices
+
+  data-seeds:
+    image: ${DOCKER_USERNAME}/${PROJECT_NAME:-itapia}-data-seeds:${ITAPIA_TAG:-latest}
+    container_name: ${PROJECT_NAME:-itapia}-data-seeds
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - stocks_postgre_db
+    volumes:
+      - ./backend/data_seeds:/data-seeds
+    networks:
+      - local-network
+
+  
+  api-gateway:
+    image: ${DOCKER_USERNAME}/${PROJECT_NAME:-itapia}-api-gateway:${ITAPIA_TAG:-latest}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    container_name: ${PROJECT_NAME:-itapia}-api-gateway
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - realtime_redis_db
+      - stocks_postgre_db
+      - ai-service-quick
+    volumes:
+      - ./backend/api_gateway:/api-gateway
+    ports:
+      - "${API_GATEWAY_PORT:-8000}:8000"
+    networks:
+      - local-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 ${API_RELOAD_OPTION:-}
+
+  ai-service-quick:
+    image: ${DOCKER_USERNAME}/${PROJECT_NAME:-itapia}-ai-service-quick:${ITAPIA_TAG:-latest}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    container_name: ${PROJECT_NAME:-itapia}-ai-service-quick
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend/ai_service_quick/app:/ai-service-quick/app
+      - ai_service_quick_kaggle_cache:/root/.cache/kagglehub
+      - ai_service_quick_hgf_cache:/root/.cache/huggingface
+    depends_on:
+      - realtime_redis_db
+      - stocks_postgre_db
+    ports:
+      - "${AI_SERVICE_QUICK_PORT:-8001}:8000"
+    networks:
+      - local-network
+    entrypoint: /ai-service-quick/entrypoint.sh
+
+  evo-worker:
+    image: ${DOCKER_USERNAME}/${PROJECT_NAME:-itapia}-evo-worker:${ITAPIA_TAG:-latest}
+    restart: ${RESTART_POLICY:-unless-stopped}
+    container_name: ${PROJECT_NAME:-itapia}-evo-worker
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - ai-service-quick
+      - stocks_postgre_db
+      - realtime_redis_db
+    volumes:
+      - ./backend/evo_worker:/evo-worker
+    ports:
+      - "${EVO_WORKER_PORT:-8002}:8000"
+    networks:
+      - local-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 ${API_RELOAD_OPTION:-}
+
+  frontend:
+    image: ${DOCKER_USERNAME}/${PROJECT_NAME:-itapia}-frontend:${ITAPIA_TAG:-latest}
+    container_name: ${PROJECT_NAME:-itapia}-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - api-gateway
+    env_file:
+      - ./frontend/.env
+    networks:
+      - local-network
+
+volumes:
+  postgres_data:
+    name: ${PROJECT_NAME:-itapia}_postgres_data 
+  
+  redis_data:
+    name: ${PROJECT_NAME:-itapia}_redis_data 
+    
+  ai_service_quick_kaggle_cache:
+    name: ${PROJECT_NAME:-itapia}_ai_service_quick_kaggle_cache
+
+  ai_service_quick_hgf_cache:
+    name: ${PROJECT_NAME:-itapia}_ai_service_quick_hgf_cache
+
+networks:
+  local-network:
+    driver: bridge
+    name: ${PROJECT_NAME:-itapia}-local-network
