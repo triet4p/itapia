@@ -5,7 +5,6 @@ WORKDIR /frontend
 
 COPY ./package*.json /frontend/
 RUN npm install
-
 COPY . /frontend/
 RUN npm run build
 
@@ -13,6 +12,7 @@ RUN npm run build
 FROM nginx:alpine
 
 COPY --from=build /frontend/dist/ /usr/share/nginx/html
+COPY ./default.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
